@@ -1,0 +1,63 @@
+/* Keyboard shortcuts: a short two-column list inside the shared dialog. */
+.shortcuts-body {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.shortcuts-body h3 {
+  margin: 0 0 var(--s-2);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.shortcut-list {
+  display: grid;
+  margin: 0;
+}
+
+.shortcut-list > div {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 9rem) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.shortcut-list dt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}
+
+.shortcut-list dd {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.shortcut-list kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5rem;
+  padding: 0.0625rem 0.45rem;
+  border: 1px solid var(--rule-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--r-1);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+}
+
+@media (max-width: 30rem) {
+  .shortcut-list > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-1);
+  }
+}

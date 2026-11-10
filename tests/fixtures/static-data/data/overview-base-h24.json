@@ -1,0 +1,505 @@
+{
+ "schemaVersion": 1,
+ "presentation": {
+  "profile": "analytics-overview",
+  "version": 1,
+  "detail": "deferred"
+ },
+ "ready": true,
+ "publication": {
+  "id": "fixture-publication",
+  "generatedAt": "2026-10-28T14:05:00.000Z",
+  "status": "partial"
+ },
+ "request": {
+  "chain": "base",
+  "window": "h24"
+ },
+ "asOf": "2026-10-28T14:05:00.000Z",
+ "networks": [
+  {
+   "slug": "base",
+   "name": "Base"
+  },
+  {
+   "slug": "ethereum",
+   "name": "Ethereum"
+  },
+  {
+   "slug": "robinhood",
+   "name": "Robinhood"
+  }
+ ],
+ "sources": [
+  {
+   "id": "registry",
+   "name": "Uniswap hooklist",
+   "url": "https://github.com/Uniswap/hooklist",
+   "status": "live",
+   "updatedAt": "2026-10-28T13:41:20.000Z",
+   "note": "Hook registry, 1 request, fetched at the start of the run."
+  },
+  {
+   "id": "dexscreener",
+   "name": "DEX Screener",
+   "url": "https://dexscreener.com/",
+   "status": "live",
+   "updatedAt": "2026-10-28T14:04:58.000Z",
+   "note": "Pool measurements in one burst: 4 requests, 12 pools returned, 0 rate limits."
+  },
+  {
+   "id": "geckoterminal",
+   "name": "GeckoTerminal",
+   "url": "https://www.geckoterminal.com/",
+   "status": "live",
+   "updatedAt": "2026-10-28T13:58:02.000Z",
+   "note": "Pool discovery pages: 3 requests, 12 seconds apart."
+  },
+  {
+   "id": "v4xyz",
+   "name": "v4.xyz indexer",
+   "url": "https://www.v4.xyz",
+   "status": "live",
+   "updatedAt": "2026-10-28T13:52:30.000Z",
+   "note": "Pool identity only (which hook, which two currencies) for newly discovered pools: 5 requests between 13:50 UTC and 13:52 UTC. It supplies no amounts."
+  },
+  {
+   "id": "census",
+   "name": "Pool census",
+   "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+   "status": "cached",
+   "updatedAt": "2026-10-27T20:11:09.000Z",
+   "note": "Hook Radar's index of PoolManager events, exported 27 Oct 2026, 20:11 UTC. Shown as it stood on 27 Oct 2026, 20:11 UTC; this edition does not refresh it."
+  }
+ ],
+ "inventory": {
+  "generatedAt": "2026-10-27T20:11:09.000Z",
+  "running": false,
+  "poolCount": 480,
+  "hookPoolCount": 93,
+  "hookCount": 31,
+  "networks": [
+   {
+    "chain": "base",
+    "chainId": 8453,
+    "name": "Base",
+    "manager": "0x1111111111111111111111111111111111118453",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 300,
+    "hookPoolCount": 61,
+    "hookCount": 17,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   },
+   {
+    "chain": "ethereum",
+    "chainId": 1,
+    "name": "Ethereum",
+    "manager": "0x1111111111111111111111111111111111111111",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 150,
+    "hookPoolCount": 28,
+    "hookCount": 11,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   },
+   {
+    "chain": "robinhood",
+    "chainId": 4663,
+    "name": "Robinhood",
+    "manager": "0x1111111111111111111111111111111111114663",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 30,
+    "hookPoolCount": 4,
+    "hookCount": 3,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   }
+  ]
+ },
+ "totals": {
+  "volumeUsd": 3568,
+  "liquidityUsd": 25100,
+  "samplePools": 7,
+  "volumePools": 4,
+  "liquidityPools": 5,
+  "activePools": 4,
+  "attributedProjects": 3,
+  "unattributedPools": 1,
+  "unattributedVolumeUsd": 28,
+  "unlistedProjects": 0,
+  "concentration": null,
+  "freshness": {
+   "maxAgeMs": 300000,
+   "expiresAt": "2026-10-28T14:06:40.000Z",
+   "liquidity": {
+    "observedPools": 6,
+    "currentPools": 5,
+    "stalePools": 1,
+    "unknownPools": 0,
+    "oldestAt": "2026-10-28T14:01:40.000Z",
+    "newestAt": "2026-10-28T14:04:40.000Z",
+    "latestObservedAt": "2026-10-28T14:04:40.000Z",
+    "expiresAt": "2026-10-28T14:06:40.000Z"
+   },
+   "volume": {
+    "h1": {
+     "observedPools": 5,
+     "currentPools": 4,
+     "stalePools": 1,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:02:30.000Z",
+     "newestAt": "2026-10-28T14:04:40.000Z",
+     "latestObservedAt": "2026-10-28T14:04:40.000Z",
+     "expiresAt": "2026-10-28T14:07:30.000Z"
+    },
+    "h6": {
+     "observedPools": 5,
+     "currentPools": 4,
+     "stalePools": 1,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:02:30.000Z",
+     "newestAt": "2026-10-28T14:04:40.000Z",
+     "latestObservedAt": "2026-10-28T14:04:40.000Z",
+     "expiresAt": "2026-10-28T14:07:30.000Z"
+    },
+    "h24": {
+     "observedPools": 5,
+     "currentPools": 4,
+     "stalePools": 1,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:02:30.000Z",
+     "newestAt": "2026-10-28T14:04:40.000Z",
+     "latestObservedAt": "2026-10-28T14:04:40.000Z",
+     "expiresAt": "2026-10-28T14:07:30.000Z"
+    }
+   }
+  }
+ },
+ "networkTotals": [
+  {
+   "volumeUsd": 3568,
+   "liquidityUsd": 25100,
+   "samplePools": 7,
+   "volumePools": 4,
+   "liquidityPools": 5,
+   "activePools": 4,
+   "attributedProjects": 3,
+   "unattributedPools": 1,
+   "unattributedVolumeUsd": 28,
+   "unlistedProjects": 0,
+   "concentration": null,
+   "freshness": {
+    "maxAgeMs": 300000,
+    "expiresAt": "2026-10-28T14:06:40.000Z",
+    "liquidity": {
+     "observedPools": 6,
+     "currentPools": 5,
+     "stalePools": 1,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:01:40.000Z",
+     "newestAt": "2026-10-28T14:04:40.000Z",
+     "latestObservedAt": "2026-10-28T14:04:40.000Z",
+     "expiresAt": "2026-10-28T14:06:40.000Z"
+    },
+    "volume": {
+     "h1": {
+      "observedPools": 5,
+      "currentPools": 4,
+      "stalePools": 1,
+      "unknownPools": 0,
+      "oldestAt": "2026-10-28T14:02:30.000Z",
+      "newestAt": "2026-10-28T14:04:40.000Z",
+      "latestObservedAt": "2026-10-28T14:04:40.000Z",
+      "expiresAt": "2026-10-28T14:07:30.000Z"
+     },
+     "h6": {
+      "observedPools": 5,
+      "currentPools": 4,
+      "stalePools": 1,
+      "unknownPools": 0,
+      "oldestAt": "2026-10-28T14:02:30.000Z",
+      "newestAt": "2026-10-28T14:04:40.000Z",
+      "latestObservedAt": "2026-10-28T14:04:40.000Z",
+      "expiresAt": "2026-10-28T14:07:30.000Z"
+     },
+     "h24": {
+      "observedPools": 5,
+      "currentPools": 4,
+      "stalePools": 1,
+      "unknownPools": 0,
+      "oldestAt": "2026-10-28T14:02:30.000Z",
+      "newestAt": "2026-10-28T14:04:40.000Z",
+      "latestObservedAt": "2026-10-28T14:04:40.000Z",
+      "expiresAt": "2026-10-28T14:07:30.000Z"
+     }
+    }
+   },
+   "chain": "base",
+   "name": "Base",
+   "volumeShare": 1,
+   "inventory": {
+    "chain": "base",
+    "chainId": 8453,
+    "name": "Base",
+    "manager": "0x1111111111111111111111111111111111118453",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 300,
+    "hookPoolCount": 61,
+    "hookCount": 17,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   },
+   "caughtUp": true,
+   "headFresh": false
+  }
+ ],
+ "categories": {
+  "volume": [
+   {
+    "category": "Launches",
+    "value": 3300,
+    "share": 0.9248878923766816,
+    "measuredPools": 2,
+    "color": "#f566b1",
+    "freshness": {
+     "observedPools": 2,
+     "currentPools": 2,
+     "stalePools": 0,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:02:30.000Z",
+     "newestAt": "2026-10-28T14:04:10.000Z",
+     "latestObservedAt": "2026-10-28T14:04:10.000Z",
+     "expiresAt": "2026-10-28T14:07:30.000Z"
+    }
+   },
+   {
+    "category": "Fees",
+    "value": 240,
+    "share": 0.06726457399103139,
+    "measuredPools": 1,
+    "color": "#7bc6cf",
+    "freshness": {
+     "observedPools": 1,
+     "currentPools": 1,
+     "stalePools": 0,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:04:40.000Z",
+     "newestAt": "2026-10-28T14:04:40.000Z",
+     "latestObservedAt": "2026-10-28T14:04:40.000Z",
+     "expiresAt": "2026-10-28T14:09:40.000Z"
+    }
+   },
+   {
+    "category": "Unattributed",
+    "value": 28,
+    "share": 0.007847533632286996,
+    "measuredPools": 1,
+    "color": "#8c899f",
+    "freshness": {
+     "observedPools": 1,
+     "currentPools": 1,
+     "stalePools": 0,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:04:00.000Z",
+     "newestAt": "2026-10-28T14:04:00.000Z",
+     "latestObservedAt": "2026-10-28T14:04:00.000Z",
+     "expiresAt": "2026-10-28T14:09:00.000Z"
+    }
+   },
+   {
+    "category": "Liquidity",
+    "value": null,
+    "share": null,
+    "measuredPools": 0,
+    "color": "#b29af4",
+    "freshness": {
+     "observedPools": 0,
+     "currentPools": 0,
+     "stalePools": 0,
+     "unknownPools": 0,
+     "oldestAt": null,
+     "newestAt": null,
+     "latestObservedAt": null,
+     "expiresAt": null
+    }
+   }
+  ],
+  "reserves": [
+   {
+    "category": "Launches",
+    "value": 15000,
+    "share": 0.5976095617529881,
+    "measuredPools": 2,
+    "color": "#f566b1",
+    "freshness": {
+     "observedPools": 2,
+     "currentPools": 2,
+     "stalePools": 0,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:02:30.000Z",
+     "newestAt": "2026-10-28T14:04:10.000Z",
+     "latestObservedAt": "2026-10-28T14:04:10.000Z",
+     "expiresAt": "2026-10-28T14:07:30.000Z"
+    }
+   },
+   {
+    "category": "Liquidity",
+    "value": 7000,
+    "share": 0.2788844621513944,
+    "measuredPools": 1,
+    "color": "#b29af4",
+    "freshness": {
+     "observedPools": 1,
+     "currentPools": 1,
+     "stalePools": 0,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:01:40.000Z",
+     "newestAt": "2026-10-28T14:01:40.000Z",
+     "latestObservedAt": "2026-10-28T14:01:40.000Z",
+     "expiresAt": "2026-10-28T14:06:40.000Z"
+    }
+   },
+   {
+    "category": "Fees",
+    "value": 3000,
+    "share": 0.11952191235059761,
+    "measuredPools": 1,
+    "color": "#7bc6cf",
+    "freshness": {
+     "observedPools": 1,
+     "currentPools": 1,
+     "stalePools": 0,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:04:40.000Z",
+     "newestAt": "2026-10-28T14:04:40.000Z",
+     "latestObservedAt": "2026-10-28T14:04:40.000Z",
+     "expiresAt": "2026-10-28T14:09:40.000Z"
+    }
+   },
+   {
+    "category": "Unattributed",
+    "value": 100,
+    "share": 0.00398406374501992,
+    "measuredPools": 1,
+    "color": "#8c899f",
+    "freshness": {
+     "observedPools": 1,
+     "currentPools": 1,
+     "stalePools": 0,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:04:00.000Z",
+     "newestAt": "2026-10-28T14:04:00.000Z",
+     "latestObservedAt": "2026-10-28T14:04:00.000Z",
+     "expiresAt": "2026-10-28T14:09:00.000Z"
+    }
+   }
+  ]
+ },
+ "history": {
+  "available": false,
+  "points": []
+ },
+ "contributions": {
+  "version": 1,
+  "scope": "initial-current-cohort",
+  "projects": [
+   [
+    "alpha",
+    true,
+    "Launches"
+   ],
+   [
+    "beta",
+    true,
+    "Liquidity"
+   ],
+   [
+    "gamma",
+    true,
+    "Fees"
+   ]
+  ],
+  "rows": [
+   [
+    "base",
+    "0x0000000000000000000000000000000000000000000000000000000000000001",
+    0,
+    "2026-10-28T14:04:10.000Z",
+    100,
+    600,
+    2400,
+    10000,
+    0
+   ],
+   [
+    "base",
+    "0x0000000000000000000000000000000000000000000000000000000000000002",
+    0,
+    "2026-10-28T14:02:30.000Z",
+    50,
+    300,
+    900,
+    5000,
+    1
+   ],
+   [
+    "base",
+    "0x0000000000000000000000000000000000000000000000000000000000000005",
+    1,
+    "2026-10-28T14:01:40.000Z",
+    null,
+    null,
+    null,
+    7000,
+    4
+   ],
+   [
+    "base",
+    "0x0000000000000000000000000000000000000000000000000000000000000008",
+    2,
+    "2026-10-28T14:04:40.000Z",
+    10,
+    60,
+    240,
+    3000,
+    2
+   ],
+   [
+    "base",
+    "0x000000000000000000000000000000000000000000000000000000000000000c",
+    -1,
+    "2026-10-28T14:04:00.000Z",
+    7,
+    14,
+    28,
+    100,
+    3
+   ]
+  ]
+ }
+}

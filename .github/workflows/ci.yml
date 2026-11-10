@@ -1,0 +1,45 @@
+# Checks that run on every push and pull request: unit tests, the collector
+# against its recorded fixtures (no network, nothing written) and a static build.
+# This workflow publishes nothing and has read-only access.
+
+name: Checks
+
+on:
+  push:
+    branches-ignore:
+      - site
+  pull_request:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Unit tests
+        run: npm run test:edition
+
+      - name: Collector, offline
+        run: node collector/run.mjs --offline --no-publish
+
+      - name: Static build
+        run: npm run build:static

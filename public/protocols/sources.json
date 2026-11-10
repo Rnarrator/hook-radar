@@ -1,0 +1,1248 @@
+{
+  "retrievedAt": "2026-10-14",
+  "rights": "All protocol artwork remains the property of its respective owner. These are original publicly served brand assets used to identify protocols in a neutral ecosystem directory; no art has been redrawn or recolored.",
+  "mappingPolicy": "Artwork identifies named directory families. It does not verify ownership of every grouped deployment. Specific ambiguous hook names require contextual evidence; unknown families use a neutral dash. Uniswap Labs reference hooks require all deployments to match the official repository chain/address table. An original that is dark on transparent, or that colours itself by the visitor's colour scheme, is shown unaltered on a light plate (manifest field plate: \"light\" with plateReason); the plate sets the colour scheme to light and the file is never recoloured.",
+  "assets": [
+    {
+      "protocol": "euler",
+      "file": "brand-euler.svg",
+      "assetUrl": "https://www.euler.finance/branding/euler-symbol-transparent.svg",
+      "identitySources": [
+        "https://www.euler.finance/brand"
+      ],
+      "sha256": "ff56facb1300f5661f09e6de396d064f1167525235fa0671f4aa72eef869b68e",
+      "bytes": 907
+    },
+    {
+      "protocol": "bunni",
+      "file": "brand-bunni.svg",
+      "assetUrl": "https://bunni.xyz/assets/img/bunni-favicon.svg",
+      "identitySources": [
+        "https://bunni.xyz/"
+      ],
+      "sha256": "6d899e09db532624c58d3341304e4b036702bdac144955b2f38b6b1a23eab000",
+      "bytes": 4939
+    },
+    {
+      "protocol": "flaunch",
+      "file": "brand-flaunch.svg",
+      "assetUrl": "https://flaunch.gg/favicon.svg",
+      "identitySources": [
+        "https://flaunch.gg/"
+      ],
+      "sha256": "8769f115c7c1ff6eeb8f9dfd5ed137d6f1f0079a460a7022e52924e984fd9cc6",
+      "bytes": 908
+    },
+    {
+      "protocol": "clanker",
+      "file": "brand-clanker.png",
+      "assetUrl": "https://clanker.world/logo_circle.png",
+      "identitySources": [
+        "https://clanker.world/"
+      ],
+      "sha256": "23abcbcb8de14fe94e7b6e5ec166bf0ead7e24cb5d8623960f1983236465d169",
+      "bytes": 21186
+    },
+    {
+      "protocol": "frontier",
+      "file": "brand-frontier.svg",
+      "assetUrl": "https://frontier.fun/favicon.svg",
+      "identitySources": [
+        "https://frontier.fun/"
+      ],
+      "sha256": "ca3bbfc4414713deda5aefb1f60dad38e285c5adabe6d68e5aa302cddf6221f5",
+      "bytes": 256
+    },
+    {
+      "protocol": "cork",
+      "file": "brand-cork.svg",
+      "assetUrl": "https://www.cork.tech/favicon.svg",
+      "identitySources": [
+        "https://www.cork.tech/",
+        "https://etherscan.io/address/0x5287e8915445aee78e10190559d8dd21e0e9ea88#code",
+        "https://github.com/Cork-Technology/Cork-Hook",
+        "https://docs.cork.tech"
+      ],
+      "sha256": "a29cd38f8f365c7ad97a4ef9b84b5798488ea3d79f04c16f978e5d881b024e66",
+      "bytes": 721,
+      "mappingEvidence": {
+        "Cork AMM": {
+          "confidence": "high source identity; no current official deployment table matching legacy address",
+          "safeRule": "Exact family ID hook-5af6ede0232aac0909f1 and Ethereum address 0x5287e8915445aee78e10190559d8dd21e0e9ea88; avoid substring Cork name match."
+        }
+      }
+    },
+    {
+      "protocol": "arrakis",
+      "file": "brand-arrakis.png",
+      "assetUrl": "https://framerusercontent.com/images/LgK3EkMIAMKtmcV3zBpoydGj1k.png",
+      "identitySources": [
+        "https://arrakis.finance/"
+      ],
+      "sha256": "4bbe0e8bb0eb50e51e4eaff361b4d953c8cc233a9eeb6dfb3f5a6d1c0c3f6b15",
+      "bytes": 647
+    },
+    {
+      "protocol": "doppler",
+      "file": "brand-doppler.svg",
+      "assetUrl": "https://app.doppler.lol/icons/doppler.svg",
+      "identitySources": [
+        "https://app.doppler.lol/"
+      ],
+      "sha256": "b312cedd7f9ee2e3fbdecbc944ffdebdf2d10214f3c64f763583b7e7fbf75371",
+      "bytes": 3770
+    },
+    {
+      "protocol": "angstrom",
+      "file": "brand-angstrom.svg",
+      "assetUrl": "https://docs.angstrom.xyz/img/logo.svg",
+      "identitySources": [
+        "https://docs.angstrom.xyz/"
+      ],
+      "sha256": "4938e9960f70939b91d71c92f5d017076de7fc3c944f4a54e58e20b904fc5aa4",
+      "bytes": 1736
+    },
+    {
+      "protocol": "GlueHook",
+      "file": "other-gluehook.png",
+      "assetUrl": "https://www.gluehook.trade/icon-192.png",
+      "identitySources": [
+        "https://www.gluehook.trade/docs/networks",
+        "https://github.com/glue-finance/GlueHook"
+      ],
+      "mapping": {
+        "familyName": "GlueHook",
+        "familyId": "hook-c3df54eb19b885a45bfa",
+        "knownAddresses": [
+          "0x03d482cb3ff339c2d29736818d0f72c66dd6a040",
+          "0x0f41715dc432692b66a5adf8dcfef6ac407b20c8"
+        ]
+      },
+      "evidence": "Current official networks page publishes 0x03D482cB3Ff339C2d29736818D0F72c66dD6A040 as the canonical V3 address on every supported network, and identifies V2 0x0F41...20c8 as the previous generation. The web-crawled official version publishes the full V2 address. Both occur in the registry family. This is the official app icon, downloaded without changing the artwork.",
+      "sha256": "d73eb11978178412ba8a62604a3cffd69e0f58b5a88a953063157251b50ace71",
+      "bytes": 28685
+    },
+    {
+      "protocol": "Phi",
+      "file": "other-phi.png",
+      "assetUrl": "https://avatars.githubusercontent.com/u/110320402?v=4&s=128",
+      "identitySources": [
+        "https://docs.phi.box/explore-phi/phi-board/phi-board",
+        "https://docs.phi.box/explore-phi/phi-board/eli5-how-publiphi-works",
+        "https://github.com/PHI-LABS-INC"
+      ],
+      "mapping": {
+        "familyNames": [
+          "PhiEthHooks",
+          "BoardHook"
+        ],
+        "familyIds": [
+          "hook-db5cf245760485085711",
+          "hook-8725c5797bb5e367a877"
+        ],
+        "chain": "base",
+        "requiresDescriptionEvidence": true
+      },
+      "evidence": "Official Phi documentation describes ETH wrapping 1:1 into PhiEth and fair-launch pools using Uniswap v4 hooks; it names the Publiphi workflow. Registry PhiEthHooks explicitly wraps/unwraps PhiEth and BoardHook exposes publiphi. Official documentation links to PHI-LABS-INC Github, whose own organization avatar is used here. The source domains currently return parking redirects to direct requests; identity is supported by the web-crawled official docs plus the live official Github organization, not by a parking-page favicon. No factory-level ownership verification was completed. If exact address verification is mandatory, keep these families neutral until it is obtained.",
+      "sha256": "6f5f87cc9b5d979d45031f1bbf51cd3444cbd46916b2c0891c3bd8cacf6832e0",
+      "bytes": 902,
+      "mappingEvidence": {
+        "PhiEthHooks": {
+          "confidence": "strong unique terminology and behavior affiliation; onchain factory ownership not established",
+          "safeRule": "Curated exact family ID plus matching name and Base chain. For PhiEthHooks require phiEth in purpose; for BoardHook require at least one publiphi description. Do not generic-match BoardHook from arbitrary future IDs."
+        },
+        "BoardHook": {
+          "confidence": "strong unique terminology and behavior affiliation; onchain factory ownership not established",
+          "safeRule": "Curated exact family ID plus matching name and Base chain. For PhiEthHooks require phiEth in purpose; for BoardHook require at least one publiphi description. Do not generic-match BoardHook from arbitrary future IDs."
+        }
+      }
+    },
+    {
+      "protocol": "Aegis",
+      "file": "other-aegis.svg",
+      "assetUrl": "https://aegis.markets/logo.svg",
+      "identitySources": [
+        "https://docs.aegis.markets/deployed-contracts",
+        "https://github.com/labs-solo/AEGIS_DFM",
+        "https://aegis.markets/assets/index-BvLsBEFF.js"
+      ],
+      "mapping": {
+        "knownChainAddressPairs": [
+          {
+            "chain": "unichain",
+            "address": "0xa0b0d2d00fd544d8e0887f1a3cedd6e24baf10cc"
+          },
+          {
+            "chain": "unichain",
+            "address": "0x88c9ff9fc0b22cca42265d3f1d1c2c39e41cdacc"
+          }
+        ],
+        "ambiguousFamilyName": "Spot",
+        "ambiguousFamilyId": "hook-be2bdbb3100e41191874"
+      },
+      "evidence": "Official Aegis docs explicitly call its central hook Spot and list the two Unichain contracts. Official app configuration confirms 0x88C9...DACC under its Unichain config. The registry Spot family contains other addresses and the same 0x88C9...DACC address on Monad and X Layer, which are not supported by this evidence. Do not map every generic Spot deployment to Aegis solely on name or code resemblance. The Aegis family has a matching contract name/address elsewhere and may be curated separately by root.",
+      "sha256": "bdd090eabac0ed84169b89dc0c24ba736143082b23c310879081c15b7e25766b",
+      "bytes": 2124,
+      "mappingEvidence": {
+        "Aegis": {
+          "confidence": "high for family identity; not a claim every name-grouped deployment is owned by protocol",
+          "safeRule": "Curated exact ID aegis, ideally gated on at least one known official Unichain contract. Never match generic Spot by name."
+        }
+      }
+    },
+    {
+      "protocol": "zora",
+      "file": "zora.png",
+      "assetUrl": "https://zora.co/assets/favicon/apple-touch-icon.png",
+      "identitySources": [
+        "https://zora.co",
+        "https://docs.zora.co/coins/contracts"
+      ],
+      "sha256": "ec6577bd70652900bf29cf01806c37676805c57d362a091d6413e7b6eb875019",
+      "bytes": 29000
+    },
+    {
+      "protocol": "alphix",
+      "file": "alphix.svg",
+      "assetUrl": "https://raw.githubusercontent.com/alphixfi/alphix-core/main/branding-materials/logos/icon/LogoIconWhite.svg",
+      "identitySources": [
+        "https://github.com/alphixfi/alphix-core/tree/main/branding-materials",
+        "https://github.com/alphixfi/alphix-core"
+      ],
+      "sha256": "7e882300b90c5273a66a4af3f7008ce030d963d306ba01cb13876f219b6f5e66",
+      "bytes": 394
+    },
+    {
+      "protocol": "uniswap",
+      "file": "uniswap.png",
+      "assetUrl": "https://avatars.githubusercontent.com/u/36115574?v=4&s=128",
+      "identitySources": [
+        "https://github.com/Uniswap",
+        "https://github.com/Uniswap/v4-hooks-public"
+      ],
+      "sha256": "4310e7aee7747e8699b066cb513267aa87e6f120b2891f9409b66745a2d2687d",
+      "bytes": 13277
+    },
+    {
+      "protocol": "claus",
+      "file": "claus.png",
+      "assetUrl": "https://claus.si/assets/favicon-ec673a.png",
+      "identitySources": [
+        "https://claus.si/",
+        "https://claus.si/about.json",
+        "https://claus.si/read/Hooks/NFTs"
+      ],
+      "sha256": "464e9d722660687a53cdbdb5cd054aa65963a55568e6311290b183262b10af2a",
+      "bytes": 3292,
+      "reviewedAt": "2026-10-19T18:23:07.168Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Official homepage links the favicon. Public about.json identifies Claus on Ethereum and publishes hookProxy 0x37Bfb8AC7C960E558657871D41Ca70E07e7DbfFf. Official NFT documentation independently publishes the same hook proxy. Exact address matches the single directory family deployment.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-b5c8622fb7bf89767e69",
+          "name": "Claus",
+          "deployments": [
+            {
+              "chain": "ethereum",
+              "chainId": 1,
+              "address": "0x37bfb8ac7c960e558657871d41ca70e07e7dbfff"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "vectis",
+      "file": "vectis.svg",
+      "assetUrl": "https://vectis.family/assets/images/vectis-icon-ochre-transparent.svg",
+      "identitySources": [
+        "https://vectis.family/",
+        "https://vectis.family/assets/js/config.js"
+      ],
+      "sha256": "fa20871a700eb2793e475fb8f5a86c8f986272bb54d41193ba83b08b2db552d4",
+      "bytes": 8070,
+      "reviewedAt": "2026-10-19T18:23:07.171Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Official homepage references the original icon. Site config publishes chainId 4663, chainName Robinhood Chain, hook 0x4201Ec638F68b59FC2a9FdbEb5abfEc834f16800 labeled VectisHook v2. Exact address matches directory deployment. Additional official reflect hook 0xf4312871bB45614926d000d95c82aDFBa07Ae0CC exists but is not included in this mapping.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-85a7ef280bfea367afb6",
+          "name": "VectisHook",
+          "deployments": [
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0x4201ec638f68b59fc2a9fdbeb5abfec834f16800"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "unipeg",
+      "file": "unipeg.png",
+      "assetUrl": "https://unipeg.art/images/logo.png",
+      "identitySources": [
+        "https://unipeg.art/",
+        "https://unipeg.art/assets/index-D0-lnIRs.js"
+      ],
+      "sha256": "8df707e5f153d2cf4bd085b91d7ea1cc77bdc8f745b10a4bf9811e8b4c6efd57",
+      "bytes": 169685,
+      "reviewedAt": "2026-10-19T18:23:07.174Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Official app HTML and header component reference /images/logo.png. Same app bundle declares token 0x44b28991B167582F18BA0259e0173176ca125505 and governing hook 0xe54082DfBf044B6a8F584bdDdb90a22d5613C440; exact hook matches directory Ethereum deployment. Primary site describes collectible generation through a custom Uniswap v4 hook. Original pixels retained.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-9f3ecf78e2c0ffbb51ee",
+          "name": "UPeg Hook",
+          "deployments": [
+            {
+              "chain": "ethereum",
+              "chainId": 1,
+              "address": "0xe54082dfbf044b6a8f584bdddb90a22d5613c440"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "kyberswap",
+      "file": "kyberswap.png",
+      "assetUrl": "https://raw.githubusercontent.com/KyberNetwork/kyberswap-documentation/main/.gitbook/assets/kyber-logo-mark.png",
+      "identitySources": [
+        "https://docs.kyberswap.com/user-guide/kyberswap-fairflow/deployment-contracts",
+        "https://raw.githubusercontent.com/KyberNetwork/kyberswap-documentation/main/user-guide/kyberswap-fairflow/deployment-contracts.md",
+        "https://github.com/KyberNetwork/kyberswap-documentation/blob/main/.gitbook/assets/kyber-logo-mark.png"
+      ],
+      "sha256": "8f8eff13685dd52b4ac7b4ad06c5205fd692b5b72da18533b5986e9f1c294804",
+      "bytes": 149202,
+      "reviewedAt": "2026-10-19T18:23:07.176Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "The official KyberSwap FairFlow deployment table explicitly labels UniswapV4KEMHook and publishes all 7 exact chain/address pairs present in the directory family: Ethereum, BNB, Base, Arbitrum, Unichain, Monad, Robinhood. Original Kyber logo-mark PNG comes from official KyberNetwork documentation repository. No generic Uniswap name match; reject future deployments not in this verified table.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-784f15df27ab57584604",
+          "name": "UniswapV4KEMHook",
+          "deployments": [
+            {
+              "chain": "arbitrum",
+              "chainId": 42161,
+              "address": "0x4440854b2d02c57a0dc5c58b7a884562d875c0c4"
+            },
+            {
+              "chain": "base",
+              "chainId": 8453,
+              "address": "0x4440854b2d02c57a0dc5c58b7a884562d875c0c4"
+            },
+            {
+              "chain": "bnb",
+              "chainId": 56,
+              "address": "0x4440854b2d02c57a0dc5c58b7a884562d875c0c4"
+            },
+            {
+              "chain": "ethereum",
+              "chainId": 1,
+              "address": "0x4440854b2d02c57a0dc5c58b7a884562d875c0c4"
+            },
+            {
+              "chain": "monad",
+              "chainId": 143,
+              "address": "0x4445520306c9c70952bdfec28f3989f53d9f80c4"
+            },
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0x4445520306c9c70952bdfec28f3989f53d9f80c4"
+            },
+            {
+              "chain": "unichain",
+              "chainId": 130,
+              "address": "0x444139d6b32c1ad0b00f24a616072f74b2f880c4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "fables",
+      "file": "fables.svg",
+      "assetUrl": "https://www.fables.fi/logo.svg",
+      "identitySources": [
+        "https://www.fables.fi/",
+        "https://www.fables.fi/assets/index-177cj1oY.js"
+      ],
+      "sha256": "94f1cd4e0ed6f69714edb903e2dc3ad3b437ffb3e82ca323547ceb5a6cbc7e8c",
+      "bytes": 1674,
+      "reviewedAt": "2026-10-19T18:23:07.179Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Official app HTML loads this deployed bundle; configured pool hook addresses match every directory deployment in these four rows. Official app bundle also declares /logo.svg as appLogoUrl.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-46753a2889dd28d7f9ba",
+          "name": "FablesRampETH",
+          "deployments": [
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0x06a889870c8f83640d6816319f72e2aa579b6080"
+            },
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0x594e8e6281edf2d363a0293a50004cf868e7a080"
+            }
+          ]
+        },
+        {
+          "id": "hook-cd9943f048c9cf55634f",
+          "name": "FablesRWA",
+          "deployments": [
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0x5eb87f69be00df39981622fd60a8de4b7837e080"
+            },
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0x70a9a88402989226847ec122043ce5e7ff462080"
+            },
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0x79576fbad6e83915630bbb5d5658483f05532080"
+            },
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0xa0e8fbff13e24af2b5e61a72800e08a161bde080"
+            },
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0xa4570c37590e45f0b06898123d4de16307a32080"
+            },
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0xb608a78761f179f7c56f15e7d13921b92f00a080"
+            }
+          ]
+        },
+        {
+          "id": "hook-bfb5c857a160e2ad17b6",
+          "name": "FablesRamp",
+          "deployments": [
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0x08e52564bad99e05a694b4809f397edca417a080"
+            }
+          ]
+        },
+        {
+          "id": "hook-c94f7a210769e8bca1d9",
+          "name": "FablesRWAETH",
+          "deployments": [
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0xca89f079af00f752bfd3c345358dc38d4d73e080"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "hookr",
+      "file": "hookr.svg",
+      "assetUrl": "https://hookr.fun/icon.svg?icon.0dfnd6fhavvjo.svg",
+      "identitySources": [
+        "https://hookr.fun/",
+        "https://hookr.fun/docs/previous-releases"
+      ],
+      "sha256": "a2523485f0fcd76cec640e22cb21384a146d518f8859f5dd1443d8ecc16d9439",
+      "bytes": 6167,
+      "reviewedAt": "2026-10-19T18:23:07.182Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Official previous releases documentation explicitly names the default root 0xb3ca29cf721380cee8b8e4755f3865ebc68fe8cc and recapture root 0xb914f955294799de4b891bd2ea8af628fa1c68cc on Robinhood Chain. Additional V6 sibling 0x5a0a05... not established by this evidence.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-0d21f16c066772d5c444",
+          "name": "HookrModularHookV6",
+          "deployments": [
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0xb3ca29cf721380cee8b8e4755f3865ebc68fe8cc"
+            }
+          ]
+        },
+        {
+          "id": "hook-6356b143da0c80c73de3",
+          "name": "HookrModularHookV6WthV5",
+          "deployments": [
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0xb914f955294799de4b891bd2ea8af628fa1c68cc"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "pons",
+      "file": "pons.png",
+      "assetUrl": "https://ponsfamily.com/pons-logo.png",
+      "identitySources": [
+        "https://ponsfamily.com/launchpad",
+        "https://docs.ponsfamily.com/v2"
+      ],
+      "sha256": "05c06e534994f0c51b84348cb1962ba7a7d04f6c04b8a9253d101db220f8868a",
+      "bytes": 43277,
+      "reviewedAt": "2026-10-19T18:23:07.184Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Official v2 documentation lists Robinhood Chain 4663 and Meme hook 0xe5e702641ea86f4ae6cc3cdaed2b886f976be044. Main app uses /pons-logo.png. Do not infer the older PonsV2MemeHook row addresses from this.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-d3a89f69ff33dd42ad66",
+          "name": "V2MemeHook",
+          "deployments": [
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0xe5e702641ea86f4ae6cc3cdaed2b886f976be044"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "letscash",
+      "file": "letscash.png",
+      "assetUrl": "https://www.letscash.fun/apple-touch-icon.png",
+      "identitySources": [
+        "https://www.letscash.fun/",
+        "https://raw.githubusercontent.com/letscashfun/sdk/main/README.md"
+      ],
+      "sha256": "2bb24c47697d52243759bcd64acbe01815a623eb862ba7f86079d5fed2d4c04a",
+      "bytes": 4219,
+      "reviewedAt": "2026-10-19T18:23:07.185Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Official SDK README names Robinhood Chain 4663, hook 0x75a54357d9c78a2db19004a5fdc76c50f9242aec and letscash.fun. Main app declares this apple-touch-icon. This is the launchpad logo, not a Cash Cat token mark.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-a2f9ac5336e13b7283b6",
+          "name": "CashCatHookV2",
+          "deployments": [
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0x75a54357d9c78a2db19004a5fdc76c50f9242aec"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "umia",
+      "file": "umia.svg",
+      "assetUrl": "https://umia.finance/icons/icon.svg",
+      "identitySources": [
+        "https://umia.finance/docs/contract-addresses/base",
+        "https://github.com/umiafinance/protocol/blob/main/abi/addresses.json",
+        "https://umia.finance"
+      ],
+      "sha256": "7473ee6cbb5610270cf1f1f2bdda5342202a46ac3eb50c573cde45480964adef",
+      "bytes": 1616,
+      "reviewedAt": "2026-10-19T18:23:07.187Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Only the exact Base deployment above is primary-source verified. Other name-group addresses must not inherit artwork solely from name.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-0718f4800ae0cf89eb90",
+          "name": "UmiaHook",
+          "deployments": [
+            {
+              "chain": "base",
+              "chainId": 8453,
+              "address": "0x128bedebaa9304db74726efba848a98e7fb53a80"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "fwa",
+      "file": "fwa.png",
+      "assetUrl": "https://www.fwa.fun/fwa-logo-mark-128.png",
+      "identitySources": [
+        "https://v1.fwa.fun/docs/deployments",
+        "https://www.fwa.fun/docs/deployments",
+        "https://www.fwa.fun"
+      ],
+      "sha256": "4c4976083c1fa0e0423dbf84bfc3d663ec55cfd845bdc9d46b7f1a9172ca49d2",
+      "bytes": 8481,
+      "reviewedAt": "2026-10-19T18:23:07.190Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Only this exact Ethereum deployment is verified. Other BNB, Robinhood and similarly named Ethereum contracts are unresolved, so do not name-match all FWATokenHook contracts.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-5c0219d4564a44c578a1",
+          "name": "FWATokenHook",
+          "deployments": [
+            {
+              "chain": "ethereum",
+              "chainId": 1,
+              "address": "0x2c67eba8a50af0db5fba55f725247a75cbda6444"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "coinbase",
+      "file": "coinbase.png",
+      "assetUrl": "https://avatars.githubusercontent.com/u/1885080?v=4",
+      "identitySources": [
+        "https://docs.verifiedpools.com/security/deployments",
+        "https://help.coinbase.com/en/coinbase/trading-and-funding/verified-pools-overview",
+        "https://api.github.com/orgs/coinbase",
+        "https://docs.verifiedpools.com"
+      ],
+      "sha256": "dbeeada7bfb992dd453f1c12db32e4dad1a20f1b0d0cde8259f58b4ccd4ebdc2",
+      "bytes": 7383,
+      "reviewedAt": "2026-10-19T18:23:07.192Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Exact Base address only. The Coinbase C denotes the authored Verified Pools hook, not every third-party hook using Coinbase attestations.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-de7be01aacfc7f7aa086",
+          "name": "Coinbase Verified Hook",
+          "deployments": [
+            {
+              "chain": "base",
+              "chainId": 8453,
+              "address": "0x5cd525c621afca515bf58631d4733fba7b72aae4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "slvr",
+      "file": "slvr.png",
+      "assetUrl": "https://slvr.fun/slvr-icon.png",
+      "identitySources": [
+        "https://slvr.fun/_next/static/chunks/1232-288b06b79d2137d0.js?dpl=dpl_FSdupriM1ySSNFEyiXMePxqk7KiN",
+        "https://slvr.fun",
+        "https://github.com/slvr-fun/sdk"
+      ],
+      "sha256": "ff663d8eab881d1d566df8213b80b1467c68422d9db1f8609d9040fb0ad94bea",
+      "bytes": 2879,
+      "reviewedAt": "2026-10-19T18:23:07.193Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Use exact Robinhood hook address. The official SDK currently documents V2 token price readers, so the exact v4 attribution comes from the official frontend configuration instead.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-e08eb20927f96628a999",
+          "name": "SlvrHook",
+          "deployments": [
+            {
+              "chain": "robinhood",
+              "chainId": 4663,
+              "address": "0x64c6103255ccc638febe3619aeb52d2b59d6a0cc"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "aztec",
+      "file": "aztec.png",
+      "assetUrl": "https://sale.aztec.network/assets/favicon.png",
+      "identitySources": [
+        "https://sale.aztec.network/assets/index-Cu4uMRL2.js",
+        "https://sale.aztec.network",
+        "https://aztec.network/topic/aztec-network"
+      ],
+      "sha256": "e076391d9e4efa637597f56cda299fffc14b35fad6c2d8d49024f5b7b7051174",
+      "bytes": 3856,
+      "reviewedAt": "2026-10-19T18:23:07.195Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "This logo identifies Aztec`s particular deployed liquidity strategy. Do not apply Aztec or Uniswap artwork to every deployment of the generic VirtualLBPStrategyBasic contract.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-7070dc9f296e97ae2a7a",
+          "name": "VirtualLBPStrategyBasic",
+          "deployments": [
+            {
+              "chain": "ethereum",
+              "chainId": 1,
+              "address": "0xd53006d1e3110fd319a79aeec4c527a0d265e080"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "tokenworks",
+      "file": "tokenworks.svg",
+      "assetUrl": "https://raw.githubusercontent.com/token-works/BrandAssets/b77353f9726157f0fee96636f07027db4a26ffd8/svg/TokenWorks_Icon_Dark_Square_Transparent.svg",
+      "identitySources": [
+        "https://etherscan.io/address/0xbd15e4d324f8d02479a5ff53b52ef4048a79e444#code",
+        "https://token.works",
+        "https://github.com/token-works/BrandAssets",
+        "https://www.nftstrategy.fun/docs",
+        "https://github.com/Uniswap/hooklist/blob/main/hooklist.json",
+        "https://etherscan.io/address/0xd6a45df0c82c9a686ab1e58fb28d8fc0cf106444#code",
+        "https://etherscan.io/address/0xe3c63a9813ac03be0e8618b627cb8170cfa468c4#code"
+      ],
+      "sha256": "bb0623902cb8c5f6169b52f2e8f14402078ae7154f1c27ae4b9b0b31157a3078",
+      "bytes": 1064,
+      "reviewedAt": "2026-10-19T18:23:07.197Z",
+      "mappingPolicy": "Exact directory ID and name; nonempty deployment list; every chain/address must match this reviewed list. Conflicting chain IDs reject the artwork. Unknown members leave the whole family unbranded.",
+      "mappingEvidence": "Exact Ethereum address only. A source author comment alone would be insufficient; corroboration includes the creator ENS/address, official site ENS link, official protocol docs, and Uniswap registry.",
+      "verifiedFamilies": [
+        {
+          "id": "hook-daebeb56e66e791e7d8c",
+          "name": "TokenWorks Hook v2",
+          "deployments": [
+            {
+              "chain": "ethereum",
+              "chainId": 1,
+              "address": "0xbd15e4d324f8d02479a5ff53b52ef4048a79e444"
+            }
+          ]
+        },
+        {
+          "id": "hook-e26394cebf2e7851fb32",
+          "name": "TokenWorks Hook v3",
+          "deployments": [
+            {
+              "chain": "ethereum",
+              "chainId": 1,
+              "address": "0xd6a45df0c82c9a686ab1e58fb28d8fc0cf106444"
+            }
+          ]
+        },
+        {
+          "id": "hook-0961e788a26e6dc0e45d",
+          "name": "TokenWorks Hook v4",
+          "deployments": [
+            {
+              "chain": "ethereum",
+              "chainId": 1,
+              "address": "0xe3c63a9813ac03be0e8618b627cb8170cfa468c4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "pools-xyz",
+      "file": "pools-xyz.svg",
+      "assetUrl": "https://pools.xyz/favicon.svg",
+      "identitySources": [
+        "https://pools.xyz/",
+        "https://support.uniswap.org/hc/en-us/articles/47943121516685-Launching-and-trading-tokens-on-pools-xyz"
+      ],
+      "sha256": "f548b603ae22497bad1faf1d3f0d918ea602053e9914b0329a4d6cc4d77de93d",
+      "bytes": 2596,
+      "retrievedAt": "2026-10-21",
+      "mappingEvidence": {
+        "safeRule": "Exact catalog-backed Pools.xyz platform identity only. Shared Liquidity Launcher hooks do not inherit this artwork."
+      }
+    },
+    {
+      "protocol": "bankr",
+      "file": "bankr.svg",
+      "assetUrl": "https://bankr.bot/favicon.svg",
+      "identitySources": [
+        "https://bankr.bot/",
+        "https://docs.bankr.bot/token-launching/overview/"
+      ],
+      "sha256": "8eedd1126113ed0900433ef0c9705f599b0a57505263af38815cc8a47a75fe35",
+      "bytes": 2910,
+      "retrievedAt": "2026-10-23",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Site icon declared in bankr.bot's own page head."
+      }
+    },
+    {
+      "protocol": "arrows",
+      "file": "arrows.png",
+      "assetUrl": "https://arrows.lol/logo-no-bg.png",
+      "identitySources": [
+        "https://arrows.lol/",
+        "https://arrows.lol/docs"
+      ],
+      "sha256": "73fd1685bc57e286d653a59f8188ca41e9bbdea36ad00ffafa5cbd5d76886122",
+      "bytes": 87352,
+      "retrievedAt": "2026-10-23",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Site icon declared in arrows.lol's own page head and named as the logo in its documentation."
+      }
+    },
+    {
+      "protocol": "hook-family",
+      "file": "hook-family.png",
+      "assetUrl": "https://www.hook.family/icon.png",
+      "identitySources": [
+        "https://www.hook.family/",
+        "https://www.hook.family/docs"
+      ],
+      "sha256": "e20fa4300485d8eb99b5fa5d4402b7df77ef1a57b27f0784071ed45521fec976",
+      "bytes": 60306,
+      "retrievedAt": "2026-10-23",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Site icon (512x512) declared in hook.family's own page head."
+      }
+    },
+    {
+      "protocol": "v4-fun",
+      "file": "v4-fun.png",
+      "assetUrl": "https://v4.fun/icon.png",
+      "identitySources": [
+        "https://v4.fun/",
+        "https://v4.fun/docs"
+      ],
+      "sha256": "5cd7636bc1bf846ec2075ecbcf84e0f8cb84f5a22a1e59332ee8727a0bc09907",
+      "bytes": 18077,
+      "retrievedAt": "2026-10-23",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Site icon linked from the official v4.fun home page."
+      }
+    },
+    {
+      "protocol": "lolpad-fun",
+      "file": "lolpad-fun.png",
+      "assetUrl": "https://lolpad.fun/favicon.png",
+      "identitySources": [
+        "https://lolpad.fun/",
+        "https://lolpad.fun/docs/"
+      ],
+      "sha256": "340fefe143bbe614689703e2a31ee4d76cd0b78b955b2a8164d963a8de0d7f78",
+      "bytes": 14015,
+      "retrievedAt": "2026-10-23",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon declared in lolpad.fun's own app head."
+      }
+    },
+    {
+      "protocol": "bags",
+      "file": "bags.png",
+      "assetUrl": "https://bags.fm/icon.png",
+      "identitySources": [
+        "https://bags.fm/",
+        "https://docs.bags.fm/robinhood/overview"
+      ],
+      "sha256": "839ea3ccab27474baf00b744d2c108b945547b7e4291cd60f8a3198ec944c804",
+      "bytes": 53397,
+      "retrievedAt": "2026-10-23",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon (1024x1024) declared as rel=icon in bags.fm own page head."
+      }
+    },
+    {
+      "protocol": "klik",
+      "file": "klik.png",
+      "assetUrl": "https://klik.finance/icon.png",
+      "identitySources": [
+        "https://klik.finance/",
+        "https://klik.finance/docs"
+      ],
+      "sha256": "aa7beadb8866228f8df438c212c69cc39b260d3ff2a698aca9822a902669ba9d",
+      "bytes": 24465,
+      "retrievedAt": "2026-10-23",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon declared as rel=icon in klik.finance own page head."
+      }
+    },
+    {
+      "protocol": "solonpad",
+      "file": "solonpad.svg",
+      "assetUrl": "https://solonpad.fun/icon.svg",
+      "identitySources": [
+        "https://solonpad.fun/",
+        "https://solonpad.fun/docs"
+      ],
+      "sha256": "fe4623a8d24ab09d717f57a0208a69848552d153240c10e03c587214a4cc4337",
+      "bytes": 334,
+      "retrievedAt": "2026-10-23",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon declared as rel=icon in solonpad.fun own page head."
+      }
+    },
+    {
+      "protocol": "pangea",
+      "file": "pangea.png",
+      "assetUrl": "https://www.pangea.trade/icon.png",
+      "identitySources": [
+        "https://www.pangea.trade/",
+        "https://www.pangea.trade/app/docs"
+      ],
+      "sha256": "3135638415a83904cc2e0049a88611c4b1cab860ab7595c48f591a0492aa63e4",
+      "bytes": 21192,
+      "retrievedAt": "2026-10-23",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon (512x512) declared as rel=icon in pangea.trade own page head."
+      }
+    },
+    {
+      "protocol": "arcfun",
+      "file": "arcfun.png",
+      "assetUrl": "https://arcfun.app/arcfun-logo-512.png",
+      "identitySources": [
+        "https://arcfun.app/"
+      ],
+      "sha256": "250b65f1f514558961b87fcf341929db10a47d13d1b2ee814d3fabdce35a121f",
+      "bytes": 376728,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Logo image served by arcfun.app and named as its Open Graph image; the site links its own X account."
+      }
+    },
+    {
+      "protocol": "basestonk",
+      "file": "basestonk.png",
+      "assetUrl": "https://basestonk.io/app-icon.png",
+      "identitySources": [
+        "https://basestonk.io/"
+      ],
+      "sha256": "fd650bf48e7e2c3c2233daf0500f4d31c25d69d845ab4efe9c627124157a3b9b",
+      "bytes": 35584,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "256x256 app icon declared in basestonk.io's own HTML."
+      }
+    },
+    {
+      "protocol": "bow-fun",
+      "file": "bow-fun.png",
+      "assetUrl": "https://bow.fun/logo.png",
+      "identitySources": [
+        "https://bow.fun/"
+      ],
+      "sha256": "eb2a34c0d70f3cd1c5ac1700b0ed8b93fc7e5f8cfeb861c7dc7eceb73c3dc1a7",
+      "bytes": 151993,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon declared in bow.fun's own page head."
+      }
+    },
+    {
+      "protocol": "gwei-fun",
+      "file": "gwei-fun.svg",
+      "assetUrl": "https://gwei.fun/favicon.svg",
+      "identitySources": [
+        "https://gwei.fun/"
+      ],
+      "sha256": "33b2d52d6da229ebd7e2522301a4ef07eff56334b8597d95a6e3989b7ae5bd05",
+      "bytes": 391,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon declared in gwei.fun's own HTML."
+      }
+    },
+    {
+      "protocol": "long-supply",
+      "file": "long-supply.png",
+      "assetUrl": "https://long.supply/icon.png",
+      "identitySources": [
+        "https://long.supply/"
+      ],
+      "sha256": "48bde182631aa6e349b5a2f274c59bbf029fb7b2447a2f1110e3e5871988c6d2",
+      "bytes": 12081,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Site icon declared in long.supply's page head."
+      }
+    },
+    {
+      "protocol": "minara",
+      "file": "minara.svg",
+      "assetUrl": "https://minara.fun/assets/minara-glasses-BiJ4Hceq.svg",
+      "identitySources": [
+        "https://minara.fun/"
+      ],
+      "sha256": "b558f53d91894e8983c5fa4fc684f030746130a2f663f1c14ab94b72f6bedc16",
+      "bytes": 1012,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Favicon declared by minara.fun; the site links its own X account."
+      }
+    },
+    {
+      "protocol": "pmav-fun",
+      "file": "pmav-fun.svg",
+      "assetUrl": "https://pmav.fun/favicon.svg",
+      "identitySources": [
+        "https://pmav.fun/"
+      ],
+      "sha256": "5bcea2234a1585d0b98c4a77e5a4dfd5eda1f56e5b86693a5498bb6160f84573",
+      "bytes": 508,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon declared in pmav.fun's own HTML."
+      }
+    },
+    {
+      "protocol": "robinvista",
+      "file": "robinvista.png",
+      "assetUrl": "https://robinvista.app/robinvista.png",
+      "identitySources": [
+        "https://robinvista.app/"
+      ],
+      "sha256": "799b86dc8063ad1d413afcbbb656bbf0115646eee7f6d9d2fa75df6d42693d70",
+      "bytes": 379866,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon link declared by robinvista.app's own page."
+      }
+    },
+    {
+      "protocol": "ubi-fun",
+      "file": "ubi-fun.svg",
+      "assetUrl": "https://ubi.fun/favicon.svg",
+      "identitySources": [
+        "https://ubi.fun/"
+      ],
+      "sha256": "33b7540a2deda8c694c845ac2c9d5262f74dadd6ae489e94cc0535e178dab05e",
+      "bytes": 204637,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon declared in ubi.fun's head; the site's JSON-LD links its own X account."
+      }
+    },
+    {
+      "protocol": "uniderp",
+      "file": "uniderp.svg",
+      "assetUrl": "https://uniderp.fun/logo-mark.svg",
+      "identitySources": [
+        "https://uniderp.fun/"
+      ],
+      "sha256": "be351f22ebdf25caf0fd1d7028708252ad02473acf0c9298fe9f71f8a24455cb",
+      "bytes": 22598,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Logo mark referenced by uniderp.fun's own head."
+      }
+    },
+    {
+      "protocol": "unihood",
+      "file": "unihood.png",
+      "assetUrl": "https://unihood.fun/unihood-logo.png",
+      "identitySources": [
+        "https://unihood.fun/"
+      ],
+      "sha256": "7088a2c55855475b9d5eec344037e7d7440897526c840e7bb1ba924c37e32280",
+      "bytes": 178532,
+      "retrievedAt": "2026-10-24",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Logo preloaded by unihood.fun's own home page."
+      }
+    },
+    {
+      "protocol": "bonker",
+      "file": "bonker.svg",
+      "assetUrl": "https://bonker.wtf/logo.svg",
+      "identitySources": [
+        "https://bonker.wtf/"
+      ],
+      "sha256": "5dbc8f152c51d64c62de43fd058c62eacc9b6372bb5dd51b3b562dfd63754770",
+      "bytes": 4624,
+      "retrievedAt": "2026-10-25",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Logo image (/logo.svg) used in the header and footer of bonker.wtf's own page."
+      }
+    },
+    {
+      "protocol": "robinseed",
+      "file": "robinseed.png",
+      "assetUrl": "https://robinseed.xyz/images/robinseed-logo-round.png",
+      "identitySources": [
+        "https://robinseed.xyz/"
+      ],
+      "sha256": "5945c526cf45d639b006d97c0925223d4a2b23ddf131aefd2fb4b866f37c401d",
+      "bytes": 294292,
+      "retrievedAt": "2026-10-25",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Round logo image served by robinseed.xyz and shown on its own landing page."
+      }
+    },
+    {
+      "protocol": "faze-fun",
+      "file": "faze-fun.png",
+      "assetUrl": "https://faze.fun/apple-touch-icon.png",
+      "identitySources": [
+        "https://faze.fun/"
+      ],
+      "sha256": "8de9253e418649729cb1ef8220f952fe55bef58f48dd89dd9953fc1b7f032bf1",
+      "bytes": 5880,
+      "retrievedAt": "2026-10-25",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "180×180 apple-touch-icon declared in faze.fun's own page head; the same site's docs list the LaunchpadHook the registry attributes to it."
+      }
+    },
+    {
+      "protocol": "argus",
+      "file": "argus.svg",
+      "assetUrl": "https://argus.world/icon.svg?icon.3li306nn6ffue.svg",
+      "identitySources": [
+        "https://argus.world/"
+      ],
+      "sha256": "96b2f9886c26ee7753efb481ff0630a5d887fc1455dc33d617a1c91b7db279fd",
+      "bytes": 8968,
+      "retrievedAt": "2026-10-25",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Icon declared in argus.world's own page head; the same site's docs list the portals the registry attributes to it."
+      }
+    },
+    {
+      "protocol": "duckpad",
+      "file": "duckpad.png",
+      "assetUrl": "https://www.duckfun.family/duckfun-logo.png",
+      "identitySources": [
+        "https://www.duckfun.family/"
+      ],
+      "sha256": "9af0f26c779344ed775619ac0db7d644e282b96f956f6d889025ef86e5e33ef9",
+      "bytes": 837460,
+      "retrievedAt": "2026-10-25",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Logo path (/duckfun-logo.png) referenced by the application bundle of duckfun.family, the site the registry lists for Duckpad; its page title reads duckpad.fun."
+      }
+    },
+    {
+      "protocol": "noice",
+      "file": "noice.svg",
+      "assetUrl": "https://noice.so/noice-folio/noice-graphic-logo.svg",
+      "identitySources": [
+        "https://noice.so/"
+      ],
+      "sha256": "3a907e23fda944fd9e826738d91575d817760ff6dd44e158375d9f8e0ab72a98",
+      "bytes": 3675,
+      "retrievedAt": "2026-10-25",
+      "plate": "light",
+      "plateReason": "The original file is dark on a transparent background (or colours itself by the visitor's colour scheme), so it is shown unaltered on a light plate that also fixes the colour scheme to light; the file is never recoloured.",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Logo image (alt \"Noice logo\") shown in noice.so's own page; black strokes on a transparent background."
+      }
+    },
+    {
+      "protocol": "hooke",
+      "file": "hooke.svg",
+      "assetUrl": "https://hooke.fun/",
+      "identitySources": [
+        "https://hooke.fun/"
+      ],
+      "sha256": "40bacec68fc258ed7eed5b1f2a63bc976b4896c30671ba1286845d304f1fce9d",
+      "bytes": 4391,
+      "retrievedAt": "2026-10-25",
+      "plate": "light",
+      "plateReason": "The original file is dark on a transparent background (or colours itself by the visitor's colour scheme), so it is shown unaltered on a light plate that also fixes the colour scheme to light; the file is never recoloured.",
+      "mappingEvidence": {
+        "safeRule": "Exact launchpad platform listing from the reviewed registry (shared/launchpad-registry.ts): id, name and description must match. The artwork identifies the platform listing only; it does not extend to hook families that merely share a name or to other platforms' hooks.",
+        "identity": "Favicon embedded as a base64 data: URI in the <link rel=\"icon\"> of hooke.fun's own page head (its aria-label is \"Hooke\"); the file is that URI's decoded bytes, unaltered. Its colour is currentColor, set by a style rule inside the file that switches with the visitor's colour scheme."
+      }
+    }
+  ],
+  "unresolved": [
+    {
+      "reason": "Exact-name and project searches still yield no trustworthy primary brand asset tied to these hook deployments. Prior unrelated Saturn brands excluded.",
+      "family": "SaturnOmnichainV4Hook"
+    },
+    {
+      "reason": "Exact-name results still primarily unrelated AI infrastructure business. Verified hook source alone does not establish original logo ownership.",
+      "family": "TokenFab"
+    },
+    {
+      "reason": "Same unresolved identity as TokenFab.",
+      "family": "TokenFabV2"
+    },
+    {
+      "reason": "No primary brand asset established for exact prediction-market hook.",
+      "family": "OrketHook"
+    },
+    {
+      "family": "LauncherHook",
+      "reason": "Generic contract family with no public primary ownership evidence; neutral fallback."
+    },
+    {
+      "family": "MultiPoolsHook",
+      "reason": "No official ownership/brand identity established; neutral fallback."
+    },
+    {
+      "family": "PolHook",
+      "reason": "Generic routing hook; using Polygon or Curve logos would imply ownership rather than the supported integration; neutral fallback."
+    },
+    {
+      "reason": "Found official nasdank.fun/docs describing matching v4 product, but direct domain fetch fails DNS and web fetch unavailable. No original asset can currently be downloaded and verified.",
+      "family": "NasdankFeeHook"
+    },
+    {
+      "family": "BellswapHook",
+      "reason": "No primary protocol identity located. Search results include unrelated school exchange and Bell AI; no logo used."
+    },
+    {
+      "family": "HookrHook",
+      "reason": "Official current previous-releases page did not contain directory legacy addresses; not approved on name alone."
+    },
+    {
+      "family": "PonsV2MemeHook",
+      "reason": "Official current docs match V2MemeHook address, not older addresses in this separate row; old indexed repo is now unavailable."
+    },
+    {
+      "family": "CashCatGraduationHook",
+      "reason": "No primary source matching exact graduation hook address found; no token mark or inferred launchpad logo used."
+    },
+    {
+      "family": "mint.fast (launchpad listing)",
+      "reason": "The site answered HTTP 522 (origin unreachable) when reviewed, so no first-party logo could be fetched."
+    },
+    {
+      "family": "Long.xyz (launchpad listing)",
+      "reason": "app.long.xyz answered HTTP 403 to an ordinary request; no logo was fetched and bot protection was not bypassed."
+    },
+    {
+      "family": "Livo (launchpad listing)",
+      "reason": "The registry's only first-party page is its GitHub repository and livo.fun answered HTTP 423 (locked); a repository avatar was not treated as the platform's own site."
+    },
+    {
+      "family": "aka.fun (launchpad listing)",
+      "reason": "The first-party logo.svg is a wide wordmark that becomes an illegible sliver on the square artwork plate; the site's only other icon is a favicon.ico."
+    },
+    {
+      "family": "ZNS Launchpad (launchpad listing)",
+      "reason": "The only first-party icon is a 48×48 favicon.ico; shipped artwork is limited to PNG and SVG by policy."
+    }
+  ],
+  "lastReviewedAt": "2026-10-25"
+}

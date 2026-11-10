@@ -1,0 +1,141 @@
+# OPTIONAL. Off by default. An alternative to the GitHub Pages deploy for people
+# whose site lives on Namecheap shared hosting (or any host that accepts FTPS).
+# See docs/HOSTING-NAMECHEAP.md.
+#
+# It does the whole job itself: collect, build, save state, upload the site by
+# FTPS. Use it INSTEAD of the Snapshot workflow, not next to it, or every
+# provider is asked twice. Turn the Snapshot workflow off in the Actions tab
+# (Snapshot, the three dots, Disable workflow) when you switch to this one.
+#
+# To switch it on:
+#   1. Repository Settings, Secrets and variables, Actions, add the secrets
+#      FTP_SERVER, FTP_USERNAME and FTP_PASSWORD (from cPanel, FTP Accounts).
+#      Use the server host name cPanel shows for the account: the certificate
+#      belongs to that name, not to your own domain.
+#   2. Add the repository variable ENABLE_FTP_DEPLOY with the value true, and
+#      the variable FTP_SERVER_DIR: the folder on the server relative to the
+#      FTP account's own directory, ending with /. If you made the dedicated
+#      account the guide describes (its directory is already the folder you
+#      publish to), set it to ./ (dot, slash). The default, public_html/, only
+#      fits the cPanel main account, which logs in at the home folder; if you
+#      leave FTP_SERVER_DIR unset on the dedicated account, the files land
+#      one level too deep (for example public_html/radar/public_html/).
+#      Optional: SITE_URL (the public address of the site, for share cards).
+#   3. Run the workflow by hand once. Keep "dry run" ticked the first time: it
+#      lists what would be uploaded and uploads nothing. Only the final upload
+#      step is dry: the run still collects the snapshot (so it asks the data
+#      services) and saves state/ to the repository in a bot commit when it
+#      changed. The server dir it lists must be the folder where index.html
+#      should appear.
+#   4. For automatic refreshes switch on the two schedule lines below, right
+#      under dry_run: open this file on github.com and use the pencil icon (or
+#      edit it in any text editor and commit with GitHub Desktop). Delete just
+#      the # at the start of each of those two lines and commit. They then read
+#      "  schedule:" and "    - cron: ...", lined up under workflow_dispatch:.
+# While ENABLE_FTP_DEPLOY is not true the job is skipped and nothing is sent.
+#
+# The upload uses SamKirkland/FTP-Deploy-Action, a widely used maintained
+# action, pinned to the exact commit of release v4.3.5 (a tag could be moved; a
+# commit cannot). It keeps a small record on the server of the files it
+# uploaded, so it only sends what changed and only removes files it uploaded
+# itself; other files in the folder are left alone.
+#
+# One exception: the build writes its own .htaccess (it switches compression
+# on) and the upload sends it with the site, so an .htaccess that already sits
+# in the target folder is replaced by the first upload. Publish into a folder of
+# its own (FTP_SERVER_DIR), or put the rules you need in public/.htaccess first,
+# which the build then keeps instead of its own. See docs/HOSTING-NAMECHEAP.md.
+#
+# The connection is encrypted (FTPS) and the server's certificate is checked
+# (security: strict; the action's own default, loose, would send the password
+# to a server it has not identified). If the check fails because the host name
+# does not match the certificate, fix the FTP_SERVER secret first (see
+# docs/HOSTING-NAMECHEAP.md); changing strict to loose is a last resort.
+
+name: Deploy to Namecheap by FTPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (list what would be uploaded, upload nothing)
+        type: boolean
+        default: true
+  #schedule:
+  #  - cron: "47 */3 * * *"
+
+# Shares the Snapshot workflow's group so the two never run at the same time.
+concurrency:
+  group: hook-radar-snapshot
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Collect, build and upload
+    if: ${{ vars.ENABLE_FTP_DEPLOY == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Exits non-zero when it will not publish. Nothing below runs then.
+      - name: Collect the snapshot
+        run: node collector/run.mjs
+
+      # No VITE_BASE: the default relative base works in any folder of the host.
+      - name: Build the site
+        run: npm run build:static -- --require-data
+        env:
+          VITE_SITE_URL: ${{ vars.SITE_URL }}
+
+      # The last gate, run on the files that will be uploaded.
+      - name: Check that the data is a live snapshot
+        run: node scripts/check-edition-data.mjs dist/data
+
+      - name: Save state
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state
+          if git diff --cached --quiet; then
+            echo "state/ is unchanged"
+            exit 0
+          fi
+          git commit -m "Update snapshot state [skip ci]"
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          done
+          echo "::error::Could not push state/ after three attempts"
+          exit 1
+
+      - name: Upload by FTPS
+        uses: SamKirkland/FTP-Deploy-Action@8e83cea8672e3fbcbb9fdafff34debf6ae4c5f65 # v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          security: strict
+          local-dir: ./dist/
+          server-dir: ${{ vars.FTP_SERVER_DIR || 'public_html/' }}
+          dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}

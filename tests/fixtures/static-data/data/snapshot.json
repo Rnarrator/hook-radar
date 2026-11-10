@@ -1,0 +1,1053 @@
+{
+ "schemaVersion": 1,
+ "generatedAt": "2026-10-28T14:05:00.000Z",
+ "status": "partial",
+ "chains": [
+  {
+   "id": 8453,
+   "slug": "base",
+   "name": "Base",
+   "explorer": "https://basescan.org"
+  },
+  {
+   "id": 1,
+   "slug": "ethereum",
+   "name": "Ethereum",
+   "explorer": "https://etherscan.io"
+  },
+  {
+   "id": 4663,
+   "slug": "robinhood",
+   "name": "Robinhood",
+   "explorer": "https://robinhoodchain.blockscout.com"
+  }
+ ],
+ "projects": [
+  {
+   "id": "alpha",
+   "name": "Alpha Markets",
+   "description": "Creator launch markets",
+   "category": "Launches",
+   "website": "https://example.com",
+   "docs": null,
+   "sourceUrl": "https://github.com/Uniswap/hooklist",
+   "deployments": [
+    {
+     "id": "base:0x11111111111111111111111111111111111110c0",
+     "address": "0x11111111111111111111111111111111111110c0",
+     "chain": "base",
+     "chainId": 8453,
+     "name": "AlphaHook",
+     "description": "Test hook deployment",
+     "verifiedSource": true,
+     "flags": {
+      "beforeSwap": true,
+      "afterSwap": true
+     },
+     "properties": {
+      "dynamicFee": true,
+      "upgradeable": false,
+      "requiresCustomSwapData": false,
+      "vanillaSwap": false,
+      "swapAccess": "none"
+     },
+     "auditUrl": null,
+     "sourceUrl": "https://github.com/Uniswap/hooklist",
+     "explorerUrl": "https://basescan.org/address/0x11111111111111111111111111111111111110c0"
+    },
+    {
+     "id": "ethereum:0x22222222222222222222222222222222222210c0",
+     "address": "0x22222222222222222222222222222222222210c0",
+     "chain": "ethereum",
+     "chainId": 1,
+     "name": "AlphaEthereumHook",
+     "description": "Test hook deployment",
+     "verifiedSource": true,
+     "flags": {
+      "beforeSwap": true,
+      "afterSwap": true
+     },
+     "properties": {
+      "dynamicFee": true,
+      "upgradeable": false,
+      "requiresCustomSwapData": false,
+      "vanillaSwap": false,
+      "swapAccess": "none"
+     },
+     "auditUrl": null,
+     "sourceUrl": "https://github.com/Uniswap/hooklist",
+     "explorerUrl": "https://basescan.org/address/0x22222222222222222222222222222222222210c0"
+    }
+   ],
+   "chains": [
+    "base",
+    "ethereum"
+   ],
+   "metrics": {
+    "poolCount": 4,
+    "liquidityUsd": 35000,
+    "volumeUsd": {
+     "h1": 150,
+     "h6": 900,
+     "h24": 3300
+    },
+    "coverage": "partial",
+    "note": "Test measured pools",
+    "freshness": {
+     "maxAgeMs": 300000,
+     "expiresAt": "2026-10-28T14:07:30.000Z",
+     "liquidity": {
+      "observedPools": 4,
+      "currentPools": 3,
+      "stalePools": 1,
+      "unknownPools": 0,
+      "oldestAt": "2026-10-28T14:02:30.000Z",
+      "newestAt": "2026-10-28T14:04:10.000Z",
+      "latestObservedAt": "2026-10-28T14:04:10.000Z",
+      "expiresAt": "2026-10-28T14:07:30.000Z"
+     },
+     "volume": {
+      "h1": {
+       "observedPools": 4,
+       "currentPools": 3,
+       "stalePools": 1,
+       "unknownPools": 0,
+       "oldestAt": "2026-10-28T14:02:30.000Z",
+       "newestAt": "2026-10-28T14:04:10.000Z",
+       "latestObservedAt": "2026-10-28T14:04:10.000Z",
+       "expiresAt": "2026-10-28T14:07:30.000Z"
+      },
+      "h6": {
+       "observedPools": 4,
+       "currentPools": 3,
+       "stalePools": 1,
+       "unknownPools": 0,
+       "oldestAt": "2026-10-28T14:02:30.000Z",
+       "newestAt": "2026-10-28T14:04:10.000Z",
+       "latestObservedAt": "2026-10-28T14:04:10.000Z",
+       "expiresAt": "2026-10-28T14:07:30.000Z"
+      },
+      "h24": {
+       "observedPools": 4,
+       "currentPools": 3,
+       "stalePools": 1,
+       "unknownPools": 0,
+       "oldestAt": "2026-10-28T14:02:30.000Z",
+       "newestAt": "2026-10-28T14:04:10.000Z",
+       "latestObservedAt": "2026-10-28T14:04:10.000Z",
+       "expiresAt": "2026-10-28T14:07:30.000Z"
+      }
+     }
+    }
+   },
+   "history": []
+  },
+  {
+   "id": "beta",
+   "name": "Beta Liquidity",
+   "description": "Dynamic liquidity management",
+   "category": "Liquidity",
+   "website": null,
+   "docs": null,
+   "sourceUrl": "https://github.com/Uniswap/hooklist",
+   "deployments": [
+    {
+     "id": "base:0x33333333333333333333333333333333333310c0",
+     "address": "0x33333333333333333333333333333333333310c0",
+     "chain": "base",
+     "chainId": 8453,
+     "name": "BetaHook",
+     "description": "Test hook deployment",
+     "verifiedSource": false,
+     "flags": {
+      "beforeSwap": true,
+      "afterSwap": true
+     },
+     "properties": {
+      "dynamicFee": false,
+      "upgradeable": true,
+      "requiresCustomSwapData": true,
+      "vanillaSwap": false,
+      "swapAccess": "allowlist"
+     },
+     "auditUrl": null,
+     "sourceUrl": "https://github.com/Uniswap/hooklist",
+     "explorerUrl": "https://basescan.org/address/0x33333333333333333333333333333333333310c0"
+    }
+   ],
+   "chains": [
+    "base"
+   ],
+   "metrics": {
+    "poolCount": 2,
+    "liquidityUsd": 7000,
+    "volumeUsd": {
+     "h1": null,
+     "h6": null,
+     "h24": null
+    },
+    "coverage": "partial",
+    "note": "No measured sample",
+    "freshness": {
+     "maxAgeMs": 300000,
+     "expiresAt": "2026-10-28T14:06:40.000Z",
+     "liquidity": {
+      "observedPools": 1,
+      "currentPools": 1,
+      "stalePools": 0,
+      "unknownPools": 0,
+      "oldestAt": "2026-10-28T14:01:40.000Z",
+      "newestAt": "2026-10-28T14:01:40.000Z",
+      "latestObservedAt": "2026-10-28T14:01:40.000Z",
+      "expiresAt": "2026-10-28T14:06:40.000Z"
+     },
+     "volume": {
+      "h1": {
+       "observedPools": 0,
+       "currentPools": 0,
+       "stalePools": 0,
+       "unknownPools": 0,
+       "oldestAt": null,
+       "newestAt": null,
+       "latestObservedAt": null,
+       "expiresAt": null
+      },
+      "h6": {
+       "observedPools": 0,
+       "currentPools": 0,
+       "stalePools": 0,
+       "unknownPools": 0,
+       "oldestAt": null,
+       "newestAt": null,
+       "latestObservedAt": null,
+       "expiresAt": null
+      },
+      "h24": {
+       "observedPools": 0,
+       "currentPools": 0,
+       "stalePools": 0,
+       "unknownPools": 0,
+       "oldestAt": null,
+       "newestAt": null,
+       "latestObservedAt": null,
+       "expiresAt": null
+      }
+     }
+    }
+   },
+   "history": []
+  },
+  {
+   "id": "frontier",
+   "name": "Frontier",
+   "description": "Programmable creator markets",
+   "category": "Launches",
+   "website": "https://frontier.fun",
+   "docs": "https://docs.frontier.fun",
+   "sourceUrl": "https://docs.frontier.fun/developers/contracts-and-addresses/",
+   "deployments": [
+    {
+     "id": "robinhood:0x44444444444444444444444444444444444410c0",
+     "address": "0x44444444444444444444444444444444444410c0",
+     "chain": "robinhood",
+     "chainId": 1,
+     "name": "FactoryHook",
+     "description": "Test hook deployment",
+     "verifiedSource": true,
+     "flags": {
+      "beforeSwap": true,
+      "afterSwap": true
+     },
+     "properties": {
+      "dynamicFee": true,
+      "upgradeable": false,
+      "requiresCustomSwapData": false,
+      "vanillaSwap": false,
+      "swapAccess": "none"
+     },
+     "auditUrl": null,
+     "sourceUrl": "https://github.com/Uniswap/hooklist",
+     "explorerUrl": "https://basescan.org/address/0x44444444444444444444444444444444444410c0"
+    }
+   ],
+   "chains": [
+    "robinhood"
+   ],
+   "metrics": {
+    "poolCount": 1,
+    "liquidityUsd": null,
+    "volumeUsd": {
+     "h1": null,
+     "h6": null,
+     "h24": null
+    },
+    "coverage": "partial",
+    "note": "Only indexed pools",
+    "freshness": {
+     "maxAgeMs": 300000,
+     "expiresAt": null,
+     "liquidity": {
+      "observedPools": 1,
+      "currentPools": 0,
+      "stalePools": 1,
+      "unknownPools": 0,
+      "oldestAt": null,
+      "newestAt": null,
+      "latestObservedAt": "2026-10-28T13:57:30.000Z",
+      "expiresAt": null
+     },
+     "volume": {
+      "h1": {
+       "observedPools": 1,
+       "currentPools": 0,
+       "stalePools": 1,
+       "unknownPools": 0,
+       "oldestAt": null,
+       "newestAt": null,
+       "latestObservedAt": "2026-10-28T13:57:30.000Z",
+       "expiresAt": null
+      },
+      "h6": {
+       "observedPools": 1,
+       "currentPools": 0,
+       "stalePools": 1,
+       "unknownPools": 0,
+       "oldestAt": null,
+       "newestAt": null,
+       "latestObservedAt": "2026-10-28T13:57:30.000Z",
+       "expiresAt": null
+      },
+      "h24": {
+       "observedPools": 1,
+       "currentPools": 0,
+       "stalePools": 1,
+       "unknownPools": 0,
+       "oldestAt": null,
+       "newestAt": null,
+       "latestObservedAt": "2026-10-28T13:57:30.000Z",
+       "expiresAt": null
+      }
+     }
+    }
+   },
+   "history": []
+  },
+  {
+   "id": "gamma",
+   "name": "Gamma Fee Guard",
+   "description": "Adjusts swap fees to volatility",
+   "category": "Fees",
+   "website": null,
+   "docs": null,
+   "sourceUrl": "https://github.com/Uniswap/hooklist",
+   "deployments": [
+    {
+     "id": "base:0x55555555555555555555555555555555555510c0",
+     "address": "0x55555555555555555555555555555555555510c0",
+     "chain": "base",
+     "chainId": 8453,
+     "name": "GammaBase",
+     "description": "Test hook deployment",
+     "verifiedSource": true,
+     "flags": {
+      "beforeSwap": true,
+      "afterSwap": true
+     },
+     "properties": {
+      "dynamicFee": true,
+      "upgradeable": false,
+      "requiresCustomSwapData": false,
+      "vanillaSwap": false,
+      "swapAccess": "none"
+     },
+     "auditUrl": null,
+     "sourceUrl": "https://github.com/Uniswap/hooklist",
+     "explorerUrl": "https://example.invalid/address/0x55555555555555555555555555555555555510c0"
+    },
+    {
+     "id": "ethereum:0x66666666666666666666666666666666666610c0",
+     "address": "0x66666666666666666666666666666666666610c0",
+     "chain": "ethereum",
+     "chainId": 1,
+     "name": "GammaEthereum",
+     "description": "Test hook deployment",
+     "verifiedSource": true,
+     "flags": {
+      "beforeSwap": true,
+      "afterSwap": true
+     },
+     "properties": {
+      "dynamicFee": true,
+      "upgradeable": false,
+      "requiresCustomSwapData": false,
+      "vanillaSwap": false,
+      "swapAccess": "none"
+     },
+     "auditUrl": null,
+     "sourceUrl": "https://github.com/Uniswap/hooklist",
+     "explorerUrl": "https://example.invalid/address/0x66666666666666666666666666666666666610c0"
+    }
+   ],
+   "chains": [
+    "base",
+    "ethereum"
+   ],
+   "metrics": {
+    "poolCount": 3,
+    "liquidityUsd": 5200,
+    "volumeUsd": {
+     "h1": 18,
+     "h6": 100,
+     "h24": 400
+    },
+    "coverage": "partial",
+    "note": "Recomputed from the measured pools at the snapshot time.",
+    "freshness": {
+     "maxAgeMs": 300000,
+     "expiresAt": "2026-10-28T14:05:05.000Z",
+     "liquidity": {
+      "observedPools": 3,
+      "currentPools": 2,
+      "stalePools": 1,
+      "unknownPools": 0,
+      "oldestAt": "2026-10-28T14:00:05.000Z",
+      "newestAt": "2026-10-28T14:04:40.000Z",
+      "latestObservedAt": "2026-10-28T14:04:40.000Z",
+      "expiresAt": "2026-10-28T14:05:05.000Z"
+     },
+     "volume": {
+      "h1": {
+       "observedPools": 3,
+       "currentPools": 2,
+       "stalePools": 1,
+       "unknownPools": 0,
+       "oldestAt": "2026-10-28T14:00:05.000Z",
+       "newestAt": "2026-10-28T14:04:40.000Z",
+       "latestObservedAt": "2026-10-28T14:04:40.000Z",
+       "expiresAt": "2026-10-28T14:05:05.000Z"
+      },
+      "h6": {
+       "observedPools": 3,
+       "currentPools": 2,
+       "stalePools": 1,
+       "unknownPools": 0,
+       "oldestAt": "2026-10-28T14:00:05.000Z",
+       "newestAt": "2026-10-28T14:04:40.000Z",
+       "latestObservedAt": "2026-10-28T14:04:40.000Z",
+       "expiresAt": "2026-10-28T14:05:05.000Z"
+      },
+      "h24": {
+       "observedPools": 3,
+       "currentPools": 2,
+       "stalePools": 1,
+       "unknownPools": 0,
+       "oldestAt": "2026-10-28T14:00:05.000Z",
+       "newestAt": "2026-10-28T14:04:40.000Z",
+       "latestObservedAt": "2026-10-28T14:04:40.000Z",
+       "expiresAt": "2026-10-28T14:05:05.000Z"
+      }
+     }
+    }
+   },
+   "history": []
+  },
+  {
+   "id": "delta",
+   "name": "Delta Oracle",
+   "description": "Publishes a pool price oracle",
+   "category": "Oracles",
+   "website": null,
+   "docs": null,
+   "sourceUrl": "https://github.com/Uniswap/hooklist",
+   "deployments": [
+    {
+     "id": "ethereum:0x77777777777777777777777777777777777710c0",
+     "address": "0x77777777777777777777777777777777777710c0",
+     "chain": "ethereum",
+     "chainId": 1,
+     "name": "DeltaOracle",
+     "description": "Test hook deployment",
+     "verifiedSource": true,
+     "flags": {
+      "beforeSwap": true,
+      "afterSwap": true
+     },
+     "properties": {
+      "dynamicFee": true,
+      "upgradeable": false,
+      "requiresCustomSwapData": false,
+      "vanillaSwap": false,
+      "swapAccess": "none"
+     },
+     "auditUrl": null,
+     "sourceUrl": "https://github.com/Uniswap/hooklist",
+     "explorerUrl": "https://example.invalid/address/0x77777777777777777777777777777777777710c0"
+    }
+   ],
+   "chains": [
+    "ethereum"
+   ],
+   "metrics": {
+    "poolCount": 1,
+    "liquidityUsd": 400,
+    "volumeUsd": {
+     "h1": 1,
+     "h6": 2,
+     "h24": 3
+    },
+    "coverage": "partial",
+    "note": "Recomputed from the measured pools at the snapshot time.",
+    "freshness": {
+     "maxAgeMs": 300000,
+     "expiresAt": "2026-10-28T14:09:55.000Z",
+     "liquidity": {
+      "observedPools": 1,
+      "currentPools": 1,
+      "stalePools": 0,
+      "unknownPools": 0,
+      "oldestAt": "2026-10-28T14:04:55.000Z",
+      "newestAt": "2026-10-28T14:04:55.000Z",
+      "latestObservedAt": "2026-10-28T14:04:55.000Z",
+      "expiresAt": "2026-10-28T14:09:55.000Z"
+     },
+     "volume": {
+      "h1": {
+       "observedPools": 1,
+       "currentPools": 1,
+       "stalePools": 0,
+       "unknownPools": 0,
+       "oldestAt": "2026-10-28T14:04:55.000Z",
+       "newestAt": "2026-10-28T14:04:55.000Z",
+       "latestObservedAt": "2026-10-28T14:04:55.000Z",
+       "expiresAt": "2026-10-28T14:09:55.000Z"
+      },
+      "h6": {
+       "observedPools": 1,
+       "currentPools": 1,
+       "stalePools": 0,
+       "unknownPools": 0,
+       "oldestAt": "2026-10-28T14:04:55.000Z",
+       "newestAt": "2026-10-28T14:04:55.000Z",
+       "latestObservedAt": "2026-10-28T14:04:55.000Z",
+       "expiresAt": "2026-10-28T14:09:55.000Z"
+      },
+      "h24": {
+       "observedPools": 1,
+       "currentPools": 1,
+       "stalePools": 0,
+       "unknownPools": 0,
+       "oldestAt": "2026-10-28T14:04:55.000Z",
+       "newestAt": "2026-10-28T14:04:55.000Z",
+       "latestObservedAt": "2026-10-28T14:04:55.000Z",
+       "expiresAt": "2026-10-28T14:09:55.000Z"
+      }
+     }
+    }
+   },
+   "history": []
+  }
+ ],
+ "pools": [
+  {
+   "id": "base:alpha1",
+   "chain": "base",
+   "name": "ETH / ALPHA",
+   "address": "0x0000000000000000000000000000000000000000000000000000000000000001",
+   "hookAddress": "0x11111111111111111111111111111111111110c0",
+   "projectId": "alpha",
+   "url": "https://www.geckoterminal.com/base/pools/alpha1",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "ETH",
+    "ALPHA"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 10000,
+   "volumeUsd": {
+    "h1": 100,
+    "h6": 600,
+    "h24": 2400
+   },
+   "metricUpdatedAt": "2026-10-28T14:04:10.000Z"
+  },
+  {
+   "id": "base:alpha2",
+   "chain": "base",
+   "name": "USDC / ALPHA",
+   "address": "0x0000000000000000000000000000000000000000000000000000000000000002",
+   "hookAddress": "0x11111111111111111111111111111111111110c0",
+   "projectId": "alpha",
+   "url": "https://www.geckoterminal.com/base/pools/alpha2",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "USDC",
+    "ALPHA"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 5000,
+   "volumeUsd": {
+    "h1": 50,
+    "h6": 300,
+    "h24": 900
+   },
+   "metricUpdatedAt": "2026-10-28T14:02:30.000Z"
+  },
+  {
+   "id": "ethereum:alpha3",
+   "chain": "ethereum",
+   "name": "WBTC / ALPHA",
+   "address": "0x0000000000000000000000000000000000000000000000000000000000000003",
+   "hookAddress": "0x22222222222222222222222222222222222210c0",
+   "projectId": "alpha",
+   "url": "https://www.geckoterminal.com/ethereum/pools/alpha3",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "WBTC",
+    "ALPHA"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 20000,
+   "volumeUsd": {
+    "h1": 0,
+    "h6": 0,
+    "h24": 0
+   },
+   "metricUpdatedAt": "2026-10-28T14:03:00.000Z"
+  },
+  {
+   "id": "base:alpha4",
+   "chain": "base",
+   "name": "DAI / ALPHA",
+   "address": "0x0000000000000000000000000000000000000000000000000000000000000004",
+   "hookAddress": "0x11111111111111111111111111111111111110c0",
+   "projectId": "alpha",
+   "url": "https://www.geckoterminal.com/base/pools/alpha4",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "DAI",
+    "ALPHA"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 900,
+   "volumeUsd": {
+    "h1": 900,
+    "h6": 900,
+    "h24": 900
+   },
+   "metricUpdatedAt": "2026-10-28T13:50:00.000Z"
+  },
+  {
+   "id": "base:beta1",
+   "chain": "base",
+   "name": "ETH / BETA",
+   "address": "0x0000000000000000000000000000000000000000000000000000000000000005",
+   "hookAddress": "0x33333333333333333333333333333333333310c0",
+   "projectId": "beta",
+   "url": "https://www.geckoterminal.com/base/pools/beta1",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "ETH",
+    "BETA"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 7000,
+   "volumeUsd": {
+    "h1": null,
+    "h6": null,
+    "h24": null
+   },
+   "metricUpdatedAt": "2026-10-28T14:01:40.000Z"
+  },
+  {
+   "id": "base:beta2",
+   "chain": "base",
+   "name": "USDC / BETA",
+   "address": "0x0000000000000000000000000000000000000000000000000000000000000006",
+   "hookAddress": "0x33333333333333333333333333333333333310c0",
+   "projectId": "beta",
+   "url": "https://www.geckoterminal.com/base/pools/beta2",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "USDC",
+    "BETA"
+   ],
+   "metricStatus": "unavailable",
+   "liquidityUsd": null,
+   "volumeUsd": {
+    "h1": null,
+    "h6": null,
+    "h24": null
+   },
+   "metricUpdatedAt": null
+  },
+  {
+   "id": "robinhood:front1",
+   "chain": "robinhood",
+   "name": "ETH / FRONT",
+   "address": "0x0000000000000000000000000000000000000000000000000000000000000007",
+   "hookAddress": "0x44444444444444444444444444444444444410c0",
+   "projectId": "frontier",
+   "url": "https://www.geckoterminal.com/robinhood/pools/front1",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "ETH",
+    "FRONT"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 1000,
+   "volumeUsd": {
+    "h1": 20,
+    "h6": 100,
+    "h24": 300
+   },
+   "metricUpdatedAt": "2026-10-28T13:57:30.000Z"
+  },
+  {
+   "id": "base:gamma1",
+   "chain": "base",
+   "name": "ETH / GAMMA",
+   "address": "0x0000000000000000000000000000000000000000000000000000000000000008",
+   "hookAddress": "0x55555555555555555555555555555555555510c0",
+   "projectId": "gamma",
+   "url": "https://www.geckoterminal.com/base/pools/gamma1",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "ETH",
+    "GAMMA"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 3000,
+   "volumeUsd": {
+    "h1": 10,
+    "h6": 60,
+    "h24": 240
+   },
+   "metricUpdatedAt": "2026-10-28T14:04:40.000Z"
+  },
+  {
+   "id": "ethereum:gamma2",
+   "chain": "ethereum",
+   "name": "ETH / GAMMA2",
+   "address": "0x0000000000000000000000000000000000000000000000000000000000000009",
+   "hookAddress": "0x66666666666666666666666666666666666610c0",
+   "projectId": "gamma",
+   "url": "https://www.geckoterminal.com/ethereum/pools/gamma2",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "ETH",
+    "GAMMA2"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 1500,
+   "volumeUsd": {
+    "h1": 5,
+    "h6": 30,
+    "h24": 120
+   },
+   "metricUpdatedAt": "2026-10-28T13:59:45.000Z"
+  },
+  {
+   "id": "ethereum:gamma3",
+   "chain": "ethereum",
+   "name": "USDC / GAMMA",
+   "address": "0x000000000000000000000000000000000000000000000000000000000000000a",
+   "hookAddress": "0x66666666666666666666666666666666666610c0",
+   "projectId": "gamma",
+   "url": "https://www.geckoterminal.com/ethereum/pools/gamma3",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "USDC",
+    "GAMMA"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 2200,
+   "volumeUsd": {
+    "h1": 8,
+    "h6": 40,
+    "h24": 160
+   },
+   "metricUpdatedAt": "2026-10-28T14:00:05.000Z"
+  },
+  {
+   "id": "ethereum:delta1",
+   "chain": "ethereum",
+   "name": "ETH / DELTA",
+   "address": "0x000000000000000000000000000000000000000000000000000000000000000b",
+   "hookAddress": "0x77777777777777777777777777777777777710c0",
+   "projectId": "delta",
+   "url": "https://www.geckoterminal.com/ethereum/pools/delta1",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "ETH",
+    "DELTA"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 400,
+   "volumeUsd": {
+    "h1": 1,
+    "h6": 2,
+    "h24": 3
+   },
+   "metricUpdatedAt": "2026-10-28T14:04:55.000Z"
+  },
+  {
+   "id": "base:loose1",
+   "chain": "base",
+   "name": "ETH / LOOSE",
+   "address": "0x000000000000000000000000000000000000000000000000000000000000000c",
+   "hookAddress": null,
+   "projectId": null,
+   "url": "https://www.geckoterminal.com/base/pools/loose1",
+   "source": "DEX Screener",
+   "createdAt": "2026-10-01T00:00:00.000Z",
+   "tokens": [
+    "ETH",
+    "LOOSE"
+   ],
+   "metricStatus": "live",
+   "liquidityUsd": 100,
+   "volumeUsd": {
+    "h1": 7,
+    "h6": 14,
+    "h24": 28
+   },
+   "metricUpdatedAt": "2026-10-28T14:04:00.000Z"
+  }
+ ],
+ "events": [
+  {
+   "id": "fixture-event",
+   "type": "new-deployment",
+   "title": "Gamma deployment listed",
+   "description": "A Base deployment was added to the registry.",
+   "timestamp": "2026-10-27T09:00:00.000Z",
+   "projectId": "gamma",
+   "chain": "base",
+   "url": "https://github.com/Uniswap/hooklist"
+  }
+ ],
+ "sources": [
+  {
+   "id": "registry",
+   "name": "Uniswap hooklist",
+   "url": "https://github.com/Uniswap/hooklist",
+   "status": "live",
+   "updatedAt": "2026-10-28T13:41:20.000Z",
+   "note": "Hook registry, 1 request, fetched at the start of the run."
+  },
+  {
+   "id": "dexscreener",
+   "name": "DEX Screener",
+   "url": "https://dexscreener.com/",
+   "status": "live",
+   "updatedAt": "2026-10-28T14:04:58.000Z",
+   "note": "Pool measurements in one burst: 4 requests, 12 pools returned, 0 rate limits."
+  },
+  {
+   "id": "geckoterminal",
+   "name": "GeckoTerminal",
+   "url": "https://www.geckoterminal.com/",
+   "status": "live",
+   "updatedAt": "2026-10-28T13:58:02.000Z",
+   "note": "Pool discovery pages: 3 requests, 12 seconds apart."
+  },
+  {
+   "id": "v4xyz",
+   "name": "v4.xyz indexer",
+   "url": "https://www.v4.xyz",
+   "status": "live",
+   "updatedAt": "2026-10-28T13:52:30.000Z",
+   "note": "Pool identity only (which hook, which two currencies) for newly discovered pools: 5 requests between 13:50 UTC and 13:52 UTC. It supplies no amounts."
+  },
+  {
+   "id": "census",
+   "name": "Pool census",
+   "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+   "status": "cached",
+   "updatedAt": "2026-10-27T20:11:09.000Z",
+   "note": "Hook Radar's index of PoolManager events, exported 27 Oct 2026, 20:11 UTC. Shown as it stood on 27 Oct 2026, 20:11 UTC; this edition does not refresh it."
+  }
+ ],
+ "history": [],
+ "summary": {
+  "indexedProjects": 5,
+  "indexedDeployments": 7,
+  "trackedPools": 12,
+  "liquidityUsd": 47700,
+  "volumeUsd": {
+   "h1": 176,
+   "h6": 1016,
+   "h24": 3731
+  },
+  "freshness": {
+   "maxAgeMs": 300000,
+   "expiresAt": "2026-10-28T14:05:05.000Z",
+   "liquidity": {
+    "observedPools": 11,
+    "currentPools": 8,
+    "stalePools": 3,
+    "unknownPools": 0,
+    "oldestAt": "2026-10-28T14:00:05.000Z",
+    "newestAt": "2026-10-28T14:04:55.000Z",
+    "latestObservedAt": "2026-10-28T14:04:55.000Z",
+    "expiresAt": "2026-10-28T14:05:05.000Z"
+   },
+   "volume": {
+    "h1": {
+     "observedPools": 10,
+     "currentPools": 7,
+     "stalePools": 3,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:00:05.000Z",
+     "newestAt": "2026-10-28T14:04:55.000Z",
+     "latestObservedAt": "2026-10-28T14:04:55.000Z",
+     "expiresAt": "2026-10-28T14:05:05.000Z"
+    },
+    "h6": {
+     "observedPools": 10,
+     "currentPools": 7,
+     "stalePools": 3,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:00:05.000Z",
+     "newestAt": "2026-10-28T14:04:55.000Z",
+     "latestObservedAt": "2026-10-28T14:04:55.000Z",
+     "expiresAt": "2026-10-28T14:05:05.000Z"
+    },
+    "h24": {
+     "observedPools": 10,
+     "currentPools": 7,
+     "stalePools": 3,
+     "unknownPools": 0,
+     "oldestAt": "2026-10-28T14:00:05.000Z",
+     "newestAt": "2026-10-28T14:04:55.000Z",
+     "latestObservedAt": "2026-10-28T14:04:55.000Z",
+     "expiresAt": "2026-10-28T14:05:05.000Z"
+    }
+   }
+  }
+ },
+ "coverage": {
+  "title": "Measured pool sample",
+  "description": "Hook pools measured in one burst; a sample, not an ecosystem total.",
+  "measuredChains": [
+   "base",
+   "ethereum",
+   "robinhood"
+  ],
+  "registryDeployments": 7,
+  "attributedPools": 11,
+  "totalObservedPools": 12
+ },
+ "inventory": {
+  "generatedAt": "2026-10-27T20:11:09.000Z",
+  "running": false,
+  "poolCount": 480,
+  "hookPoolCount": 93,
+  "hookCount": 31,
+  "networks": [
+   {
+    "chain": "base",
+    "chainId": 8453,
+    "name": "Base",
+    "manager": "0x1111111111111111111111111111111111118453",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 300,
+    "hookPoolCount": 61,
+    "hookCount": 17,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   },
+   {
+    "chain": "ethereum",
+    "chainId": 1,
+    "name": "Ethereum",
+    "manager": "0x1111111111111111111111111111111111111111",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 150,
+    "hookPoolCount": 28,
+    "hookCount": 11,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   },
+   {
+    "chain": "robinhood",
+    "chainId": 4663,
+    "name": "Robinhood",
+    "manager": "0x1111111111111111111111111111111111114663",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 30,
+    "hookPoolCount": 4,
+    "hookCount": 3,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   }
+  ]
+ },
+ "marketCoverage": {
+  "networks": [
+   {
+    "chain": "base",
+    "chainId": 8453,
+    "inventoryPools": 61,
+    "checkedPools": 7,
+    "measuredPools": 6,
+    "pendingPools": 54,
+    "missingPools": 1,
+    "attemptedPools": 7,
+    "status": "live"
+   },
+   {
+    "chain": "ethereum",
+    "chainId": 1,
+    "inventoryPools": 28,
+    "checkedPools": 4,
+    "measuredPools": 4,
+    "pendingPools": 24,
+    "missingPools": 0,
+    "attemptedPools": 4,
+    "status": "live"
+   },
+   {
+    "chain": "robinhood",
+    "chainId": 4663,
+    "inventoryPools": 4,
+    "checkedPools": 1,
+    "measuredPools": 1,
+    "pendingPools": 3,
+    "missingPools": 0,
+    "attemptedPools": 1,
+    "status": "live"
+   }
+  ],
+  "cacheWarning": null
+ }
+}

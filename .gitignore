@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.radar-cache/
+work/
+test-results/
+*.tsbuildinfo
+*.log
+.vite/
+/site-mirror/
+.env
+.env.*
+!.env.example
+# Written by every collector run; the Snapshot job builds it fresh, so it is not committed.
+public/data/

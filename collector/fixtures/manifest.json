@@ -1,0 +1,171 @@
+{
+  "recordedAt": "2026-10-27T21:10:52.555Z",
+  "requests": {
+    "dexscreener": {
+      "requests": 3,
+      "succeeded": 3,
+      "failed": 0,
+      "bytes": 40396,
+      "firstRequestAt": 1793135464507,
+      "lastRequestAt": 1793135465321,
+      "lastStatus": 200,
+      "retryAfterMs": null,
+      "stopped": null
+    },
+    "geckoterminal": {
+      "requests": 2,
+      "succeeded": 2,
+      "failed": 0,
+      "bytes": 81894,
+      "firstRequestAt": 1793135459724,
+      "lastRequestAt": 1793135471732,
+      "lastStatus": 200,
+      "retryAfterMs": null,
+      "stopped": null
+    },
+    "v4xyz": {
+      "requests": 3,
+      "succeeded": 3,
+      "failed": 0,
+      "bytes": 99323,
+      "firstRequestAt": 1793135453808,
+      "lastRequestAt": 1793135463818,
+      "lastStatus": 200,
+      "retryAfterMs": null,
+      "stopped": null
+    },
+    "registry": {
+      "requests": 2,
+      "succeeded": 2,
+      "failed": 0,
+      "bytes": 6312796,
+      "firstRequestAt": 1793135452559,
+      "lastRequestAt": 1793135453573,
+      "lastStatus": 200,
+      "retryAfterMs": null,
+      "stopped": null
+    },
+    "frontier": {
+      "requests": 1,
+      "succeeded": 1,
+      "failed": 0,
+      "bytes": 2368,
+      "firstRequestAt": 1793135453621,
+      "lastRequestAt": 1793135453621,
+      "lastStatus": 200,
+      "retryAfterMs": null,
+      "stopped": null
+    }
+  },
+  "discoveryPage": 1,
+  "burst": {
+    "dexRequests": 3,
+    "measured": 59,
+    "fallback": {
+      "requests": 1,
+      "measured": 24,
+      "ids": 24
+    }
+  },
+  "entries": [
+    {
+      "provider": "raw.githubusercontent.com",
+      "url": "https://raw.githubusercontent.com/Uniswap/hooklist/main/hooklist.json",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:10:51 GMT",
+      "age": null,
+      "file": "raw-1.json",
+      "bytes": 6310132
+    },
+    {
+      "provider": "raw.githubusercontent.com",
+      "url": "https://raw.githubusercontent.com/Uniswap/hooklist/main/chains.json",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:10:52 GMT",
+      "age": null,
+      "file": "raw-2.json",
+      "bytes": 2664
+    },
+    {
+      "provider": "api.frontier.fun",
+      "url": "https://api.frontier.fun/chains",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:10:52 GMT",
+      "age": null,
+      "file": "frontier-1.json",
+      "bytes": 2368
+    },
+    {
+      "provider": "www.v4.xyz",
+      "url": "https://www.v4.xyz/api/pools?chainId=1",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:10:53 GMT",
+      "age": 0,
+      "file": "v4-1.json",
+      "bytes": 53015
+    },
+    {
+      "provider": "www.v4.xyz",
+      "url": "https://www.v4.xyz/api/pools?chainId=8453",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:10:58 GMT",
+      "age": 0,
+      "file": "v4-2.json",
+      "bytes": 45330
+    },
+    {
+      "provider": "api.geckoterminal.com",
+      "url": "https://api.geckoterminal.com/api/v2/networks/base/dexes/uniswap-v4-base/pools?page=1&include=base_token,quote_token,dex&include_composition=true&sort=h24_volume_usd_desc",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:10:59 GMT",
+      "age": null,
+      "file": "geckoterminal-1.json",
+      "bytes": 35026
+    },
+    {
+      "provider": "www.v4.xyz",
+      "url": "https://www.v4.xyz/api/pool/8453_0x5a74ea01e29115bdd633ed7559802ddbdcc600ba22a778b6d200893c2e7a2690",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:11:03 GMT",
+      "age": 0,
+      "file": "v4-3.json",
+      "bytes": 978
+    },
+    {
+      "provider": "api.dexscreener.com",
+      "url": "https://api.dexscreener.com/latest/dex/pairs/base/0x0303fe013e346395521fb7dd8e53c5ecc616a3f5540943fb778959f78ce860ea,0x03d3c21ea1daf51dd2898ebaf9342a93374877ba6ab34cc7ffe5b5d43ee46e0a,0x0f66031ab12a3790ae466590deefcafb340eb39e5a4f44b06d4d980a359e5be2,0x11a57fb8246deee3e6a74f69db61885c97af82697460fb17b6c6e7a683be0d70,0x15f351bf1637b43d70631ba95fb9bbb1ff21761c29b034c1b380aecb922464dd,0x1bbbfd9333e9652cdd55be128226775dee1af77a813fd363eaa1e81bb530d4b3,0x20dae85ea05d3b22706aead2b9f73b53bdef0e3be8100ba29ba49ff3409ebfee,0x237586292aa0f523b028e6e5d805a3720be18d0c62ba273626754b0188bb31ef,0x30a4215649be7489523aeb54401fafea9f8bd9ab76c49ec52ebfa3965774ec98,0x3a77a503c496502ba1345d6e7e4f1475194a85550c57be26aec923700aa79152,0x3fd08abeea06cef22cefc6e43467d32efe1f0995d205e7eb1748b77f5f457b16,0x4a9b9e13975d26f4e3e17c655593bb82145dd4452aedafb826d856b817c9cfd4,0x5215f34b43dd487080e4460d2b71c97cfc9312da8591abb30cc173cf8926e0c8,0x52c84b74461f956470e48b691c24e194c5b6863b80d0b5412c6f9d9b8e118fcc,0x5a74ea01e29115bdd633ed7559802ddbdcc600ba22a778b6d200893c2e7a2690,0x62652e9539c88d4a1e590f0f05ff61854c269273ac59922ee9037d07edbf41d3,0x64f978ef116d3c2e1231cfd8b80a369dcd8e91b28037c9973b65b59fd2cbbb96,0x654c64ff88c107273881d54f09e5c42ed12e1ef880a885ee0b9cd81a36c22d2b,0x66de67b4f1cbf94155abf7c5ff1a1a1a8d0509f958434f55fb4065d2826f8aa0,0x66ec44536c989265afa87bff9a89f5dd6ad56cfa53f15a596ad396f19f55c52f,0x68ab198bc4c61c8c691a3e35d1b3a5248d8e04acb9e28a1bb2ef0d3fa564fe93,0x6ef02666f150d9649655b884e043b61b0990fad9be4c632d0c7568bb24da9367,0x6f42a3aacf3fd5e8bc50c8970f661bd392f35fe7eba9e28dd4e00f21c99c4078,0x772df3802094b1731d715d1d037c1f6fc31d0ad6de39aaab3b3af21373efa330,0x77509a8c750c35e95edc78a48ebf8f424bfc01b9e6fc46c2c54f6dd177cb8c2f,0x7a5964aaa5fd6088d34511c64403ba4190e8e9145273a7b1c21e8f60ff4d1af9,0x7b082b068d68c6e5ee95bed0cafbee4d5ef9b144dab4b07cb68411761e3e69ee,0x7eac33d5641697366eaec3234147fd98ba25f01acca66a51a48bd129fc532145,0x84771828f44fcfbaae08e271ff74e272cc2934a3348ec724a475941185ce4eb9,0x861d1bf3d524ea732b2fd60b89c9fee46f06882b64cedb80d247942eaa47decd",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:11:03 GMT",
+      "age": null,
+      "file": "dexscreener-1.json",
+      "bytes": 18056
+    },
+    {
+      "provider": "api.dexscreener.com",
+      "url": "https://api.dexscreener.com/latest/dex/pairs/base/0x901c3efe40a79488b47923e5c7c6a8c7bec785b39f838ca966673464830f9cc5,0x98c8f03094a9e65ccedc14c40130e4a5dd0ce14fb12ea58cbeac11f662b458b9,0x9fd58e73d8047cb14ac540acd141d3fc1a41fb6252d674b730faf62fe24aa8ce,0xb01375d0b9e1232c6cad7c5741e656e36072fb82418be36ea5df7e4b126a4acd,0xba84c20599b69129174383afb272c5d37819a49a6ba2a0f243adce51be1fca79,0xbc6683f3fed27bbfdfb6d9f342a29c5f2c2f02de9f9d65fb35d77d4f43a7b51e,0xbe924a1eed25cd932cccf9edf85648df31553622811e522f66dc5f00ce48047b,0xc03cfdf36c0d22bf771c2da065ff8564833fb4b68644cef5aeaa374591b2d839,0xc19d91d99afc0332e5013a569c9721cd9ecb51a14c851f7a189a140950a627fa,0xd4ccb4ba11eb5b47f22fa14f97edaeee42edecb1b84221b8c3ca9fa74c02a97c,0xe3a15dff4d3cb1e878096472cd4013161d48adcd8a216e57e2c6bc65e48bc25b,0xe7f69801807adaa527b18a9d1881f2184e45192015a7b93435f2b2721f2cdee3,0xe89d00b9c5936892e8149346cfabd50decee3fb017a84c01acdfc50f67771dec,0xe8f1de33c745f57a9c6dddfabfaaa6e74d99122889b511d18295b2507bc1ff04,0xe90103abb939cac76af36b5874d1bd409558094d965502e0f2c013202543b09f,0xeab6695180287986a42d4531cc69fb179551b7bf2856ff9f45edd65b8ae8f5be,0xec33256bf1ded407a57fd3c1965e7556e42ac14db09bc4e6fef57d5e2eb0b0b9,0xefcafb341c8aa48403fd5752a68c3b4c55cb47853d202c3500417fb14589f4bf,0xf0bac62dd4fd04dc26c9bc9ded68f16c515ab71c09bb87e8e546b7ce83c0ccb9,0xf5dff4830bb0f171da8443cbcc23ab53632c728bd1bed80f036733b85504522e,0xfc25fdd217e288d03a877f0b7d49e0bbe52b2288c88de929125062569fc7eb2a",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:11:04 GMT",
+      "age": null,
+      "file": "dexscreener-2.json",
+      "bytes": 14053
+    },
+    {
+      "provider": "api.dexscreener.com",
+      "url": "https://api.dexscreener.com/latest/dex/pairs/ethereum/0x2b21c65d9a7dc6926ee330a1c6e5a8037fd81774f3dc066536f800128e39f634,0x8b39be478d19f3dfc2bd997796ba46662d0fce435d697fcb294f1ec0087a2f4b,0x90078845bceb849b171873cfbc92db8540e9c803ff57d9d21b1215ec158e79b3,0x98316e8405502774a5d0a0761276b5d26505a8195c1905169864008d5e7a3eea,0xce2899b16743cfd5a954d8122d5e07f410305b1aebee39fd73d9f3b9ebf10c2f,0xde31d7cdc7f4db844e87bb67a139ff78afbb8d32e38cce429dbc3a66f1f76dc9,0xe500210c7ea6bfd9f69dce044b09ef384ec2b34832f132baec3b418208e3a657,0xeda62d2906d0edf26d40c793d581609552a44a87f618a98ff76ebe8dde4b7edb",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:11:04 GMT",
+      "age": null,
+      "file": "dexscreener-3.json",
+      "bytes": 8287
+    },
+    {
+      "provider": "api.geckoterminal.com",
+      "url": "https://api.geckoterminal.com/api/v2/networks/base/pools/multi/0x0303fe013e346395521fb7dd8e53c5ecc616a3f5540943fb778959f78ce860ea,0x0f66031ab12a3790ae466590deefcafb340eb39e5a4f44b06d4d980a359e5be2,0x20dae85ea05d3b22706aead2b9f73b53bdef0e3be8100ba29ba49ff3409ebfee,0x237586292aa0f523b028e6e5d805a3720be18d0c62ba273626754b0188bb31ef,0x30a4215649be7489523aeb54401fafea9f8bd9ab76c49ec52ebfa3965774ec98,0x3a77a503c496502ba1345d6e7e4f1475194a85550c57be26aec923700aa79152,0x5215f34b43dd487080e4460d2b71c97cfc9312da8591abb30cc173cf8926e0c8,0x62652e9539c88d4a1e590f0f05ff61854c269273ac59922ee9037d07edbf41d3,0x654c64ff88c107273881d54f09e5c42ed12e1ef880a885ee0b9cd81a36c22d2b,0x66de67b4f1cbf94155abf7c5ff1a1a1a8d0509f958434f55fb4065d2826f8aa0,0x66ec44536c989265afa87bff9a89f5dd6ad56cfa53f15a596ad396f19f55c52f,0x772df3802094b1731d715d1d037c1f6fc31d0ad6de39aaab3b3af21373efa330,0x77509a8c750c35e95edc78a48ebf8f424bfc01b9e6fc46c2c54f6dd177cb8c2f,0x7a5964aaa5fd6088d34511c64403ba4190e8e9145273a7b1c21e8f60ff4d1af9,0x7b082b068d68c6e5ee95bed0cafbee4d5ef9b144dab4b07cb68411761e3e69ee,0xb01375d0b9e1232c6cad7c5741e656e36072fb82418be36ea5df7e4b126a4acd,0xba84c20599b69129174383afb272c5d37819a49a6ba2a0f243adce51be1fca79,0xc03cfdf36c0d22bf771c2da065ff8564833fb4b68644cef5aeaa374591b2d839,0xd4ccb4ba11eb5b47f22fa14f97edaeee42edecb1b84221b8c3ca9fa74c02a97c,0xe3a15dff4d3cb1e878096472cd4013161d48adcd8a216e57e2c6bc65e48bc25b,0xe7f69801807adaa527b18a9d1881f2184e45192015a7b93435f2b2721f2cdee3,0xe89d00b9c5936892e8149346cfabd50decee3fb017a84c01acdfc50f67771dec,0xe8f1de33c745f57a9c6dddfabfaaa6e74d99122889b511d18295b2507bc1ff04,0xe90103abb939cac76af36b5874d1bd409558094d965502e0f2c013202543b09f?include=base_token,quote_token,dex&include_composition=true",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:11:11 GMT",
+      "age": null,
+      "file": "geckoterminal-2.json",
+      "bytes": 46868
+    }
+  ]
+}

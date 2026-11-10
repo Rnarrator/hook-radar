@@ -1,0 +1,221 @@
+/* Learn · read the permissions out of a hook address. A working instrument:
+   the fingerprint and the bits are computed from what was typed. */
+
+.learn-decoder {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr);
+  gap: var(--s-7);
+  margin-top: var(--s-8);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--rule-strong);
+}
+
+.learn-decoder-copy > p {
+  max-width: 44ch;
+  margin-top: var(--s-4);
+  font-size: var(--fs-lead);
+  line-height: 1.45;
+}
+
+.learn-page .learn-decoder-copy > p.learn-decoder-note {
+  margin-top: var(--s-2);
+  max-width: 48ch;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+}
+
+.learn-page .learn-decoder-note[data-invalid="true"] {
+  color: var(--danger);
+}
+
+.learn-decoder-field {
+  display: grid;
+  gap: var(--s-2);
+  margin-top: var(--s-5);
+  max-width: 34rem;
+}
+
+.learn-decoder-field > span {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.learn-decoder-field input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-body);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.learn-decoder-field input::placeholder {
+  color: var(--ink-faint);
+}
+
+.learn-decoder-field input:hover {
+  border-color: var(--rule-focus);
+}
+
+.learn-decoder-field input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.learn-decoder-examples {
+  display: grid;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+
+.learn-decoder-examples > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.learn-decoder-examples .control {
+  gap: var(--s-2);
+}
+
+.learn-decoder-examples .control small {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+/* The plate holds the instrument reading. */
+.learn-decoder-plate {
+  display: grid;
+  align-content: start;
+  gap: var(--s-4);
+  min-width: 0;
+  padding: var(--s-5);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background: var(--surface-1);
+  background-image: var(--key-light);
+  box-shadow: var(--elev-2);
+}
+
+.learn-page .learn-decoder-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-4);
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+/* Only the cells are dimmed: dimming the labels as well drops them below 4.5:1. */
+.learn-decoder-empty .permission-glyph-cell {
+  opacity: 0.7;
+}
+
+.learn-decoder-address {
+  margin: 0;
+}
+
+.learn-decoder-address code {
+  display: block;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* The last four hex digits hold the 14 flag bits. */
+.learn-decoder-address mark {
+  padding: 0.05em 0.25em;
+  border-radius: var(--r-1);
+  background: var(--signal-wash);
+  box-shadow: inset 0 -1px 0 var(--signal);
+  color: var(--ink);
+}
+
+.learn-decoder-bits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2) var(--s-3);
+  margin: 0;
+}
+
+.learn-decoder-bits code {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-lead);
+  letter-spacing: 0.08em;
+}
+
+.learn-decoder-list {
+  display: grid;
+  gap: var(--s-3);
+  margin: var(--s-2) 0 0;
+  padding: var(--s-4) 0 0;
+  border-top: 1px solid var(--rule);
+  list-style: none;
+}
+
+.learn-decoder-list li {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.learn-decoder-list code {
+  color: var(--signal);
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+}
+
+.learn-decoder-list span {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.learn-page .learn-decoder-issue {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+  margin: 0;
+  color: var(--brass);
+  font-size: var(--fs-small);
+}
+
+.learn-page .learn-decoder-issue svg {
+  flex: none;
+  margin-top: 0.125rem;
+}
+
+.learn-page .learn-decoder-foot {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+@media (max-width: 60rem) {
+  .learn-decoder {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-6);
+  }
+}
+
+@media (max-width: 34rem) {
+  .learn-decoder-plate {
+    padding: var(--s-4);
+  }
+}
+
+/* The plate is as tall as its reading, not as tall as the copy beside it. */
+.learn-decoder-plate {
+  align-self: start;
+}

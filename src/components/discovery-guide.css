@@ -1,0 +1,221 @@
+/* Saved discovery filters: the popover anchored to the Discover rail.
+   (The use-case rail itself is styled in design/discover.css.) */
+
+.discovery-saved {
+  position: relative;
+  display: inline-flex;
+}
+
+.saved-filters-trigger[aria-expanded="true"] {
+  border-color: var(--signal-line);
+  background: var(--signal-wash);
+  color: var(--ink);
+}
+
+.saved-filters-trigger[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+
+.saved-filters-label-short {
+  display: none;
+}
+
+.saved-filters-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: var(--r-pill);
+  background: var(--surface-4);
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.saved-filters-panel {
+  position: fixed;
+  z-index: var(--z-popover);
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--s-4);
+  border: 1px solid var(--rule-focus);
+  border-radius: var(--r-3);
+  background:
+    var(--key-light),
+    var(--surface-2);
+  box-shadow: var(--elev-3);
+  animation: rise-in var(--dur-2) var(--ease-out);
+}
+
+.saved-filters-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.saved-filters-panel h3 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: 400;
+  line-height: var(--lh-tight);
+}
+
+.saved-filters-panel > header p,
+.saved-filter-storage,
+.saved-filter-note {
+  margin-top: var(--s-1);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.saved-filters-panel .icon-button {
+  width: 2rem;
+  min-height: 2rem;
+}
+
+.saved-filter-list {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 var(--s-3);
+  padding: 0;
+  list-style: none;
+}
+
+.saved-filter-list > li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.saved-filter-apply {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  text-align: left;
+  color: var(--ink-soft);
+}
+
+.saved-filter-apply > span {
+  display: grid;
+  min-width: 0;
+}
+
+.saved-filter-apply strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.saved-filter-apply small,
+.saved-filter-scope {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.saved-filter-apply:hover:not(:disabled),
+.saved-filter-apply[aria-current="true"] {
+  border-color: var(--signal-line);
+  background: var(--signal-wash);
+}
+
+.saved-filter-manage {
+  display: inline-flex;
+  gap: var(--s-1);
+}
+
+.saved-filter-manage button {
+  min-height: 2rem;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-1);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.saved-filter-manage button:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+.saved-filter-form {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.saved-filter-form label {
+  display: grid;
+  gap: var(--s-1);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.saved-filter-form input {
+  min-height: 2.5rem;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 400;
+}
+
+.saved-filter-form input:focus-visible {
+  border-color: var(--signal-line);
+  box-shadow: 0 0 0 3px var(--signal-wash);
+}
+
+.saved-filter-form input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.saved-filter-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.saved-filter-form-actions small {
+  color: var(--ink-muted);
+}
+
+.saved-filter-error,
+.saved-filter-feedback {
+  font-size: var(--fs-small);
+}
+
+.saved-filter-error {
+  color: var(--danger);
+}
+
+.saved-filter-feedback {
+  color: var(--lagoon);
+}
+
+@media (max-width: 52rem) {
+  .saved-filters-label-long {
+    display: none;
+  }
+
+  .saved-filters-label-short {
+    display: inline;
+  }
+}

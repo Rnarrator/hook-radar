@@ -1,0 +1,12 @@
+{
+ "generatedAt": "2026-10-28T14:05:00.000Z",
+ "collectionStartedAt": "2026-10-28T13:41:12.000Z",
+ "burstStartedAt": "2026-10-28T14:01:20.000Z",
+ "burstEndedAt": "2026-10-28T14:05:00.000Z",
+ "counts": {
+  "requests": 8
+ },
+ "sources": [],
+ "collectorVersion": "fixture",
+ "previousGeneratedAt": "2026-10-28T11:04:41.000Z"
+}

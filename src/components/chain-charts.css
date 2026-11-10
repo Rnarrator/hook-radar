@@ -1,0 +1,593 @@
+/* Chains instruments · Observatory. Network atlas (ranked horizontal bars),
+   index evidence (stacked state bar) and pool composition (one 100% bar).
+   Plates frame instruments only; no donuts, no decorative series. */
+
+.chain-charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(17rem, 1fr);
+  align-items: start;
+  gap: var(--s-5);
+  min-width: 0;
+}
+
+.chain-charts.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chain-chart-panel {
+  position: relative;
+  min-width: 0;
+  padding: var(--s-5);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background:
+    var(--key-light),
+    var(--surface-1);
+  box-shadow: var(--elev-1);
+}
+
+.chain-chart-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-4);
+  min-width: 0;
+}
+
+.chain-chart-heading > div {
+  min-width: 0;
+}
+
+.chain-chart-eyebrow {
+  margin: 0 0 var(--s-1);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.chain-chart-heading h2 {
+  font-size: var(--fs-h3);
+}
+
+.chain-chart-network-name {
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.chain-chart-switch {
+  max-width: 100%;
+}
+
+/* Plate caption: metric · scope · cohort · coverage. */
+.chain-chart-caption {
+  margin: var(--s-3) 0 var(--s-4);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.chain-chart-caption > b {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.chain-chart-caption > .chain-chart-flag {
+  color: var(--brass);
+}
+
+/* Ranked rows share one grid with the axis so the scale sits over the bars. */
+.chain-chart-axis,
+.chain-chart-network {
+  display: grid;
+  grid-template-columns:
+    1.75rem minmax(6rem, 9rem) minmax(0, 1fr) minmax(5.5rem, 7rem)
+    0.875rem;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.chain-chart-axis {
+  padding: 0 var(--s-2) var(--s-1);
+}
+
+.chain-chart-axis-scale {
+  grid-column: 3;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding-bottom: var(--s-1);
+  border-bottom: 1px solid var(--rule-strong);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.chain-chart-networks {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chain-chart-network {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-1);
+  color: var(--ink-soft);
+  text-align: left;
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+.chain-chart-network:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.chain-chart-rank {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.chain-chart-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chain-chart-track {
+  position: relative;
+  height: 0.625rem;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-3);
+}
+
+.chain-chart-track > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--iris);
+  transition: width var(--dur-3) var(--ease-out);
+}
+
+.chain-chart-network:hover:not(:disabled) .chain-chart-track > span {
+  background: color-mix(in srgb, var(--iris) 80%, white);
+}
+
+/* Measured zero is a tick at the origin; unavailable is hatched, not empty. */
+.chain-chart-network[data-state="zero"] .chain-chart-track::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: var(--ink-soft);
+}
+
+.chain-chart-network[data-state="unavailable"] .chain-chart-track {
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    var(--rule-strong) 4px 5px
+  );
+}
+
+.chain-chart-value {
+  display: grid;
+  justify-items: end;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.chain-chart-value b {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.chain-chart-value small {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.chain-chart-network[data-state="unavailable"] .chain-chart-value b {
+  color: var(--ink-muted);
+}
+
+.chain-chart-network > svg {
+  color: var(--ink-faint);
+  transition:
+    color var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+.chain-chart-network:hover:not(:disabled) > svg {
+  color: var(--signal);
+  transform: translateX(2px);
+}
+
+.chain-chart-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 2.5rem;
+  margin-top: var(--s-2);
+  color: var(--signal);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.chain-chart-expand:hover:not(:disabled) {
+  color: var(--signal-hover);
+}
+
+.chain-chart-expand svg {
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.chain-chart-expand[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.chain-chart-note {
+  margin-top: var(--s-3);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.chain-chart-empty {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4) 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.chain-chart-empty strong {
+  color: var(--ink);
+}
+
+/* ── Index evidence ──────────────────────────────────────────────────────── */
+.chain-evidence-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-3);
+  margin: var(--s-3) 0 var(--s-4);
+}
+
+.chain-evidence-readout strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--fs-stat);
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.chain-evidence-readout span {
+  flex: 1 1 12rem;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.chain-evidence-bar {
+  display: flex;
+  gap: 2px;
+  height: 0.75rem;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.chain-evidence-bar > span {
+  flex-basis: 0;
+  min-width: 3px;
+  background: var(--ink-faint);
+}
+
+.chain-evidence-bar > [data-state="current"],
+.chain-evidence-legend [data-state="current"] i {
+  background: var(--lagoon);
+}
+
+.chain-evidence-bar > [data-state="waiting"],
+.chain-evidence-legend [data-state="waiting"] i {
+  background: var(--brass);
+}
+
+.chain-evidence-bar > [data-state="registry"],
+.chain-evidence-legend [data-state="registry"] i {
+  background: var(--mist);
+}
+
+.chain-evidence-bar > [data-state="unsupported"],
+.chain-evidence-legend [data-state="unsupported"] i {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--ink-faint) 0 2px,
+    transparent 2px 4px
+  );
+}
+
+.chain-evidence-legend {
+  display: grid;
+  gap: var(--s-1);
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chain-evidence-legend li {
+  display: grid;
+  grid-template-columns: 0.625rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.chain-evidence-legend i {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+}
+
+.chain-evidence-legend b {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-weight: 500;
+}
+
+.chain-evidence-divider {
+  height: 1px;
+  margin: var(--s-5) 0 var(--s-4);
+  background: var(--rule);
+}
+
+/* ── Pool composition: one 100% bar ──────────────────────────────────────── */
+.chain-pool-composition {
+  display: grid;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.chain-pool-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-3);
+}
+
+.chain-pool-headline strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.3rem + 1.2vw, 2.5rem);
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.chain-pool-headline span {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.chain-pool-bar {
+  display: flex;
+  gap: 2px;
+  height: 0.875rem;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface-3);
+}
+
+.chain-pool-bar[data-measured="false"] {
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    var(--rule-strong) 4px 5px
+  );
+}
+
+.chain-pool-hooked {
+  flex: none;
+  background: var(--iris);
+}
+
+.chain-pool-plain {
+  flex: 1;
+  background: var(--surface-4);
+}
+
+.chain-pool-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-6);
+  margin: 0;
+}
+
+.chain-pool-legend > div {
+  display: grid;
+  gap: 2px;
+}
+
+.chain-pool-legend dt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.chain-pool-legend dd {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.chain-pool-legend-total {
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--rule-strong);
+}
+
+.chain-pool-dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  background: var(--iris);
+}
+
+.chain-pool-dot.plain {
+  background: var(--surface-4);
+  box-shadow: inset 0 0 0 1px var(--rule-focus);
+}
+
+.chain-composition-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(11rem, 1fr);
+  gap: var(--s-6);
+  margin-top: var(--s-4);
+}
+
+.chain-chart-evidence {
+  display: grid;
+  align-content: start;
+  gap: var(--s-4);
+  margin: 0;
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--rule);
+}
+
+.chain-chart-evidence > div {
+  display: grid;
+  gap: 2px;
+}
+
+.chain-chart-evidence dt {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.chain-chart-evidence dd {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  line-height: 1.1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 64rem) {
+  .chain-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 52rem) {
+  .chain-chart-switch button {
+    min-height: 2.5rem;
+  }
+
+  .chain-composition-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+  }
+
+  .chain-chart-evidence {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: var(--s-4) 0 0;
+    border-top: 1px solid var(--rule);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 40rem) {
+  .chain-chart-panel {
+    padding: var(--s-4);
+  }
+
+  .chain-chart-switch {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .chain-chart-switch button {
+    padding: var(--s-1) var(--s-2);
+    line-height: 1.2;
+    white-space: normal;
+  }
+
+  .chain-chart-axis,
+  .chain-chart-network {
+    grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+    column-gap: var(--s-2);
+    row-gap: var(--s-1);
+  }
+
+  .chain-chart-axis-scale {
+    grid-column: 2 / -1;
+  }
+
+  .chain-chart-network {
+    grid-template-areas:
+      "rank name value"
+      ". track track";
+    padding: var(--s-2);
+  }
+
+  .chain-chart-rank {
+    grid-area: rank;
+  }
+
+  .chain-chart-name {
+    grid-area: name;
+  }
+
+  .chain-chart-value {
+    grid-area: value;
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2);
+  }
+
+  .chain-chart-track {
+    grid-area: track;
+  }
+
+  .chain-chart-network > svg {
+    display: none;
+  }
+
+  .chain-chart-evidence {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chain-chart-evidence dd {
+    font-size: 1.5rem;
+  }
+
+  .chain-pool-legend-total {
+    padding-left: 0;
+    border-left: 0;
+  }
+}

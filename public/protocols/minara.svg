@@ -1,0 +1,20 @@
+<svg preserveAspectRatio="xMidYMid meet" width="360" height="160" viewBox="0 0 360 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Union">
+<path d="M260 160H180V140H260V160Z" fill="#49EDBF"/>
+<path d="M80 120V140H40V120H80Z" fill="#49EDBF"/>
+<path d="M180 140H160V120H180V140Z" fill="#49EDBF"/>
+<path d="M280 140H260V120H280V140Z" fill="#49EDBF"/>
+<path d="M40 120H20V100H40V120Z" fill="#49EDBF"/>
+<path d="M100 120H80V100H100V120Z" fill="#49EDBF"/>
+<path d="M160 120H140V90H120V100H100V60H120V70H140V40H160V120Z" fill="#49EDBF"/>
+<path d="M300 70H340V90H300V120H280V40H300V70Z" fill="#49EDBF"/>
+<path d="M360 120H340V90H360V120Z" fill="#49EDBF"/>
+<path d="M20 100H0V60H20V100Z" fill="#49EDBF"/>
+<path d="M40 60H20V40H40V60Z" fill="#49EDBF"/>
+<path d="M100 60H80V40H100V60Z" fill="#49EDBF"/>
+<path d="M80 40H40V20H80V40Z" fill="#49EDBF"/>
+<path d="M180 40H160V20H180V40Z" fill="#49EDBF"/>
+<path d="M280 40H260V20H280V40Z" fill="#49EDBF"/>
+<path d="M260 20H180V0H260V20Z" fill="#49EDBF"/>
+</g>
+</svg>

@@ -1,0 +1,1797 @@
+/* Compare · the Observatory comparison instrument.
+   Project identities head the columns; every row below shares those columns.
+   Three arrangements, one DOM:
+   - data-layout="columns": every column fits, identities align with the matrix
+     and the matrix header sticks beneath the horizon bar.
+   - data-layout="stacked": identities wrap; the matrix scrolls sideways with
+     pinned row labels.
+   - phones (≤ 40rem): each matrix row becomes a stacked group listing every
+     project's value, so a row stays comparable without sideways scrolling.
+   Differences are marked, never ranked. Measured zero and "not measured" keep
+   distinct marks. */
+
+.hook-comparison {
+  --cmp-label: 13.5rem; /* keep in step with COLUMN_LABEL_REM */
+  --cmp-col: 13rem; /* keep in step with COLUMN_MIN_REM */
+  --cmp-cell: var(--s-4);
+  --cmp-sticky-top: 4rem;
+  min-width: 0;
+  padding-bottom: var(--s-6);
+  color: var(--ink);
+  /* The arrangement switches after a resize is measured; clipping (not a
+     scroll container, so sticky headers still work) keeps that frame from
+     ever widening the page. */
+  overflow-x: clip;
+  overflow-clip-margin: var(--s-2);
+}
+
+.hook-comparison[data-layout="stacked"] {
+  --cmp-label: 9rem;
+  --cmp-col: 12.5rem;
+}
+
+/* Use-case colour for purpose marks: the same use case, the same hue. */
+.hook-comparison [data-category] {
+  --cat: var(--cat-other);
+}
+.hook-comparison [data-category="Launches"] {
+  --cat: var(--cat-launches);
+}
+.hook-comparison [data-category="Liquidity"] {
+  --cat: var(--cat-liquidity);
+}
+.hook-comparison [data-category="Fees"] {
+  --cat: var(--cat-fees);
+}
+.hook-comparison [data-category="MEV"] {
+  --cat: var(--cat-mev);
+}
+.hook-comparison [data-category="Orders"] {
+  --cat: var(--cat-orders);
+}
+.hook-comparison [data-category="Oracles"] {
+  --cat: var(--cat-oracles);
+}
+.hook-comparison [data-category="Access"] {
+  --cat: var(--cat-access);
+}
+
+/* ── Heading ─────────────────────────────────────────────────────────────── */
+.comparison-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-5);
+  margin-bottom: var(--s-4);
+}
+
+.comparison-heading .kicker {
+  display: block;
+  margin-bottom: var(--s-2);
+}
+
+.comparison-heading h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  font-size: var(--fs-h3);
+}
+
+.comparison-selection-count {
+  display: inline-grid;
+  place-items: center;
+  min-height: 1.5rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-pill);
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.comparison-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.comparison-header-actions .control {
+  min-height: 2.75rem;
+}
+
+.hook-comparison > .notice {
+  margin-bottom: var(--s-4);
+}
+
+/* An id from a link can be one long unbroken word (up to 100 characters): let
+ * it wrap inside the notice instead of widening it past the sentence. */
+.comparison-not-carried > div {
+  min-width: 0;
+}
+
+.comparison-not-carried code {
+  overflow-wrap: anywhere;
+}
+
+/* The notice can run to several lines: the icon sits at the top, beside the
+ * sentence, and each id is a row of its own (the id, then its Remove button)
+ * rather than a bulleted item with the browser's indent. */
+.comparison-not-carried {
+  align-items: flex-start;
+}
+
+/* The 16px icon is centred on the first 19.5px line of the sentence. */
+.comparison-not-carried > svg {
+  flex: none;
+  margin-top: 0.11rem;
+}
+
+.comparison-not-carried ul {
+  display: grid;
+  gap: var(--s-1);
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comparison-not-carried li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+
+.comparison-not-carried button {
+  margin-left: 0;
+}
+
+/* Auto Snapshot edition only (the root carries data-edition, set by the build;
+   the live page never has it and is untouched). Touch: Forget and Remove are
+   full 44px targets, like the controls around them. :where() keeps the
+   selector's own specificity; the second class lets this outrank the notice's
+   2rem button whichever stylesheet loads last. Each id gets a box as tall as
+   its button, centred in it (the id has no border or fill of its own), so the
+   two stay one row with their tops level and a long id still wraps. */
+@media (max-width: 52rem), (pointer: coarse) {
+  :where(:root[data-edition="snapshot"]) .notice.comparison-not-carried button {
+    min-height: 2.75rem;
+    padding: 0 var(--s-4);
+  }
+
+  :where(:root[data-edition="snapshot"]) .notice.comparison-not-carried code {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}
+
+/* ── Project picker (shared with Activity) ───────────────────────────────── */
+.comparison-picker {
+  min-width: 0;
+  padding: var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background: var(--surface-1);
+  box-shadow: var(--edge-light);
+}
+
+.comparison-picker-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-1) var(--s-3);
+  margin-bottom: var(--s-2);
+}
+
+.comparison-picker-heading label {
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.comparison-picker-heading > span {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+}
+
+.comparison-search {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  min-height: 2.75rem;
+  padding-left: var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--ground);
+  color: var(--ink-muted);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out);
+}
+
+.comparison-search:hover {
+  border-color: var(--rule-focus);
+}
+
+.comparison-search:focus-within {
+  border-color: var(--signal-line);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 3px var(--signal-wash);
+}
+
+.comparison-search > svg {
+  flex: none;
+}
+
+.comparison-search input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.6rem;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-body);
+}
+
+.comparison-search input:focus-visible {
+  box-shadow: none;
+}
+
+.comparison-search input:disabled {
+  cursor: not-allowed;
+}
+
+.comparison-search .icon-button {
+  width: 2.75rem;
+  height: 2.6rem;
+  min-height: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.comparison-picker-status {
+  margin: var(--s-3) 0 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.comparison-picker-status.sr-only {
+  margin: -1px;
+}
+
+.comparison-picker > .control {
+  margin-top: var(--s-3);
+}
+
+.comparison-search-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  column-gap: var(--s-5);
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comparison-search-results li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: var(--s-2) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.comparison-search-results li > .protocol-logo {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--r-2);
+}
+
+.comparison-search-results li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.comparison-search-results strong {
+  display: block;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.comparison-search-results li > div > span {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.comparison-add {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex: none;
+  min-height: 2.5rem;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  box-shadow: var(--edge-light);
+  transition:
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
+}
+
+.comparison-add svg {
+  color: var(--signal);
+}
+
+.comparison-add:hover:not(:disabled) {
+  border-color: var(--signal-line);
+  background: var(--signal-wash);
+}
+
+.comparison-add:disabled {
+  cursor: default;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-muted);
+}
+
+.comparison-more {
+  width: 100%;
+  margin-top: var(--s-3);
+}
+
+/* Inside Compare the picker is a quiet disclosure bar, not a second box. */
+.comparison-picker-disclosure {
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background: var(--surface-1);
+  box-shadow: var(--edge-light);
+}
+
+.comparison-picker-disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 3.25rem;
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-3);
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.comparison-picker-disclosure > summary::-webkit-details-marker,
+.comparison-disclosure > summary::-webkit-details-marker,
+.comparison-contract-grid summary::-webkit-details-marker {
+  display: none;
+}
+
+.comparison-picker-disclosure > summary:hover .comparison-picker-summary-icon {
+  background: var(--signal);
+  color: var(--on-signal);
+}
+
+.comparison-picker-disclosure[open] > summary {
+  border-bottom: 1px solid var(--rule);
+  border-radius: var(--r-3) var(--r-3) 0 0;
+}
+
+.comparison-picker-summary-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--signal-line);
+  border-radius: 50%;
+  background: var(--signal-wash);
+  color: var(--signal);
+  transition:
+    background var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.comparison-picker-summary-meta {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  text-align: right;
+}
+
+.comparison-disclosure-chevron {
+  flex: none;
+  color: var(--ink-muted);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+details[open] > summary > .comparison-disclosure-chevron {
+  transform: rotate(180deg);
+}
+
+.comparison-picker-disclosure .comparison-picker {
+  border: 0;
+  border-radius: 0 0 var(--r-3) var(--r-3);
+  background: transparent;
+  box-shadow: none;
+}
+
+.comparison-picker-disclosure .comparison-search-results {
+  max-height: 18.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ── Empty comparison: how it works, what you will see ───────────────────── */
+.comparison-workspace {
+  display: grid;
+  gap: var(--s-5);
+  min-width: 0;
+}
+
+.comparison-empty-guide {
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--rule);
+}
+
+.comparison-empty-guide ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--s-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comparison-empty-guide li {
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+  padding-left: var(--s-4);
+  border-left: 1px solid var(--rule-strong);
+}
+
+.comparison-step {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+}
+
+.comparison-empty-guide li strong {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 400;
+  line-height: var(--lh-tight);
+}
+
+.comparison-empty-guide li p {
+  max-width: 38ch;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.comparison-empty-contents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-6);
+}
+
+.comparison-empty-contents .kicker {
+  margin-right: var(--s-2);
+}
+
+.comparison-empty-contents > span:not(.kicker) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0 0.7rem;
+  border: 1px dashed var(--rule-focus);
+  border-radius: var(--r-pill);
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+}
+
+/* ── Identity columns ────────────────────────────────────────────────────── */
+.comparison-columns {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.comparison-corner:empty {
+  display: none;
+}
+
+.comparison-scope {
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+}
+
+.comparison-scope label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.comparison-scope label svg {
+  color: var(--ink-muted);
+}
+
+.comparison-scope .select-control {
+  min-height: 2.75rem;
+  padding-right: var(--s-2);
+}
+
+.comparison-scope select {
+  width: 100%;
+  min-height: 2.6rem;
+  font-size: var(--fs-small);
+}
+
+.comparison-scope select:disabled {
+  cursor: not-allowed;
+  color: var(--ink-muted);
+}
+
+.comparison-scope p {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.45;
+}
+
+.comparison-selection {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  min-width: 0;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.comparison-project {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  min-width: 0;
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.comparison-project-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+  margin-bottom: var(--s-1);
+}
+
+.comparison-project .protocol-logo.large {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--r-2);
+}
+
+.comparison-project-pending {
+  display: block;
+  width: 3rem;
+  height: 3rem;
+  border: 1px dashed var(--rule-focus);
+  border-radius: var(--r-2);
+}
+
+.comparison-remove.icon-button {
+  margin: -0.25rem -0.5rem 0 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-muted);
+}
+
+/* Quiet icon buttons drop their edge light, never their focus ring. */
+.comparison-remove.icon-button:focus-visible,
+.comparison-search .icon-button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.comparison-project-category,
+.comparison-purpose {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+}
+
+.comparison-purpose {
+  color: var(--ink);
+  font-size: var(--fs-small);
+}
+
+.comparison-project-category::before,
+.comparison-purpose::before {
+  content: "";
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--cat);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cat) 22%, transparent);
+}
+
+.comparison-project h3 {
+  max-width: 100%;
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.005em;
+  overflow-wrap: anywhere;
+}
+
+.comparison-project-description {
+  display: -webkit-box;
+  max-width: 46ch;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.comparison-project-status {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.comparison-project-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--s-4);
+  margin-top: auto;
+  padding-top: var(--s-1);
+}
+
+.comparison-project-links button,
+.comparison-project-links .external {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 2.5rem;
+  padding: 0;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  text-align: left;
+}
+
+.comparison-project-links button {
+  color: var(--ink);
+}
+
+.comparison-project-links button svg {
+  color: var(--signal);
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.comparison-project-links button:hover {
+  color: var(--signal-hover);
+}
+
+.comparison-project-links button:hover svg {
+  transform: translateX(2px);
+}
+
+.comparison-project-links .external {
+  color: var(--ink-soft);
+}
+
+.comparison-project-links .external:hover {
+  color: var(--ink);
+}
+
+.comparison-refresh-note {
+  color: var(--brass);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+
+.comparison-refresh-note button {
+  display: block;
+  min-height: 2.5rem;
+  color: var(--signal);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.comparison-next {
+  display: grid;
+  place-items: center;
+  min-height: 9rem;
+  margin: var(--s-4) 0;
+  padding: var(--s-4);
+  border: 1px dashed var(--rule-focus);
+  border-radius: var(--r-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  text-align: center;
+}
+
+/* ── Bands: rows that share the identity columns ─────────────────────────── */
+/* The integration and network sections arrive after the project cards: until
+   then their height is held, so the matrix below does not jump down. */
+.comparison-reserve {
+  min-height: 23.5rem;
+}
+
+@media (max-width: 60rem) {
+  .comparison-reserve {
+    min-height: 16rem;
+  }
+}
+
+.comparison-band {
+  display: grid;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: var(--s-5) 0;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.comparison-band-label h3 {
+  font-size: var(--fs-body);
+}
+
+.comparison-band-label .kicker {
+  display: block;
+  margin-bottom: var(--s-1);
+}
+
+.comparison-band-label p,
+.comparison-band-copy {
+  max-width: 68ch;
+  margin-top: var(--s-1);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.comparison-band-copy {
+  color: var(--ink-soft);
+}
+
+.comparison-band-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--s-4) var(--s-5);
+  min-width: 0;
+}
+
+.comparison-band-columns > * {
+  min-width: 0;
+}
+
+.comparison-band-name {
+  display: block;
+  margin-bottom: var(--s-2);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+.comparison-integration-grid > article {
+  display: grid;
+  align-content: start;
+  gap: var(--s-3);
+}
+
+.comparison-capability {
+  display: grid;
+  gap: 2px;
+}
+
+.comparison-capability > span {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.comparison-capability > b {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-2);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.comparison-capability:not(.declared) > b {
+  color: var(--ink-soft);
+}
+
+.comparison-capability > b .comparison-meter {
+  width: 2.5rem;
+}
+
+.comparison-capability > small {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.comparison-network-summary .comparison-band {
+  padding-bottom: var(--s-3);
+}
+
+/* Proportion of a project's own hook versions (declared / not / unknown). */
+.comparison-meter {
+  display: flex;
+  gap: 2px;
+  width: min(100%, 8rem);
+  height: 0.4rem;
+  border-radius: 1px;
+}
+
+.comparison-meter:empty {
+  background: var(--surface-3);
+}
+
+.comparison-meter i,
+.comparison-legend i {
+  display: block;
+  min-width: 3px;
+  border-radius: 1px;
+}
+
+.hook-comparison .is-on {
+  background: var(--ink-soft);
+}
+
+.hook-comparison .is-off {
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--rule-focus);
+}
+
+.hook-comparison .is-unknown {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--ink-faint) 0 1.5px,
+    transparent 1.5px 4px
+  );
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+}
+
+/* ── Matrix heading, toggle and key ──────────────────────────────────────── */
+.comparison-matrix-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-5);
+  margin-top: var(--s-4);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--rule-strong);
+}
+
+.comparison-matrix-heading h3 {
+  font-size: var(--fs-h3);
+}
+
+.comparison-matrix-heading p {
+  max-width: 70ch;
+  margin-top: var(--s-1);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.comparison-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 2.75rem;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.comparison-toggle input {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: 50%;
+  width: 2.25rem;
+  height: 1.25rem;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.comparison-toggle-track {
+  position: relative;
+  flex: none;
+  width: 2.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--rule-focus);
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  transition:
+    background var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out);
+}
+
+.comparison-toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out);
+}
+
+.comparison-toggle input:checked + .comparison-toggle-track {
+  border-color: var(--signal-line);
+  background: var(--signal-wash);
+}
+
+.comparison-toggle input:checked + .comparison-toggle-track::after {
+  background: var(--signal);
+  transform: translateX(1rem);
+}
+
+.comparison-toggle input:focus-visible + .comparison-toggle-track {
+  box-shadow: var(--focus-ring);
+}
+
+.comparison-toggle input:disabled,
+.comparison-toggle:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.comparison-toggle input:disabled + .comparison-toggle-track {
+  opacity: 0.45;
+}
+
+.comparison-toggle:hover input:not(:disabled) + .comparison-toggle-track {
+  border-color: var(--signal-line);
+}
+
+.comparison-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin: var(--s-3) 0 var(--s-4);
+  padding: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  list-style: none;
+}
+
+.comparison-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.comparison-legend i {
+  width: 0.9rem;
+  height: 0.45rem;
+}
+
+.comparison-legend .comparison-same-tag {
+  margin: 0;
+}
+
+.comparison-legend-dash {
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.comparison-scroll-hint {
+  margin: 0 0 var(--s-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+/* ── Matrix ──────────────────────────────────────────────────────────────── */
+.comparison-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-left: var(--cmp-label);
+  scroll-snap-type: x proximity;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.comparison-scroll:focus-visible {
+  border-radius: var(--r-1);
+  box-shadow: var(--focus-ring);
+}
+
+.comparison-table {
+  width: 100%;
+  min-width: calc(var(--cmp-label) + var(--cmp-count, 2) * var(--cmp-col));
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: var(--fs-small);
+}
+
+.comparison-field-column {
+  width: var(--cmp-label);
+}
+
+/* Legacy global th/td rules set widths, nowrap and tiny type; reset them. */
+.comparison-table th,
+.comparison-table td {
+  width: auto;
+  padding: var(--cmp-cell);
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: inherit;
+  letter-spacing: normal;
+  line-height: 1.45;
+  white-space: normal;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.comparison-table td,
+.comparison-table thead th + th {
+  border-left: 1px solid var(--rule);
+  scroll-snap-align: start;
+}
+
+.comparison-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--ground);
+}
+
+.comparison-table thead {
+  background: none;
+}
+
+.comparison-table thead th {
+  padding-block: var(--s-3);
+  border-bottom-color: var(--rule-strong);
+  background: var(--ground);
+  color: var(--ink);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.comparison-table thead th:first-child {
+  z-index: 3;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.comparison-column-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.comparison-column-head .protocol-logo {
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 7px;
+}
+
+.comparison-column-head .protocol-logo img {
+  width: calc(100% - 0.4rem);
+  height: calc(100% - 0.4rem);
+}
+
+.comparison-column-head .protocol-logo.unavailable {
+  display: none;
+}
+
+.comparison-table tbody th {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.comparison-table tbody tr {
+  height: auto;
+  border-bottom: 0;
+  background: none;
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+.comparison-table tbody tr:hover > * {
+  background: color-mix(in srgb, var(--surface-1) 70%, transparent);
+}
+
+.comparison-table tbody tr:hover > th:first-child {
+  background: var(--surface-1);
+}
+
+.comparison-row-label {
+  display: block;
+}
+
+.comparison-row-code {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.comparison-table tbody th small {
+  display: block;
+  max-width: 28ch;
+  margin-top: var(--s-1);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.comparison-same-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.25rem;
+  margin-top: var(--s-1);
+  padding: 0 0.45rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-pill);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Rows that hold the same value everywhere recede, so differences read first. */
+.comparison-table tr[data-same] > td,
+.comparison-table tr[data-same] > td :is(span, strong, small) {
+  color: var(--ink-muted);
+}
+
+.comparison-table tr[data-same] .is-on {
+  background: var(--ink-muted);
+}
+
+/* Row groups: a caps label in the top margin of the group's first row. */
+.comparison-group-start > th,
+.comparison-group-start > td {
+  padding-top: 2.75rem;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.comparison-table thead + tbody > .comparison-group-start > th,
+.comparison-table thead + tbody > .comparison-group-start > td {
+  border-top: 0;
+}
+
+.comparison-group-label {
+  position: absolute;
+  top: var(--cmp-cell);
+  left: var(--cmp-cell);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.comparison-cell {
+  min-width: 0;
+}
+
+.comparison-table td small {
+  display: block;
+  margin-top: var(--s-1);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.45;
+}
+
+.comparison-figure,
+.comparison-amount {
+  display: block;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.005em;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.comparison-reading {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+}
+
+.comparison-reading.is-unavailable .comparison-amount {
+  color: var(--ink-muted);
+}
+
+.comparison-reading .metric-measurement {
+  margin-top: var(--s-1);
+}
+
+.comparison-source {
+  overflow-wrap: anywhere;
+}
+
+.comparison-networks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}
+
+.comparison-networks > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 1.5rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-pill);
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+}
+
+.comparison-networks > span.is-shared {
+  border-color: color-mix(in srgb, var(--lagoon) 55%, transparent);
+  color: var(--ink);
+}
+
+.comparison-networks > span.is-shared::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--lagoon);
+}
+
+.comparison-declaration {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-1);
+}
+
+.comparison-declaration .comparison-meter {
+  margin: 0.35rem 0 2px;
+}
+
+.comparison-declaration > span {
+  color: var(--ink);
+}
+
+.comparison-declaration:not([data-state="declared"]) > span {
+  color: var(--ink-soft);
+}
+
+.comparison-declaration > small {
+  margin-top: 0;
+}
+
+.comparison-access {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comparison-access small {
+  margin-top: 0;
+}
+
+.comparison-unavailable {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.comparison-network-present {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink);
+}
+
+.comparison-network-present svg {
+  color: var(--lagoon);
+}
+
+.comparison-same {
+  padding: var(--s-5) 0;
+  border-top: 1px solid var(--rule-strong);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+/* ── Disclosures: callbacks, contracts, method ───────────────────────────── */
+.comparison-disclosure {
+  margin-top: var(--s-4);
+  border-top: 1px solid var(--rule-strong);
+}
+
+.comparison-network-matrix.comparison-disclosure {
+  margin-top: 0;
+  border-top-color: var(--rule);
+}
+
+.comparison-disclosure > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+  min-height: 3.5rem;
+  padding: var(--s-3) 0;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.comparison-network-matrix.comparison-disclosure > summary {
+  min-height: 2.75rem;
+  font-size: var(--fs-small);
+}
+
+.comparison-disclosure > summary > span {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  font-weight: 400;
+}
+
+.comparison-disclosure > summary > .comparison-disclosure-chevron {
+  margin-left: auto;
+}
+
+.comparison-disclosure > summary:hover > .comparison-disclosure-chevron {
+  color: var(--signal);
+}
+
+.comparison-callbacks > p,
+.comparison-methodology > div {
+  max-width: 80ch;
+  padding: var(--s-4) 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.comparison-methodology p + p {
+  margin-top: var(--s-3);
+}
+
+.comparison-contract-content {
+  padding-top: var(--s-3);
+  border-top: 0;
+}
+
+.comparison-contract-content .comparison-band-label label {
+  display: block;
+  margin-bottom: var(--s-2);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.comparison-contract-content .comparison-search input {
+  font-size: var(--fs-small);
+}
+
+.comparison-contract-grid h4 {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.comparison-contract-grid > section > p:not(.comparison-contract-count) {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.comparison-contract-count {
+  margin: 2px 0 var(--s-3);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.comparison-contract-grid ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comparison-contract-grid li {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--rule);
+  font-size: var(--fs-small);
+}
+
+.comparison-contract-chain {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.comparison-contract-grid li > strong {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.comparison-contract-address {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+
+.comparison-contract-address code {
+  flex: 1;
+  min-width: 0;
+  padding-top: 0.6rem;
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.comparison-contract-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-4);
+}
+
+.comparison-contract-links .external {
+  min-height: 2.5rem;
+  font-size: var(--fs-micro);
+}
+
+.comparison-contract-grid li > details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 2.5rem;
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+  cursor: pointer;
+  list-style: none;
+}
+
+.comparison-contract-grid li > details[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.comparison-contract-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  padding-bottom: var(--s-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.comparison-contract-flags code {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-1);
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+}
+
+.comparison-contract-grid > section > .control {
+  width: 100%;
+}
+
+/* ── Columns arrangement: identities and bands share the matrix grid ──── */
+.hook-comparison[data-layout="columns"] .comparison-columns {
+  grid-template-columns: var(--cmp-label) minmax(0, 1fr);
+  gap: 0;
+}
+
+.hook-comparison[data-layout="columns"] .comparison-corner {
+  display: block;
+  padding: var(--s-4) var(--s-4) var(--s-4) 0;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.hook-comparison[data-layout="columns"] .comparison-selection,
+.hook-comparison[data-layout="columns"] .comparison-band-columns {
+  grid-template-columns: repeat(var(--cmp-count), minmax(0, 1fr));
+  gap: 0;
+}
+
+.hook-comparison[data-layout="columns"][data-count="1"] .comparison-selection,
+.hook-comparison[data-layout="columns"][data-count="1"]
+  .comparison-band-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hook-comparison[data-layout="columns"] .comparison-project {
+  padding: var(--s-4);
+  border-bottom: 0;
+  border-left: 1px solid var(--rule);
+}
+
+.hook-comparison[data-layout="columns"] .comparison-next {
+  margin: var(--s-4);
+}
+
+.hook-comparison[data-layout="columns"] .comparison-band {
+  grid-template-columns: var(--cmp-label) minmax(0, 1fr);
+  gap: 0;
+}
+
+.hook-comparison[data-layout="columns"] .comparison-band-label {
+  padding-right: var(--s-4);
+}
+
+.hook-comparison[data-layout="columns"] .comparison-band-columns > * {
+  padding: 0 var(--s-4);
+  border-left: 1px solid var(--rule);
+}
+
+.hook-comparison[data-layout="columns"] .comparison-band-copy {
+  margin-top: 0;
+  padding-left: var(--s-4);
+  align-self: end;
+}
+
+/* Column names are already the heading above; keep them for assistive tech. */
+.hook-comparison[data-layout="columns"] .comparison-band-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.hook-comparison[data-layout="columns"][data-count="1"] .comparison-table {
+  width: calc(var(--cmp-label) + (100% - var(--cmp-label)) / 2);
+}
+
+/* With no sideways scroll the matrix header can follow the reader down. */
+.hook-comparison[data-layout="columns"] .comparison-scroll {
+  overflow: visible;
+}
+
+.hook-comparison[data-layout="columns"] .comparison-table thead th {
+  position: sticky;
+  top: var(--cmp-sticky-top);
+  z-index: 2;
+}
+
+.hook-comparison[data-layout="columns"] .comparison-table thead th:first-child {
+  z-index: 3;
+}
+
+/* ── Smaller screens ─────────────────────────────────────────────────────── */
+@media (max-width: 52rem) {
+  .hook-comparison {
+    --cmp-sticky-top: 3.5rem;
+  }
+
+  .comparison-search input,
+  .comparison-scope select,
+  .comparison-contract-content .comparison-search input {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .hook-comparison {
+    --cmp-cell: var(--s-3);
+  }
+
+  .comparison-heading {
+    align-items: flex-start;
+  }
+
+  .comparison-header-actions,
+  .comparison-header-actions .control {
+    width: 100%;
+  }
+
+  .comparison-picker-summary-meta {
+    display: none;
+  }
+
+  .comparison-picker-disclosure > summary > .comparison-disclosure-chevron {
+    margin-left: auto;
+  }
+
+  .comparison-project h3 {
+    font-size: 1.6rem;
+  }
+
+  .comparison-project-description {
+    -webkit-line-clamp: 2;
+  }
+
+  /* Each matrix row becomes a group: label, then every project's value. */
+  .comparison-scroll {
+    overflow: visible;
+  }
+
+  .comparison-table,
+  .comparison-table tbody,
+  .comparison-table tr,
+  .comparison-table th,
+  .comparison-table td {
+    display: block;
+    width: auto;
+    min-width: 0;
+  }
+
+  .comparison-table colgroup {
+    display: none;
+  }
+
+  .comparison-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .comparison-table tbody tr {
+    padding: var(--s-3) 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .comparison-table tbody tr:hover > *,
+  .comparison-table tbody tr:hover > th:first-child {
+    background: none;
+  }
+
+  .comparison-table tbody th,
+  .comparison-table th:first-child {
+    position: static;
+    padding: 0 0 var(--s-2);
+    border: 0;
+    background: none;
+  }
+
+  .comparison-table tbody th small {
+    max-width: none;
+  }
+
+  .comparison-table td {
+    display: grid;
+    grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr);
+    gap: var(--s-3);
+    padding: var(--s-2) 0;
+    border: 0;
+    border-top: 1px dashed var(--rule);
+  }
+
+  .comparison-table td::before {
+    content: attr(data-project);
+    color: var(--ink-muted);
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .comparison-group-start > th,
+  .comparison-group-start > td,
+  .comparison-table thead + tbody > .comparison-group-start > th,
+  .comparison-table thead + tbody > .comparison-group-start > td {
+    padding-top: var(--s-2);
+    border-top: 0;
+  }
+
+  .comparison-group-start > td {
+    border-top: 1px dashed var(--rule);
+  }
+
+  .comparison-table tbody .comparison-group-start {
+    margin-top: var(--s-4);
+    border-top: 1px solid var(--rule-strong);
+  }
+
+  .comparison-table thead + tbody .comparison-group-start {
+    margin-top: 0;
+    border-top: 0;
+  }
+
+  .comparison-group-label {
+    position: static;
+    display: block;
+    margin-bottom: var(--s-2);
+  }
+
+  .comparison-figure,
+  .comparison-amount {
+    font-size: 1.5rem;
+  }
+
+  .comparison-meter {
+    width: min(100%, 6rem);
+  }
+
+  .comparison-scroll-hint {
+    display: none;
+  }
+
+  .comparison-contract-content .comparison-search {
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comparison-toggle-track,
+  .comparison-toggle-track::after,
+  .comparison-disclosure-chevron,
+  .comparison-project-links button svg {
+    transition: none;
+  }
+}
+
+/* The signature row's key sits in the narrow label column: one state per line. */
+.comparison-table th .permission-glyph-key {
+  display: grid;
+  gap: var(--s-1);
+  margin-top: var(--s-2);
+  font-weight: 400;
+}

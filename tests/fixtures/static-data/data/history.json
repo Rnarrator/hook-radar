@@ -1,0 +1,30 @@
+{
+ "schemaVersion": 1,
+ "points": [
+  {
+   "timestamp": 1793153100000,
+   "value": 3100,
+   "pools": 12
+  },
+  {
+   "timestamp": 1793163900000,
+   "value": 3300,
+   "pools": 11
+  },
+  {
+   "timestamp": 1793174700000,
+   "value": 3250,
+   "pools": 10
+  },
+  {
+   "timestamp": 1793185500000,
+   "value": 3600,
+   "pools": 9
+  },
+  {
+   "timestamp": 1793196300000,
+   "value": 3731,
+   "pools": 8
+  }
+ ]
+}

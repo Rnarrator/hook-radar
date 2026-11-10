@@ -1,0 +1,776 @@
+/* Observatory components: buttons, fields, chips, dialogs, feedback.
+   These restyle the shared class names every view already uses (.control,
+   .icon-button, .search-box, .modal, .drawer, .toast …). Views add their own
+   layout in their own stylesheet; they do not redefine these primitives. */
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.control,
+.primary-button,
+.icon-button,
+.detail-text-action,
+.external-button {
+  --btn-bg: var(--surface-2);
+  --btn-border: var(--rule-strong);
+  --btn-ink: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 2.5rem;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--btn-border);
+  border-radius: var(--r-2);
+  background: var(--btn-bg);
+  color: var(--btn-ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: var(--edge-light);
+  transition:
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+.control:hover:not(:disabled),
+.icon-button:hover:not(:disabled),
+.detail-text-action:hover:not(:disabled) {
+  --btn-bg: var(--surface-3);
+  --btn-border: var(--rule-focus);
+  --btn-ink: var(--ink);
+  color: var(--ink);
+}
+
+.control:active:not(:disabled),
+.icon-button:active:not(:disabled),
+.primary-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.control:disabled,
+.primary-button:disabled,
+.icon-button:disabled {
+  opacity: 0.45;
+}
+
+.control.selected,
+.control[aria-pressed="true"],
+.control[aria-expanded="true"] {
+  --btn-bg: var(--signal-wash);
+  --btn-border: var(--signal-line);
+  --btn-ink: var(--ink);
+}
+
+.primary-button,
+.control.primary {
+  --btn-bg: var(--signal);
+  --btn-border: var(--signal);
+  --btn-ink: var(--on-signal);
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 6px 18px -8px rgba(255, 92, 169, 0.6);
+}
+
+.primary-button:hover:not(:disabled),
+.control.primary:hover:not(:disabled) {
+  --btn-bg: var(--signal-hover);
+  --btn-border: var(--signal-hover);
+  color: var(--on-signal);
+  text-decoration: none;
+}
+
+.icon-button {
+  width: 2.5rem;
+  padding: 0;
+}
+
+.detail-text-action {
+  --btn-bg: transparent;
+  --btn-border: transparent;
+  box-shadow: none;
+}
+
+/* Text link with an outbound arrow. */
+.external {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--signal);
+  font-weight: 500;
+}
+
+/* ── Segmented controls ──────────────────────────────────────────────────── */
+.window-switch,
+.index-scope-switch,
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.window-switch button,
+.index-scope-switch button,
+.segmented button {
+  min-height: 2rem;
+  padding: 0 var(--s-3);
+  border-radius: 6px;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.window-switch button:hover:not(:disabled):not(.selected),
+.index-scope-switch button:hover:not(:disabled):not([aria-pressed="true"]),
+.segmented button:hover:not(:disabled):not([aria-pressed="true"]) {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.window-switch button.selected,
+.window-switch button[aria-pressed="true"],
+.index-scope-switch button[aria-pressed="true"],
+.segmented button[aria-pressed="true"],
+.segmented button[aria-selected="true"] {
+  background: var(--surface-4);
+  color: var(--ink);
+  box-shadow:
+    var(--edge-light),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    inset 0 -2px 0 var(--signal);
+}
+
+.window-switch button:disabled,
+.index-scope-switch button:disabled {
+  opacity: 0.45;
+}
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+.search-box,
+.select-control,
+.field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 2.5rem;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink-muted);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.search-box:hover,
+.select-control:hover,
+.field:hover {
+  border-color: var(--rule-focus);
+}
+
+.search-box:focus-within,
+.select-control:focus-within,
+.field:focus-within {
+  border-color: var(--signal);
+  background: var(--surface-2);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 3px var(--signal-wash);
+}
+
+.search-box input,
+.select-control select,
+.field input,
+.field select {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-body);
+}
+
+/* Text fields stay at 16px: smaller type makes iOS Safari zoom the page on focus. */
+.search-box input,
+.field input {
+  font-size: max(1rem, 16px);
+}
+
+.search-box input:focus-visible,
+.select-control select:focus-visible,
+.field input:focus-visible,
+.field select:focus-visible {
+  box-shadow: none;
+  /* The field wrapper shows the focus state (border and wash). */
+  outline: none;
+}
+
+.select-control select {
+  appearance: none;
+  padding-right: var(--s-5);
+  cursor: pointer;
+}
+
+.select-control select option {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.select-control > svg {
+  position: absolute;
+  right: var(--s-3);
+  pointer-events: none;
+  color: var(--ink-muted);
+}
+
+.search-box kbd,
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.35rem;
+  border: 1px solid var(--rule-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.clear-search {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--r-1);
+  color: var(--ink-muted);
+}
+
+.clear-search:hover {
+  color: var(--ink);
+  background: var(--surface-3);
+}
+
+/* ── Chips and tags ──────────────────────────────────────────────────────── */
+.tag,
+.category-tag,
+.chip {
+  --chip-color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 1.5rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface-1);
+  color: var(--chip-color);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.category-tag::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--cat, var(--cat-other));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cat, var(--cat-other)) 22%, transparent);
+}
+
+.category-tag[data-category="Launches"],
+.category-tag:is(.launches) {
+  --cat: var(--cat-launches);
+}
+.category-tag[data-category="Liquidity"] {
+  --cat: var(--cat-liquidity);
+}
+.category-tag[data-category="Fees"] {
+  --cat: var(--cat-fees);
+}
+.category-tag[data-category="MEV"] {
+  --cat: var(--cat-mev);
+}
+.category-tag[data-category="Orders"] {
+  --cat: var(--cat-orders);
+}
+.category-tag[data-category="Oracles"] {
+  --cat: var(--cat-oracles);
+}
+.category-tag[data-category="Access"] {
+  --cat: var(--cat-access);
+}
+
+.category-tag:hover {
+  border-color: var(--rule-focus);
+  color: var(--ink);
+}
+
+/* ── Status LED: the radar ping. Only live states animate. ──────────────── */
+.status-led {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+  color: var(--ink-muted);
+}
+
+.status-led.green {
+  color: var(--lagoon);
+}
+
+.status-led.amber {
+  color: var(--brass);
+}
+
+.status-led.green::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: ping 2.8s var(--ease-out) infinite;
+}
+
+@keyframes ping {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* ── Notices and empty states ────────────────────────────────────────────── */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--brass);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.notice > svg {
+  color: var(--brass);
+}
+
+.notice.error-notice {
+  border-left-color: var(--danger);
+}
+
+.notice.error-notice > svg {
+  color: var(--danger);
+}
+
+.notice button {
+  margin-left: auto;
+  min-height: 2rem;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.notice button:hover {
+  background: var(--surface-3);
+}
+
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-3);
+  padding: var(--s-8) var(--s-5);
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.empty-state > svg {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--surface-1);
+  color: var(--ink-muted);
+}
+
+.empty-state h3 {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: 400;
+  line-height: var(--lh-tight);
+}
+
+.empty-state p {
+  max-width: 46ch;
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+}
+
+/* ── Overlays: dialog and drawer ─────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-5);
+  background: rgba(4, 5, 10, 0.72);
+  animation: fade-in var(--dur-2) var(--ease-out);
+}
+
+.drawer-overlay {
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.modal,
+.drawer {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: min(42rem, 100%);
+  max-height: calc(100dvh - 3rem);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background:
+    var(--key-light),
+    var(--surface-1);
+  box-shadow: var(--elev-3);
+  animation: rise-in var(--dur-3) var(--ease-out);
+}
+
+.drawer {
+  width: min(48rem, 100%);
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: var(--r-3) 0 0 var(--r-3);
+  border-top: 0;
+  border-bottom: 0;
+  border-right: 0;
+  animation: slide-in var(--dur-3) var(--ease-out);
+}
+
+.modal-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex: none;
+  padding: var(--s-3) var(--s-4) var(--s-3) var(--s-5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.modal-chrome > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.pixel-square {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--signal);
+}
+
+.modal-body {
+  padding: var(--s-5);
+  overflow-y: auto;
+}
+
+.modal-body h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--fs-h2);
+  line-height: var(--lh-tight);
+}
+
+.drawer-body {
+  overflow-y: auto;
+  padding: var(--s-5);
+  /* A focused control keeps breathing room instead of sitting on the edge. */
+  scroll-padding-block: var(--s-6);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--s-5) + env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  max-width: calc(100vw - 2rem);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--rule-focus);
+  border-radius: var(--r-2);
+  background: var(--surface-3);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  box-shadow: var(--elev-2);
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  pointer-events: none;
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.toast svg {
+  color: var(--lagoon);
+}
+
+/* ── Skeleton and spin ───────────────────────────────────────────────────── */
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-1);
+  background: var(--surface-2);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(144, 151, 255, 0.1),
+    transparent
+  );
+  animation: sweep 1.6s var(--ease-in-out) infinite;
+}
+
+@keyframes sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+.pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+/* ── Panel: sections are separated by rules, not boxes. ─────────────────── */
+.panel {
+  border: 0;
+  border-top: 1px solid var(--rule-strong);
+  border-radius: 0;
+  background: transparent;
+  padding: var(--s-5) 0 0;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.panel-heading h2 {
+  font-size: var(--fs-h3);
+}
+
+.panel-heading p {
+  margin-top: var(--s-1);
+  max-width: 62ch;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+/* ── Plate: a framed instrument surface for charts and key readouts. ────── */
+.plate {
+  position: relative;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background:
+    var(--key-light),
+    var(--surface-1);
+  box-shadow: var(--elev-1);
+  padding: var(--s-5);
+}
+
+.plate-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2) var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.plate-caption h2,
+.plate-caption h3 {
+  font-size: var(--fs-h3);
+}
+
+.plate-caption .scope {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+/* Large numeric readout: the editorial figure. */
+.readout {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.readout-label {
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.readout-value {
+  font-family: var(--font-display);
+  font-size: var(--fs-stat);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.readout-note {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+/* Touch: primary controls reach 44px on narrow or coarse-pointer screens. */
+@media (max-width: 52rem), (pointer: coarse) {
+  .control,
+  .primary-button,
+  .icon-button {
+    min-height: 2.75rem;
+  }
+
+  .icon-button {
+    width: 2.75rem;
+  }
+
+  .search-box,
+  .select-control,
+  .field {
+    min-height: 2.75rem;
+  }
+
+  .window-switch button,
+  .index-scope-switch button,
+  .segmented button {
+    min-height: 2.75rem;
+  }
+
+  /* Auto Snapshot edition only (the root carries data-edition, set by the build;
+     :where() keeps each selector's own specificity, and the live page, which
+     never has the attribute, is untouched). The retry beside an error is a full
+     44px target. */
+  :where(:root[data-edition="snapshot"]) .notice.error-notice button {
+    min-height: 2.75rem;
+  }
+
+  /* A tap anywhere in the field reaches the select, not only its line of text. */
+  :where(:root[data-edition="snapshot"]) .select-control select {
+    align-self: stretch;
+  }
+}
+
+/* Toast tones */
+.toast[data-tone="error"] {
+  border-color: var(--brass);
+}
+
+.toast[data-tone="info"] svg,
+.toast[data-tone="error"] svg {
+  color: var(--brass);
+}
+
+/* Touch screens do not need the keyboard hint, and the placeholder needs the room. */
+@media (max-width: 60rem), (pointer: coarse) {
+  .search-box kbd {
+    display: none;
+  }
+}

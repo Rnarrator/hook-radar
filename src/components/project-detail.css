@@ -1,0 +1,2439 @@
+/* Project detail · Observatory.
+   The drawer content (hero → readouts plate → dossier → sticky Pools | Hooks
+   tabs → setup ribbon → filters → rows). Unlayered: every rule here outranks
+   the legacy layer, so each element states the properties it relies on.
+   The drawer shell itself (.drawer, .modal-chrome) belongs to Primitives. */
+
+.drawer-body.project-detail {
+  --pd-pad: var(--s-6);
+  --pd-row-x: var(--s-3);
+  --pool-cols: minmax(0, 1fr) 6.5rem 6.5rem 6.5rem 6rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  /* No top padding: Chrome resolves sticky offsets against the scroller's
+     content box, so the tab bar must stick flush with the drawer chrome. */
+  padding: 0 var(--pd-pad) var(--s-8);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-top: 4.25rem;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+/* The snapshot edition writes a pool's creation time as "26 Oct, 20:44 UTC" (the
+   year is added beyond the snapshot's own), so its Created column is wider. */
+.drawer-body.project-detail[data-edition="snapshot"] {
+  --pool-cols: minmax(0, 1fr) 6.5rem 6.5rem 6.5rem 9.5rem;
+}
+
+.drawer-body.project-detail > :first-child {
+  margin-top: var(--s-5);
+}
+
+.project-detail h3,
+.project-detail h4 {
+  margin: 0;
+}
+
+.project-detail .rotate {
+  transform: rotate(180deg);
+}
+
+.project-detail svg.lucide-chevron-down {
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+.project-detail .detail-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--s-4) var(--s-5);
+  margin: 0;
+}
+
+.project-detail .detail-hero > .protocol-logo {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background:
+    radial-gradient(
+      120% 100% at 20% 0%,
+      rgba(144, 151, 255, 0.1),
+      transparent 60%
+    ),
+    var(--ground);
+  box-shadow: var(--elev-1);
+  font-family: var(--font-data);
+  font-size: var(--fs-h3);
+  color: var(--ink-faint);
+}
+
+.project-detail .detail-hero > .protocol-logo img {
+  width: 3rem;
+  height: 3rem;
+  object-fit: contain;
+}
+
+.project-detail .detail-hero-text {
+  display: grid;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.project-detail .project-heading-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.project-detail .project-heading-meta .category-tag {
+  margin: 0;
+}
+
+.project-detail .project-origin {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 1.5rem;
+  padding: 0 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--brass) 38%, transparent);
+  border-radius: var(--r-pill);
+  background: var(--brass-wash);
+  color: var(--ink-soft);
+  font-family: var(--font-ui);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* A small chip with a comfortable, invisible hit area. */
+.project-detail button.project-origin::after {
+  content: "";
+  position: absolute;
+  inset: -0.5rem -0.25rem;
+}
+
+.project-detail button.project-origin:hover,
+.project-detail button.project-origin[aria-expanded="true"] {
+  border-color: var(--brass);
+  color: var(--ink);
+}
+
+.project-detail .project-origin svg {
+  color: var(--brass);
+}
+
+.project-detail .project-origin-label {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.project-detail .project-protocol-name {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  line-height: 1.2;
+  margin-top: var(--s-1);
+}
+
+.project-detail .detail-hero h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.55rem + 1.6vw, 2.875rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.012em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.project-detail .detail-hero .family-fingerprint {
+  display: inline-flex;
+  margin: 0;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  overflow-wrap: anywhere;
+}
+
+.project-detail .detail-hero p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--ink-soft);
+  font-size: var(--fs-lead);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .detail-hero p[data-clamped="true"] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.project-detail .detail-summary-toggle {
+  justify-self: start;
+  min-height: 2.5rem;
+  padding: 0;
+  color: var(--signal);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.project-detail .detail-summary-toggle:hover {
+  color: var(--signal-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Service notice ──────────────────────────────────────────────────────── */
+.project-detail .detail-service-notice {
+  margin: 0;
+  align-items: flex-start;
+}
+
+.project-detail .detail-service-notice > svg {
+  margin-top: 2px;
+}
+
+.project-detail .detail-service-notice strong {
+  display: block;
+  color: var(--ink);
+}
+
+/* The snapshot edition's Retry stays focusable while it checks. */
+.project-detail .detail-service-notice .control[aria-disabled="true"] {
+  opacity: 0.45;
+}
+
+/* ── Actions: one primary, quiet tools ──────────────────────────────────── */
+.project-detail .detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-4);
+  margin: 0;
+}
+
+.project-detail .detail-actions-primary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.project-detail .detail-actions-primary > * {
+  min-height: 2.75rem;
+  font-size: var(--fs-small);
+}
+
+.project-detail .detail-actions .project-website {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-5);
+  border: 1px solid var(--signal);
+  border-radius: var(--r-2);
+  background: var(--signal);
+  color: var(--on-signal);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 6px 18px -8px rgba(255, 92, 169, 0.6);
+  transition:
+    background var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+.project-detail .detail-actions .project-website:hover {
+  background: var(--signal-hover);
+  border-color: var(--signal-hover);
+  color: var(--on-signal);
+  text-decoration: none;
+}
+
+.project-detail .detail-actions .project-website:active {
+  transform: translateY(1px);
+}
+
+.project-detail .detail-actions .watch-project {
+  padding: 0 var(--s-4);
+}
+
+.project-detail .detail-actions .watch-project[aria-pressed="true"] svg {
+  color: var(--signal);
+}
+
+.project-detail .detail-actions-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin-right: calc(-1 * var(--s-3));
+}
+
+.project-detail .detail-actions-secondary > .detail-text-action,
+.project-detail .detail-actions-secondary > .external {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0 var(--s-3);
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.project-detail .detail-actions-secondary > .detail-text-action:hover,
+.project-detail .detail-actions-secondary > .external:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.project-detail .detail-actions-secondary > .external svg {
+  color: var(--ink-muted);
+}
+
+.project-detail .detail-text-action.selected,
+.project-detail .detail-text-action[aria-pressed="true"] {
+  border-color: var(--signal-line);
+  background: var(--signal-wash);
+  color: var(--ink);
+}
+
+/* ── Readouts plate ─────────────────────────────────────────────────────── */
+.project-detail .detail-overview {
+  display: grid;
+  gap: var(--s-4);
+  margin: 0;
+  padding: var(--s-5);
+}
+
+.project-detail .detail-overview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.project-detail .detail-overview-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--s-3);
+  min-width: 0;
+  padding-top: 0.6rem;
+}
+
+.project-detail .detail-overview-head .kicker {
+  color: var(--brass);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+}
+
+.project-detail .detail-scope {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.02em;
+}
+
+.project-detail .detail-overview-head .detail-disclosure {
+  flex: none;
+  margin-right: calc(-1 * var(--s-2));
+}
+
+.project-detail .detail-stats .readout-note-short,
+.project-detail .action-short {
+  display: none;
+}
+
+.project-detail .detail-stat-context {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+
+/* Each readout spans three shared rows (label · value · provenance) so the
+   figures align across columns whatever a label's length. */
+.project-detail .detail-stats {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 0.85fr) minmax(0, 0.75fr) minmax(0, 1.2fr)
+    minmax(0, 1.2fr);
+  grid-template-rows: auto auto auto;
+  row-gap: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+  background: transparent;
+}
+
+.project-detail .detail-stats > .readout {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  align-content: start;
+  row-gap: var(--s-1);
+  min-width: 0;
+  padding: var(--s-4) var(--s-4) 0;
+  border: 0;
+  border-left: 1px solid var(--rule);
+}
+
+.project-detail .detail-stats .readout-label {
+  align-self: end;
+}
+
+.project-detail .detail-stats > .readout:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+/* Census (pools, networks) and market (volume, reserves) are different
+   measurements: a stronger rule separates the two pairs. */
+.project-detail .detail-stats > .readout[data-kind="market"]:nth-child(3) {
+  border-left-color: var(--rule-strong);
+}
+
+.project-detail .detail-stats span {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.project-detail .detail-stats .readout-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.project-detail .detail-stats .readout-label svg {
+  color: var(--ink-faint);
+}
+
+.project-detail .detail-stats .readout-value {
+  display: block;
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.45rem + 1.5vw, 2.75rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  font-variant-numeric: lining-nums tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* The drawer stops growing at 48rem, so the figure steps down with its length
+   (see readoutSize) rather than with the viewport alone. */
+.project-detail .detail-stats .readout-value[data-size="m"] {
+  font-size: clamp(1.75rem, 1.2rem + 1.2vw, 2.25rem);
+}
+
+.project-detail .detail-stats .readout-value[data-size="s"] {
+  font-size: clamp(1.5rem, 1.1rem + 1vw, 1.875rem);
+}
+
+.project-detail .detail-stats .readout-value[data-size="xs"] {
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.5rem);
+}
+
+.project-detail .detail-stats .readout-value[data-size="xxs"] {
+  font-size: clamp(1.125rem, 0.95rem + 0.5vw, 1.25rem);
+}
+
+.project-detail .detail-stats .readout-value[data-unavailable="true"] {
+  color: var(--ink-muted);
+}
+
+.project-detail .detail-stats .readout-note,
+.project-detail .detail-stats .metric-measurement.compact {
+  display: block;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .detail-stats .metric-measurement span {
+  display: inline;
+  font-size: inherit;
+}
+
+.project-detail .detail-stats .readout-note .readout-expired {
+  display: block;
+  color: var(--brass);
+}
+
+.project-detail .detail-stats .metric-measurement .measurement-state,
+.project-detail .pool-measured .measurement-state {
+  color: var(--brass);
+  white-space: nowrap;
+}
+
+.project-detail .detail-stats .metric-measurement .measurement-state::before {
+  content: " · ";
+  color: var(--ink-muted);
+}
+
+.project-detail .detail-stats .metric-measurement time {
+  white-space: nowrap;
+}
+
+.project-detail .detail-data-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-4);
+  margin: 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.project-detail .detail-freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.project-detail .detail-freshness::before {
+  content: "";
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.project-detail .detail-freshness[data-state="current"]::before {
+  background: var(--lagoon);
+}
+
+.project-detail .detail-freshness[data-state="stale"] {
+  color: var(--brass);
+}
+
+.project-detail .detail-freshness[data-state="stale"]::before {
+  background: var(--brass);
+}
+
+/* The snapshot edition dates the totals where they are read. */
+.project-detail .detail-snapshot-time {
+  color: var(--ink-soft);
+}
+
+.project-detail .detail-coverage-note {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .detail-data-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4) var(--s-6);
+  margin: 0;
+  padding: var(--s-4) 0 0;
+  border: 0;
+  border-top: 1px dashed var(--rule-strong);
+  background: transparent;
+}
+
+.project-detail .detail-data-panel > div {
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.project-detail .detail-data-panel h3 {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.project-detail .detail-data-panel p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .detail-data-panel p strong {
+  color: var(--ink);
+}
+
+.project-detail .detail-data-panel .external {
+  justify-self: start;
+  min-height: 2.5rem;
+  font-size: var(--fs-small);
+}
+
+/* ── Quiet disclosure / text buttons shared by every section ─────────────── */
+.project-detail .detail-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0 var(--s-2);
+  border: 0;
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.project-detail .detail-disclosure:hover,
+.project-detail .detail-disclosure[aria-expanded="true"] {
+  color: var(--ink);
+}
+
+.project-detail .detail-disclosure:hover {
+  background: var(--surface-2);
+  text-decoration: none;
+}
+
+.project-detail .external {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--signal);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+/* ── Dossier: progressive disclosure rows ───────────────────────────────── */
+.project-detail .detail-dossier {
+  display: grid;
+  margin: 0;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.project-detail .detail-dossier > section {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+}
+
+.project-detail .dossier-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 3.25rem;
+  margin: 0;
+  padding: 0 var(--s-2);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  text-align: left;
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+.project-detail .dossier-toggle:hover {
+  background: var(--surface-2);
+}
+
+.project-detail .dossier-toggle > svg:first-child {
+  color: var(--ink-muted);
+}
+
+.project-detail .dossier-toggle[aria-expanded="true"] > svg:first-child {
+  color: var(--brass);
+}
+
+.project-detail .dossier-title {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.project-detail .dossier-toggle .project-controls-source,
+.project-detail .dossier-toggle .dossier-hint {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.02em;
+  text-align: right;
+}
+
+.project-detail .dossier-toggle > svg:last-child {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.project-detail .project-controls-panel {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding: var(--s-1) var(--s-2) var(--s-5);
+  border: 0;
+  background: transparent;
+}
+
+.project-detail .project-controls-panel p {
+  margin: 0;
+  max-width: 64ch;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+}
+
+.project-detail .project-controls-panel dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.project-detail .project-controls-panel dl > div {
+  display: grid;
+  align-content: start;
+  gap: var(--s-1);
+  min-width: 0;
+  padding: var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+}
+
+.project-detail .project-controls-panel dl > div[data-flagged="true"] {
+  border-color: color-mix(in srgb, var(--brass) 45%, transparent);
+  box-shadow: inset 2px 0 0 var(--brass);
+}
+
+.project-detail .project-controls-panel dt {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.02em;
+}
+
+.project-detail .project-controls-panel dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.project-detail .project-controls-panel .project-evidence-note,
+.project-detail .project-controls-panel .project-controls-summary {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .project-controls-panel .detail-disclosure {
+  justify-self: start;
+  margin-left: calc(-1 * var(--s-2));
+}
+
+/* ── Sticky tabs ─────────────────────────────────────────────────────────── */
+.project-detail .detail-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: stretch;
+  gap: var(--s-5);
+  margin: calc(-1 * var(--s-2)) calc(-1 * var(--pd-pad)) 0;
+  padding: 0 var(--pd-pad);
+  border: 0;
+  border-bottom: 1px solid var(--rule-strong);
+  background: var(--surface-1);
+  box-shadow: 0 10px 18px -16px rgba(0, 0, 0, 0.9);
+}
+
+.project-detail .detail-tabs button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 3.25rem;
+  margin: 0;
+  padding: 0 var(--s-1);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  transition: color var(--dur-1) var(--ease-out);
+}
+
+.project-detail .detail-tabs button:hover {
+  color: var(--ink);
+}
+
+.project-detail .detail-tabs button.active,
+.project-detail .detail-tabs button[aria-selected="true"] {
+  border: 0;
+  color: var(--ink);
+}
+
+.project-detail .detail-tabs button[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--signal);
+}
+
+.project-detail .detail-tabs button:focus-visible {
+  border-radius: var(--r-1);
+  box-shadow: inset 0 0 0 2px var(--signal);
+}
+
+.project-detail .detail-tabs button > span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.75rem;
+  min-height: 1.375rem;
+  padding: 0 0.45rem;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+}
+
+.project-detail .detail-tabs button[aria-selected="true"] > span {
+  background: var(--signal-wash);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--signal-line);
+}
+
+/* ── Setup ribbon: hooks → pools → (extensions) ─────────────────────────── */
+.project-detail .project-setup {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.project-detail .project-setup-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.project-detail .project-setup-heading h3,
+.project-detail .project-setup-heading > span {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.project-detail .project-setup-heading > span {
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.project-detail .project-structure {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.project-detail .project-structure.has-extensions {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.project-detail .project-structure > button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "step value"
+    "step note";
+  align-items: center;
+  column-gap: var(--s-3);
+  min-width: 0;
+  min-height: 3.75rem;
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: var(--edge-light);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.project-detail .project-structure > button:hover {
+  border-color: var(--rule-focus);
+  background: var(--surface-2);
+}
+
+.project-detail .project-structure > button.current {
+  border-color: var(--signal-line);
+  background: var(--signal-wash);
+}
+
+.project-detail .setup-step {
+  grid-area: step;
+  align-self: start;
+  color: var(--ink-faint);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+}
+
+.project-detail .project-structure > button.current .setup-step {
+  color: var(--signal);
+}
+
+.project-detail .setup-value {
+  grid-area: value;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.project-detail .setup-value strong {
+  font-family: var(--font-data);
+  font-weight: 500;
+}
+
+.project-detail .setup-value svg {
+  color: var(--signal);
+}
+
+.project-detail .project-structure small {
+  grid-area: note;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.35;
+}
+
+.project-detail .project-structure > .setup-arrow {
+  align-self: center;
+  color: var(--ink-faint);
+}
+
+/* ── Filters ─────────────────────────────────────────────────────────────── */
+.project-detail .detail-filters {
+  display: grid;
+  grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.project-detail .detail-filters[data-tab="deployments"],
+.project-detail .detail-filters:not(:has(.detail-refresh)) {
+  grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr);
+}
+
+.project-detail .detail-filters .select-control,
+.project-detail .detail-filters .search-box {
+  min-width: 0;
+  min-height: 2.75rem;
+  margin: 0;
+}
+
+.project-detail .detail-filters .select-control {
+  padding: 0;
+}
+
+.project-detail .detail-filters select {
+  width: 100%;
+  max-width: none;
+  min-height: 2.625rem;
+  padding: 0 2.25rem 0 var(--s-3);
+  font-size: var(--fs-body);
+}
+
+.project-detail .detail-filters .search-box input {
+  width: 100%;
+  min-height: 2.5rem;
+  font-size: var(--fs-body);
+}
+
+.project-detail
+  .detail-filters
+  .search-box
+  input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.project-detail .detail-filters .clear-search {
+  width: 2rem;
+  height: 2rem;
+}
+
+.project-detail .detail-filters .detail-refresh {
+  min-height: 2.75rem;
+}
+
+.project-detail .detail-filter-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-2);
+  padding: var(--s-1) var(--s-1) var(--s-1) var(--s-3);
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.project-detail .detail-filter-summary button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.5rem;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-1);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.project-detail .detail-filter-summary button:hover {
+  background: var(--surface-2);
+}
+
+/* ── Lists (pools, hooks) ───────────────────────────────────────────────── */
+.project-detail .pool-list,
+.project-detail .deployment-list {
+  display: grid;
+  gap: 0;
+  margin: calc(-1 * var(--s-2)) 0 0;
+  min-width: 0;
+}
+
+.project-detail .index-pool-note,
+.project-detail .pool-names-status {
+  margin: 0;
+  padding: 0 0 var(--s-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.project-detail .index-pool-note span {
+  color: var(--ink-muted);
+}
+
+.project-detail .pool-names-status {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .pool-list > .notice {
+  margin: 0 0 var(--s-3);
+}
+
+.project-detail .pool-list > .notice > span {
+  min-width: 0;
+}
+
+.project-detail .pool-table-head {
+  display: grid;
+  grid-template-columns: var(--pool-cols);
+  gap: var(--s-3);
+  padding: var(--s-2) var(--pd-row-x);
+  border-bottom: 1px solid var(--rule-strong);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.project-detail .pool-table-head > span:nth-child(n + 3) {
+  text-align: right;
+}
+
+/* Pool row: a two-line table row with identity, network and right-aligned
+   measured columns, then freshness and actions. */
+.project-detail .pool-card {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-3) var(--pd-row-x);
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+.project-detail .pool-card:hover {
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+}
+
+.project-detail .pool-card[data-expanded="true"] {
+  background: var(--surface-2);
+  box-shadow: inset 2px 0 0 var(--signal);
+}
+
+/* The pool currently inspected in the Hooks tab's extensions view. */
+.project-detail .pool-card[data-selected="true"]:not([data-expanded="true"]) {
+  box-shadow: inset 2px 0 0 var(--signal-line);
+}
+
+.project-detail .pool-selected-mark {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.45rem;
+  border-radius: var(--r-pill);
+  background: var(--signal-wash);
+  color: var(--ink);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+}
+
+.project-detail .pool-card > .pool-row {
+  display: grid;
+  grid-template-columns: var(--pool-cols);
+  align-items: start;
+  justify-content: normal;
+  gap: var(--s-1) var(--s-3);
+}
+
+.project-detail .pool-identity {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.project-detail .pool-identity strong {
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .pool-identity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-3);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+}
+
+.project-detail .pool-id {
+  font-family: var(--font-data);
+}
+
+.project-detail .pool-configuration-summary {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .pool-card .tag,
+.project-detail .deployment-card .tag {
+  justify-self: start;
+  min-height: 1.5rem;
+  max-width: 100%;
+  padding: 0 0.6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--fs-micro);
+}
+
+.project-detail .pool-metric {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  text-align: right;
+}
+
+.project-detail .pool-metric-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.project-detail .pool-metric-value {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.project-detail .pool-metric[data-empty="true"] .pool-metric-value,
+.project-detail .pool-age .pool-metric-value {
+  color: var(--ink-muted);
+}
+
+.project-detail .pool-age .pool-metric-value {
+  font-family: var(--font-ui);
+}
+
+.project-detail .pool-age .pool-block {
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .pool-row-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--s-3);
+  min-width: 0;
+}
+
+.project-detail .pool-row-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-3);
+  min-width: 0;
+}
+
+.project-detail .pool-measured {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+}
+
+.project-detail .pool-row-status .pool-measured::before {
+  content: "";
+  flex: none;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.project-detail .pool-row-status .pool-measured[data-state="current"]::before {
+  background: var(--lagoon);
+}
+
+.project-detail .pool-row-status .pool-measured[data-state="cached"]::before,
+.project-detail .pool-row-status .pool-measured[data-state="stale"]::before {
+  background: var(--brass);
+}
+
+.project-detail .pool-row-status .pool-measured[data-state="stale"] {
+  color: var(--brass);
+}
+
+.project-detail .pool-row-status .reserve-unavailable {
+  color: var(--brass);
+}
+
+.project-detail .pool-row-status .reserve-unavailable::before {
+  background: var(--brass);
+}
+
+.project-detail .pool-card-actions,
+.project-detail .deployment-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 2px;
+  margin: 0 calc(-1 * var(--s-2)) 0 auto;
+}
+
+.project-detail .pool-card-actions .external,
+.project-detail .deployment-links .external {
+  min-height: 2.5rem;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-1);
+}
+
+.project-detail .pool-card-actions .external:hover,
+.project-detail .deployment-links .external:hover {
+  background: var(--surface-2);
+  text-decoration: none;
+}
+
+.project-detail .deployment-links button {
+  margin-left: 0;
+}
+
+.project-detail .pool-extensions-action {
+  color: var(--ink);
+}
+
+.project-detail .pool-extensions-action > svg:first-child {
+  color: var(--signal);
+}
+
+/* Expanded pool details: exact identities first, configuration second. */
+.project-detail .pool-detail-panel,
+.project-detail .contract-detail-panel {
+  display: grid;
+  gap: var(--s-2);
+  margin: var(--s-1) 0 var(--s-1);
+  padding: var(--s-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  background: var(--ground);
+  min-width: 0;
+}
+
+.project-detail .contract-caption {
+  display: block;
+  margin: 0;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.02em;
+}
+
+.project-detail .address-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-width: 0;
+  margin: 0 0 var(--s-2);
+  padding: 2px 2px 2px var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+}
+
+.project-detail .address-row code {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.project-detail .address-row .icon-button {
+  flex: none;
+  width: 2.5rem;
+  min-height: 2.5rem;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-muted);
+}
+
+.project-detail .address-row .icon-button:hover {
+  border-color: var(--rule-strong);
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+.project-detail .explorer-link {
+  text-decoration: none;
+}
+
+.project-detail .pool-recorded-observation {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-2);
+  padding: var(--s-3);
+  border: 1px solid color-mix(in srgb, var(--brass) 40%, transparent);
+  border-radius: var(--r-2);
+  background: var(--brass-wash);
+}
+
+.project-detail .pool-recorded-observation dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-6);
+  margin: 0;
+}
+
+.project-detail .pool-recorded-observation dt {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .pool-recorded-observation dd {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-body);
+}
+
+.project-detail .pool-key-details {
+  display: grid;
+  gap: var(--s-3);
+  margin: var(--s-2) 0 0;
+  padding: var(--s-3) 0 0;
+  border-top: 1px dashed var(--rule-strong);
+}
+
+.project-detail .pool-key-details h3 {
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.project-detail .pool-key-details > p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+}
+
+.project-detail .pool-key-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.project-detail .pool-key-values > div {
+  display: grid;
+  gap: 2px;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  min-width: 0;
+}
+
+.project-detail .pool-key-values dt {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .pool-key-values dd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-1);
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+.project-detail .pool-key-values dd .icon-button {
+  width: 2.5rem;
+  min-height: 2.5rem;
+  margin: -0.5rem -0.6rem -0.5rem 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.project-detail .pool-key-addresses {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.project-detail .pool-key-address {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.project-detail .pool-key-address .address-row {
+  margin-bottom: 0;
+}
+
+.project-detail .pool-token-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-3);
+  margin: 0 0 var(--s-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  overflow-wrap: anywhere;
+}
+
+.project-detail .pool-source {
+  overflow-wrap: anywhere;
+}
+
+/* Loading rows share the pool row frame. */
+.project-detail .pool-skeletons {
+  display: grid;
+}
+
+.project-detail .pool-skeleton {
+  display: grid;
+  grid-template-columns: var(--pool-cols);
+  gap: var(--s-3);
+  padding: var(--s-4) var(--pd-row-x);
+  border-bottom: 1px solid var(--rule);
+}
+
+.project-detail .pool-skeleton > span {
+  display: block;
+  height: 0.875rem;
+}
+
+.project-detail .pool-skeleton > span:first-child {
+  height: 1rem;
+  width: 70%;
+}
+
+.project-detail .pool-skeleton > span:nth-child(n + 2) {
+  grid-column: span 1;
+}
+
+.project-detail .pool-skeleton > span:nth-child(2) {
+  grid-column: 3;
+}
+
+.project-detail .list-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-4) 0 0;
+}
+
+.project-detail .pool-list-progress {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.project-detail .pool-list-progress strong {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-weight: 500;
+}
+
+.project-detail .load-more {
+  width: auto;
+  min-height: 2.75rem;
+  margin: 0 0 0 auto;
+  padding: 0 var(--s-5);
+  font-size: var(--fs-small);
+}
+
+.project-detail .empty-state {
+  padding: var(--s-7) var(--s-4);
+}
+
+.project-detail .empty-state p {
+  overflow-wrap: anywhere;
+}
+
+/* ── Hook rows ──────────────────────────────────────────────────────────── */
+.project-detail .hooks-extension-guide {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--signal-line);
+  border-radius: var(--r-2);
+  background: linear-gradient(90deg, var(--signal-wash), transparent 75%);
+}
+
+.project-detail .hooks-extension-guide p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.project-detail .extension-route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-detail .extension-route li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.project-detail .extension-route li + li::before {
+  content: "→";
+  color: var(--signal);
+  letter-spacing: 0;
+}
+
+.project-detail .deployment-list > .notice {
+  margin: 0 0 var(--s-3);
+}
+
+.project-detail .deployment-card {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding: var(--s-4) var(--pd-row-x);
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  min-width: 0;
+}
+
+.project-detail .deployment-card[data-extensions="true"] {
+  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+  box-shadow: inset 2px 0 0 var(--signal);
+}
+
+.project-detail .deployment-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-3);
+  min-width: 0;
+}
+
+.project-detail .deployment-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.project-detail .deployment-identity strong {
+  color: var(--ink);
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.project-detail .deployment-protocol {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.project-detail .deployment-protocol .protocol-logo {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-1);
+  background: var(--ground);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .deployment-protocol .protocol-logo img {
+  width: 1.375rem;
+  height: 1.375rem;
+  object-fit: contain;
+}
+
+.project-detail .hook-address-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--ground);
+  color: var(--ink-soft);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.project-detail .hook-address-copy:hover {
+  border-color: var(--rule-focus);
+  color: var(--ink);
+}
+
+.project-detail .hook-address-copy code {
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+  color: inherit;
+}
+
+.project-detail .hook-address-copy svg {
+  color: var(--ink-muted);
+}
+
+.project-detail .deployment-properties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.project-detail .property-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 1.625rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface-1);
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.project-detail .property-chip.verified {
+  border-color: color-mix(in srgb, var(--lagoon) 40%, transparent);
+  background: var(--lagoon-wash);
+  color: var(--lagoon);
+}
+
+.project-detail .property-chip.attention {
+  border-color: color-mix(in srgb, var(--brass) 40%, transparent);
+  background: var(--brass-wash);
+  color: var(--brass);
+}
+
+.project-detail .deployment-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-1) var(--s-3);
+}
+
+.project-detail .deployment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  min-width: 0;
+}
+
+.project-detail .deployment-metadata-note {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .deployment-description {
+  margin: 0 0 var(--s-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .contract-detail-panel .deployment-links {
+  margin: 0 0 0 calc(-1 * var(--s-2));
+}
+
+.project-detail .callback-panel {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+}
+
+.project-detail .callback-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}
+
+.project-detail .callback-panel code {
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--r-1);
+  background: var(--surface-3);
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  overflow-wrap: anywhere;
+}
+
+.project-detail .callback-panel p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+}
+
+/* ── Tablet: the drawer fills the viewport ───────────────────────────────── */
+@media (max-width: 47.99rem) {
+  .drawer-body.project-detail {
+    --pd-pad: var(--s-5);
+    --pool-cols: minmax(0, 1fr) 5.75rem 6rem 6rem 5.5rem;
+  }
+
+  .drawer-body.project-detail[data-edition="snapshot"] {
+    --pool-cols: minmax(0, 1fr) 5.75rem 6rem 6rem 9.5rem;
+  }
+
+  .project-detail .project-controls-panel dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── Phone sheet ─────────────────────────────────────────────────────────── */
+@media (max-width: 37.5rem) {
+  .drawer-body.project-detail {
+    --pd-pad: var(--s-4);
+    --pd-row-x: 0px;
+    gap: var(--s-3);
+    scroll-padding-top: 3.75rem;
+  }
+
+  .drawer-body.project-detail > :first-child {
+    margin-top: var(--s-4);
+  }
+
+  /* Logo beside the name; the summary takes the full sheet width. */
+  .project-detail .detail-hero {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--s-3);
+  }
+
+  .project-detail .detail-hero-text {
+    display: contents;
+  }
+
+  .project-detail .detail-hero-text > .project-heading-meta,
+  .project-detail .detail-hero-text > .project-protocol-name,
+  .project-detail .detail-hero-text > h2,
+  .project-detail .detail-hero-text > .family-fingerprint {
+    grid-column: 2;
+  }
+
+  .project-detail .detail-hero-text > .project-heading-meta {
+    grid-row: 1;
+  }
+
+  .project-detail .detail-hero > .protocol-logo {
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+
+  .project-detail .detail-hero-text > p,
+  .project-detail .detail-hero-text > .detail-summary-toggle {
+    grid-column: 1 / -1;
+  }
+
+  .project-detail .detail-hero-text > .project-protocol-name,
+  .project-detail .detail-hero-text > h2,
+  .project-detail .detail-hero-text > .family-fingerprint {
+    margin-top: calc(-1 * var(--s-2));
+  }
+
+  .project-detail .detail-hero > .protocol-logo {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: var(--r-2);
+  }
+
+  .project-detail .detail-hero > .protocol-logo img {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .project-detail .detail-hero-text {
+    gap: var(--s-1);
+  }
+
+  .project-detail .detail-hero h2 {
+    font-size: 2rem;
+  }
+
+  .project-detail .detail-hero p {
+    font-size: var(--fs-body);
+    line-height: 1.45;
+  }
+
+  .project-detail .detail-actions {
+    gap: var(--s-2);
+  }
+
+  .project-detail .detail-actions-primary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .project-detail .detail-actions-primary > * {
+    min-width: 0;
+    padding: 0 var(--s-3);
+  }
+
+  .project-detail .detail-actions-secondary {
+    width: 100%;
+    margin: 0 0 0 calc(-1 * var(--s-3));
+  }
+
+  .project-detail .detail-actions-secondary > .detail-text-action,
+  .project-detail .detail-actions-secondary > .external {
+    padding: 0 var(--s-2) 0 var(--s-3);
+  }
+
+  .project-detail .detail-overview {
+    gap: var(--s-2);
+    padding: var(--s-3);
+  }
+
+  /* Phone: the census pair collapses to one compact row (label and figure
+     side by side); the market pair keeps full readouts on a shared subgrid. */
+  .project-detail .detail-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .project-detail .detail-stats > .readout {
+    row-gap: 2px;
+    padding: var(--s-2) var(--s-3) var(--s-2);
+  }
+
+  .project-detail .detail-stats > .readout[data-kind="census"] {
+    grid-row: span 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    align-content: start;
+    gap: 0 var(--s-2);
+  }
+
+  .project-detail .detail-stats > .readout[data-kind="census"] .readout-value {
+    font-size: 1.625rem;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+
+  .project-detail
+    .detail-stats
+    > .readout[data-kind="census"]
+    .readout-value[data-size] {
+    font-size: 1.375rem;
+  }
+
+  .project-detail .detail-stats > .readout[data-kind="census"] .readout-note {
+    flex-basis: 100%;
+  }
+
+  /* The edition's "Networks with hooks" is longer than the figure it sits beside
+     has room for: it wraps within its own width and the figure stays on its row,
+     like the pool count's. */
+  .drawer-body.project-detail[data-edition="snapshot"]
+    .detail-stats
+    > .readout[data-kind="census"]:nth-child(2)
+    .readout-label {
+    flex: 0 1 6.5rem;
+  }
+
+  .project-detail .detail-scope-window {
+    display: none;
+  }
+
+  .project-detail .detail-stats .readout-label {
+    letter-spacing: 0.02em;
+  }
+
+  .project-detail .detail-stats > .readout:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .project-detail .detail-stats > .readout:nth-child(n + 3) {
+    border-top: 1px solid var(--rule);
+  }
+
+  .project-detail .detail-stats > .readout[data-kind="market"]:nth-child(3) {
+    border-left: 0;
+    border-top-color: var(--rule-strong);
+  }
+
+  .project-detail .detail-stats > .readout[data-kind="market"]:nth-child(4) {
+    border-top-color: var(--rule-strong);
+  }
+
+  .project-detail .detail-stats .readout-value {
+    font-size: 2rem;
+  }
+
+  .project-detail .detail-stats .readout-value[data-size="m"] {
+    font-size: 1.75rem;
+  }
+
+  .project-detail .detail-stats .readout-value[data-size="s"] {
+    font-size: 1.625rem;
+  }
+
+  .project-detail .detail-stats .readout-value[data-size="xs"] {
+    font-size: 1.3125rem;
+  }
+
+  .project-detail .detail-stats .readout-value[data-size="xxs"] {
+    font-size: 1.125rem;
+  }
+
+  .project-detail .detail-data-caption {
+    gap: 0 var(--s-3);
+    padding-top: var(--s-1);
+  }
+
+  .project-detail .detail-coverage-note {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .project-detail .detail-coverage-label {
+    display: none;
+  }
+
+  .project-detail .dossier-toggle .project-controls-source {
+    font-family: var(--font-ui);
+    letter-spacing: 0;
+  }
+
+  .project-detail .detail-data-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-detail .dossier-toggle {
+    min-height: 2.875rem;
+    padding: 0;
+  }
+
+  .project-detail .dossier-toggle .dossier-hint {
+    display: none;
+  }
+
+  .project-detail .dossier-toggle > svg:last-child {
+    margin-left: auto;
+  }
+
+  .project-detail .dossier-toggle .project-controls-source + svg {
+    margin-left: 0;
+  }
+
+  .project-detail .project-controls-panel {
+    padding: 0 0 var(--s-4);
+  }
+
+  .project-detail .project-controls-panel dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-detail .detail-tabs {
+    gap: var(--s-5);
+  }
+
+  .project-detail .detail-tabs button {
+    min-height: 3rem;
+  }
+
+  .project-detail .project-structure,
+  .project-detail .project-structure.has-extensions {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .project-detail .project-structure > button {
+    min-height: 3.25rem;
+    padding: var(--s-2) var(--s-3);
+  }
+
+  .project-detail .project-structure > .setup-arrow {
+    justify-self: center;
+    margin: 2px 0;
+    transform: rotate(90deg);
+  }
+
+  .project-detail .detail-filters,
+  .project-detail .detail-filters[data-tab="deployments"] {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .project-detail .detail-filters .search-box {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .project-detail .detail-filters[data-tab="deployments"] .select-control,
+  .project-detail .detail-filters:not(:has(.detail-refresh)) .select-control {
+    grid-column: 1 / -1;
+  }
+
+  .project-detail .detail-filters select,
+  .project-detail .detail-filters .search-box input {
+    font-size: 1rem;
+  }
+
+  .project-detail .detail-filters .detail-refresh {
+    width: 2.75rem;
+    padding: 0;
+  }
+
+  .project-detail .detail-refresh-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .project-detail .pool-table-head {
+    display: none;
+  }
+
+  .project-detail .pool-card {
+    padding: var(--s-3) 0;
+  }
+
+  .project-detail .pool-card[data-expanded="true"] {
+    margin: 0 calc(-1 * var(--pd-pad));
+    padding: var(--s-3) var(--pd-pad);
+  }
+
+  .project-detail .pool-card > .pool-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: var(--s-2);
+  }
+
+  .project-detail .pool-identity {
+    grid-column: 1 / 3;
+  }
+
+  .project-detail .pool-card .pool-network {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .project-detail .pool-metric {
+    justify-items: start;
+    text-align: left;
+  }
+
+  /* The edition's "20 Nov 2025, 17:00 UTC" is wider than a third of a phone, so
+     it breaks into the date and the time instead of running off the sheet. */
+  .drawer-body.project-detail[data-edition="snapshot"]
+    .pool-age
+    .pool-metric-value {
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  .project-detail .pool-metric-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    color: var(--ink-muted);
+    font-family: var(--font-data);
+    font-size: var(--fs-micro);
+    letter-spacing: 0.02em;
+    white-space: normal;
+  }
+
+  .project-detail .pool-row-foot {
+    display: grid;
+    gap: var(--s-1);
+  }
+
+  .project-detail .pool-card-actions {
+    margin: 0 0 0 calc(-1 * var(--s-2));
+    justify-content: flex-start;
+  }
+
+  .project-detail .pool-detail-panel,
+  .project-detail .contract-detail-panel {
+    padding: var(--s-3);
+  }
+
+  .project-detail .pool-skeleton {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: var(--s-4) 0;
+  }
+
+  .project-detail .pool-skeleton > span:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .project-detail .pool-skeleton > span:nth-child(2) {
+    grid-column: auto;
+  }
+
+  .project-detail .deployment-card {
+    padding: var(--s-4) 0;
+  }
+
+  .project-detail .deployment-card[data-extensions="true"] {
+    margin: 0 calc(-1 * var(--pd-pad));
+    padding: var(--s-4) var(--pd-pad);
+  }
+
+  .project-detail .deployment-foot {
+    display: grid;
+    gap: var(--s-1);
+  }
+
+  .project-detail .deployment-links {
+    margin: 0 0 0 calc(-1 * var(--s-2));
+    justify-content: flex-start;
+  }
+
+  .project-detail .list-footer {
+    display: grid;
+  }
+
+  .project-detail .load-more {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+@media (max-width: 22.5rem) {
+  .project-detail .detail-hero h2 {
+    font-size: 1.75rem;
+  }
+
+  .project-detail .detail-actions-secondary {
+    gap: 0;
+  }
+
+  .project-detail .detail-actions-secondary > .detail-text-action,
+  .project-detail .detail-actions-secondary > .external {
+    padding: 0 0.4rem 0 var(--s-3);
+  }
+
+  .project-detail .detail-actions-secondary > .external svg {
+    display: none;
+  }
+
+  .project-detail .detail-actions-secondary .action-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .project-detail .action-long,
+  .project-detail .detail-stats .readout-note-long,
+  .project-detail .project-origin-label {
+    display: none;
+  }
+
+  .project-detail .action-short,
+  .project-detail .detail-stats .readout-note-short {
+    display: inline;
+  }
+
+  .project-detail .detail-overview-title {
+    padding-top: 0.7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-detail .pool-card,
+  .project-detail .project-structure > button,
+  .project-detail svg.lucide-chevron-down {
+    transition: none;
+  }
+}
+
+/* One focus ring everywhere in the drawer, including quiet buttons whose
+   resting state removes the shadow. The tab bar keeps an inset ring. */
+.drawer-body.project-detail :is(button, a, [tabindex="0"]):focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.drawer-body.project-detail .detail-tabs button:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--signal);
+}
+
+/* Narrow phones: keep the plate caption and dossier rows on one line each. */
+@media (max-width: 22.5rem) {
+  .project-detail .detail-scope {
+    font-family: var(--font-ui);
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .project-detail .dossier-toggle .project-controls-source,
+  .project-detail .detail-stats .readout-expired-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 22.5rem) {
+  .project-detail .dossier-toggle .project-controls-source + svg {
+    margin-left: auto;
+  }
+}
+
+/* The permission fingerprint sits beside the address it was read from. */
+.project-detail .deployment-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+/* The callback signature belongs to the controls disclosure: a small
+   decorative copy in its summary row, the labelled grid in its panel. Neither
+   is on the first screen, which keeps the pools there (guarded by e2e). */
+.project-detail .dossier-toggle .project-controls-glyph {
+  margin-left: auto;
+  --cell: 0.4375rem;
+  --gap: 0.125rem;
+}
+
+.project-detail .dossier-toggle .project-controls-glyph + .project-controls-source {
+  margin-left: var(--s-3);
+}
+
+.project-detail .project-controls-signature {
+  display: grid;
+  gap: var(--s-2);
+  justify-items: start;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+}
+
+.project-detail .project-controls-signature .permission-glyph-key {
+  margin-top: var(--s-1);
+}
+
+@media (max-width: 47.99rem) {
+  .project-detail .dossier-toggle .project-controls-glyph {
+    display: none;
+  }
+}
+
+/* What the hooks may do, in words, above the technical grid. */
+.project-detail .project-controls-abilities {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.project-detail .project-controls-abilities ul {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-detail .project-controls-abilities li {
+  position: relative;
+  padding-left: var(--s-4);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.project-detail .project-controls-abilities li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 2px;
+  background: var(--signal);
+}
+
+.project-detail .project-controls-abilities li small {
+  color: var(--ink-muted);
+}

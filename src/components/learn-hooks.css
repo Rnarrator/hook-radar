@@ -1,0 +1,827 @@
+/* Learn · an editorial field guide to v4 hooks.
+   The display face carries the reading voice (lead, section titles, terms);
+   Geist carries controls and body; the callback diagram is a labelled
+   illustration on a plate, never a simulation. */
+
+.learn-page {
+  width: 100%;
+  max-width: 80rem;
+  padding-bottom: var(--s-6);
+  color: var(--ink);
+}
+
+.learn-page p {
+  color: var(--ink-soft);
+}
+
+.learn-kicker {
+  display: block;
+  margin-bottom: var(--s-3);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.learn-page h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.5rem + 1.6vw, 2.9rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.learn-page h3 {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 400;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.learn-page a {
+  color: var(--signal);
+}
+
+/* ── Introduction ────────────────────────────────────────────────────────── */
+.learn-introduction {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(16rem, 1fr);
+  gap: var(--s-7);
+  padding-bottom: var(--s-7);
+}
+
+/* Sentences are read, not scanned: they stay in the interface face while the
+   titles around them use the pixel display face. */
+.learn-page .learn-lead {
+  max-width: 34ch;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: clamp(1.4rem, 1.1rem + 1.2vw, 2rem);
+  font-weight: 500;
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+
+.learn-primary.primary-button {
+  min-height: 2.75rem;
+  margin-top: var(--s-5);
+  padding: 0 var(--s-5);
+  font-size: var(--fs-body);
+}
+
+.learn-core-facts {
+  display: grid;
+  align-content: center;
+  gap: var(--s-5);
+  margin: 0;
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--rule-strong);
+}
+
+.learn-core-facts dt {
+  margin-bottom: var(--s-1);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.learn-core-facts dd {
+  max-width: 38ch;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+/* ── Section rhythm ──────────────────────────────────────────────────────── */
+.learn-lifecycle,
+.learn-usecases,
+.learn-reading,
+.learn-faq,
+.learn-resources {
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--rule-strong);
+}
+
+.learn-usecases,
+.learn-reading,
+.learn-faq,
+.learn-resources {
+  margin-top: var(--s-8);
+}
+
+.learn-section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-4) var(--s-5);
+  margin-bottom: var(--s-5);
+}
+
+.learn-section-heading > p {
+  max-width: 32ch;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.learn-section-intro {
+  max-width: 62ch;
+  font-size: var(--fs-lead);
+  line-height: 1.45;
+}
+
+/* ── Lifecycle: operation switch, illustration, stage detail ─────────────── */
+.learn-operation-switch.segmented {
+  flex-wrap: wrap;
+}
+
+.learn-operation-switch.segmented button {
+  min-height: 2.5rem;
+  padding: 0 var(--s-4);
+  font-size: var(--fs-small);
+}
+
+.learn-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+  gap: var(--s-4) var(--s-5);
+  margin-top: var(--s-5);
+}
+
+.learn-flow-plate {
+  position: relative;
+  min-height: 20rem;
+  overflow: hidden;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background: var(--key-light), var(--surface-1);
+  box-shadow: var(--elev-1);
+}
+
+.learn-flow-caption {
+  position: absolute;
+  bottom: var(--s-3);
+  right: var(--s-4);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.learn-lanes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.learn-lane {
+  position: absolute;
+  left: var(--s-4);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.learn-lane-hook {
+  top: calc(25% - 1.65rem);
+}
+
+/* The PoolManager lane is labelled below its line, so the path rising out of
+   it never crosses the label. */
+.learn-lane-core {
+  top: calc(75% + 0.4rem);
+}
+
+.learn-lane-guide {
+  stroke: var(--rule);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.learn-flow-path {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.learn-flow-segment {
+  fill: none;
+  stroke: var(--rule-focus);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 5;
+  vector-effect: non-scaling-stroke;
+  transition:
+    stroke var(--dur-3) var(--ease-out),
+    stroke-width var(--dur-3) var(--ease-out);
+}
+
+/* The path is lit up to the selected stage: the order of calls, not timing. */
+.learn-flow[data-stage="before"] .learn-flow-segment[data-segment="entry"],
+.learn-flow[data-stage="core"]
+  .learn-flow-segment:is([data-segment="entry"], [data-segment="before"]),
+.learn-flow[data-stage="after"] .learn-flow-segment {
+  stroke: var(--signal);
+  stroke-width: 2;
+  stroke-dasharray: none;
+}
+
+.learn-flow-steps {
+  position: absolute;
+  inset: 0 2% 0 18%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 0 var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.learn-flow-step {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+}
+
+.learn-flow-step:nth-child(1) {
+  grid-area: 1 / 1;
+}
+
+.learn-flow-step:nth-child(2) {
+  grid-area: 2 / 2;
+}
+
+.learn-flow-step:nth-child(3) {
+  grid-area: 1 / 3;
+}
+
+.learn-flow-step button {
+  display: grid;
+  gap: var(--s-1);
+  width: min(100%, 14rem);
+  min-height: 6.25rem;
+  padding: var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-2);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: var(--elev-1);
+  transition:
+    border-color var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+.learn-flow-core button {
+  background: var(--surface-3);
+}
+
+.learn-flow-step button:hover {
+  border-color: var(--rule-focus);
+}
+
+.learn-flow-step button[aria-pressed="true"] {
+  border-color: var(--signal-line);
+  background:
+    linear-gradient(var(--signal-wash), var(--signal-wash)), var(--surface-2);
+  box-shadow:
+    var(--elev-2),
+    inset 0 -2px 0 var(--signal);
+}
+
+/* Pressed states carry their own shadow; keep the shared focus ring on top. */
+.learn-flow-step button:focus-visible,
+.learn-operation-switch.segmented button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.learn-flow-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+}
+
+.learn-flow-label > span {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+}
+
+.learn-flow-step code {
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.learn-flow-step button[aria-pressed="true"] code {
+  color: var(--signal-hover);
+}
+
+.learn-flow-text {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+}
+
+.learn-stage-detail {
+  display: grid;
+  align-content: start;
+  gap: var(--s-3);
+  padding: var(--s-4) 0 var(--s-4) var(--s-5);
+  border-left: 1px solid var(--rule-strong);
+}
+
+.learn-stage-detail .learn-kicker {
+  margin: 0;
+}
+
+.learn-stage-detail p {
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 1.3rem;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+
+.learn-stage-detail p code {
+  display: block;
+  width: fit-content;
+  margin-bottom: var(--s-2);
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-1);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+.learn-page .learn-stage-detail .learn-stage-note {
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+
+.learn-page .learn-flow-note {
+  grid-column: 1 / -1;
+  max-width: 82ch;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.learn-flow-note strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.learn-page .learn-flow-footnote {
+  max-width: 82ch;
+  margin-top: var(--s-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+/* ── Use cases ───────────────────────────────────────────────────────────── */
+.learn-usecase-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--rule);
+}
+
+.learn-usecase {
+  --cat: var(--cat-other);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-5) var(--s-6) var(--s-4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.learn-usecase:nth-child(even) {
+  padding-right: 0;
+  padding-left: var(--s-6);
+  border-left: 1px solid var(--rule);
+}
+
+.learn-usecase[data-category="Fees"] {
+  --cat: var(--cat-fees);
+}
+.learn-usecase[data-category="Orders"] {
+  --cat: var(--cat-orders);
+}
+.learn-usecase[data-category="Liquidity"] {
+  --cat: var(--cat-liquidity);
+}
+.learn-usecase[data-category="Launches"] {
+  --cat: var(--cat-launches);
+}
+
+.learn-usecase-title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.learn-usecase-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid color-mix(in srgb, var(--cat) 40%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cat) 10%, transparent);
+  color: var(--cat);
+}
+
+.learn-usecase-category {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.learn-usecase > p {
+  max-width: 54ch;
+  font-size: var(--fs-small);
+}
+
+.learn-usecase button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 2.75rem;
+  margin-top: auto;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.learn-usecase button svg {
+  color: var(--signal);
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.learn-usecase button:hover {
+  color: var(--signal-hover);
+}
+
+.learn-usecase button:hover svg {
+  transform: translateX(3px);
+}
+
+/* ── Reading the radar ───────────────────────────────────────────────────── */
+.learn-reading {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr);
+  gap: var(--s-7);
+}
+
+.learn-reading > div:first-child > p {
+  max-width: 40ch;
+  margin-top: var(--s-4);
+  font-size: var(--fs-lead);
+  line-height: 1.45;
+}
+
+.learn-definitions {
+  display: grid;
+  margin: 0;
+}
+
+.learn-definitions > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--s-4);
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.learn-definitions > div:first-child {
+  border-top: 1px solid var(--rule);
+}
+
+.learn-definitions dt {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.learn-definitions dd {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-body);
+}
+
+.learn-page .learn-data-note {
+  margin-top: var(--s-5);
+  padding: var(--s-3) 0 var(--s-3) var(--s-4);
+  border-left: 2px solid var(--brass);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.learn-data-note strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── Distinctions ────────────────────────────────────────────────────────── */
+.learn-faq-list {
+  border-top: 1px solid var(--rule);
+}
+
+.learn-faq details {
+  border-bottom: 1px solid var(--rule);
+}
+
+.learn-faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  min-height: 3.75rem;
+  padding: var(--s-3) 0;
+  color: var(--ink);
+  font-size: var(--fs-lead);
+  font-weight: 500;
+  line-height: var(--lh-snug);
+  cursor: pointer;
+  list-style: none;
+}
+
+.learn-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.learn-faq summary svg {
+  color: var(--ink-muted);
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
+}
+
+.learn-faq summary:hover svg {
+  color: var(--signal);
+}
+
+.learn-faq details[open] summary svg {
+  color: var(--signal);
+  transform: rotate(180deg);
+}
+
+.learn-faq details p {
+  max-width: 72ch;
+  padding: 0 var(--s-6) var(--s-5) 0;
+  font-size: var(--fs-body);
+}
+
+.learn-faq details p a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ── Resources ───────────────────────────────────────────────────────────── */
+.learn-docs-label {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.learn-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+.learn-page .learn-resource-grid a {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-4);
+  min-height: 6rem;
+  padding: var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink);
+  box-shadow: var(--edge-light);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.learn-page .learn-resource-grid a:hover {
+  border-color: var(--rule-focus);
+  background: var(--surface-2);
+  text-decoration: none;
+}
+
+.learn-resource-grid a > span:first-child {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.learn-resource-grid strong {
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.learn-resource-grid a > span:first-child > span {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.learn-resource-grid svg {
+  flex: none;
+  margin-top: 0.15rem;
+  color: var(--signal);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 64rem) {
+  .learn-resource-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The labels must end before the first step column (18% of a narrower plate). */
+  .learn-lane {
+    font-size: 0.6875rem;
+    letter-spacing: 0.03em;
+  }
+
+  .learn-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .learn-stage-detail {
+    padding: var(--s-4) 0 0;
+    border-top: 1px solid var(--rule);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 56rem) {
+  .learn-introduction,
+  .learn-reading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-5);
+  }
+
+  .learn-core-facts {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    padding: var(--s-4) 0 0;
+    border-top: 1px solid var(--rule-strong);
+    border-left: 0;
+  }
+
+  .learn-usecases,
+  .learn-reading,
+  .learn-faq,
+  .learn-resources {
+    margin-top: var(--s-7);
+  }
+}
+
+/* Phones: the two lanes become one vertical sequence with a rail. */
+@media (max-width: 44rem) {
+  .learn-resource-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .learn-flow-plate {
+    min-height: 0;
+    /* Room under the last step for the caption, which is pinned to the bottom. */
+    padding: var(--s-6) var(--s-4) calc(var(--s-4) + 1.75rem);
+  }
+
+  .learn-flow-path,
+  .learn-lanes {
+    display: none;
+  }
+
+  .learn-flow-caption {
+    left: var(--s-4);
+    right: auto;
+  }
+
+  .learn-flow-steps {
+    position: relative;
+    inset: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    gap: var(--s-4);
+    padding-left: var(--s-4);
+  }
+
+  .learn-flow-steps::before {
+    content: "";
+    position: absolute;
+    top: var(--s-4);
+    bottom: var(--s-4);
+    left: 0;
+    border-left: 1px dashed var(--rule-focus);
+  }
+
+  .learn-flow-step:nth-child(n) {
+    grid-area: auto;
+    position: relative;
+  }
+
+  .learn-flow-step::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: calc(var(--s-4) * -1 - 4px);
+    width: 9px;
+    height: 9px;
+    border: 1px solid var(--rule-focus);
+    border-radius: 50%;
+    background: var(--surface-1);
+    transform: translateY(-50%);
+  }
+
+  .learn-flow-step:has(button[aria-pressed="true"])::before {
+    border-color: var(--signal);
+    background: var(--signal);
+  }
+
+  .learn-flow-core {
+    margin-left: var(--s-5);
+  }
+
+  .learn-flow-step button {
+    min-height: 0;
+  }
+
+  .learn-usecase-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .learn-usecase,
+  .learn-usecase:nth-child(even) {
+    padding: var(--s-5) 0 var(--s-3);
+    border-left: 0;
+  }
+
+  .learn-definitions > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-1);
+  }
+
+  .learn-faq details p {
+    padding-right: 0;
+  }
+
+  .learn-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .learn-operation-switch.segmented {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .learn-operation-switch.segmented button {
+    min-height: 2.75rem;
+    padding: 0 var(--s-2);
+    white-space: normal;
+    line-height: 1.15;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-flow-segment,
+  .learn-flow-step button,
+  .learn-faq summary svg,
+  .learn-usecase button svg,
+  .learn-resource-grid a {
+    transition: none;
+  }
+}

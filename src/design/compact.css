@@ -1,0 +1,551 @@
+/* Short and tablet-width desktops: the directory is the task. The observatory
+   masthead keeps its identity but gives way so the first project is visible
+   without scrolling. Tall screens keep the full plate. */
+
+@media (min-width: 52.0625rem) and (max-height: 62rem),
+  (min-width: 52.0625rem) and (max-width: 64rem) {
+  main .titlebar.masthead {
+    row-gap: var(--s-2);
+    margin-bottom: var(--s-3);
+    padding-bottom: var(--s-3);
+  }
+
+  main .masthead .titlebar-copy {
+    padding-top: 0;
+  }
+
+  main .masthead .kicker {
+    margin: 0 0 var(--s-1);
+  }
+
+  main .masthead h1 {
+    max-width: none;
+    font-size: clamp(2rem, 1.6rem + 1vw, 2.5rem);
+  }
+
+  main .masthead-figures {
+    margin-top: var(--s-2);
+    gap: var(--s-3) var(--s-5);
+  }
+
+  main .masthead-figures dd:not(.masthead-note) {
+    font-size: 1.75rem;
+  }
+
+  main .coverage-strip {
+    margin-bottom: var(--s-2);
+  }
+
+  main .hook-spotlight {
+    grid-template-areas:
+      "top top"
+      "open controls"
+      "rail rail";
+    min-height: 0;
+    margin-bottom: var(--s-3);
+    padding: var(--s-2) var(--s-4) 0;
+  }
+
+  main .hook-spotlight .spotlight-topline {
+    margin-bottom: 0;
+  }
+
+  main .hook-spotlight .spotlight-facts {
+    display: none;
+  }
+
+  main .hook-spotlight .spotlight-open {
+    min-height: 2.75rem;
+    padding: 0;
+  }
+
+  main .hook-spotlight .spotlight-identity .protocol-logo {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 10px;
+  }
+
+  main .hook-spotlight .spotlight-identity strong {
+    font-size: 1.5rem;
+  }
+
+  main .hook-spotlight .spotlight-purpose {
+    min-height: 0;
+    -webkit-line-clamp: 1;
+    font-size: var(--fs-small);
+  }
+
+  main .hook-spotlight .spotlight-rail {
+    margin: var(--s-2) calc(var(--s-4) * -1) 0;
+  }
+
+  /* The loading plate is exactly as tall as the compact story that replaces it,
+     so the directory below does not jump when the story arrives. */
+  main .hook-spotlight.spotlight-placeholder {
+    height: 5.25rem;
+    overflow: hidden;
+  }
+
+  main .overview-data-notes {
+    margin-bottom: var(--s-2);
+  }
+
+  main .table-tools {
+    margin-bottom: var(--s-2);
+  }
+
+  main .discovery-guide {
+    margin-bottom: var(--s-2);
+    padding: var(--s-2) 0;
+  }
+}
+
+/* Short desktops keep a smaller instrument beside the title, with the controls
+   under the figures so nothing wraps. */
+@media (min-width: 64.0625rem) and (max-height: 62rem) {
+  main .titlebar.masthead {
+    grid-template-columns: minmax(0, 1fr) 17rem;
+    grid-template-areas:
+      "copy art"
+      "controls art";
+    align-items: end;
+  }
+
+  main .masthead .title-controls {
+    justify-content: flex-start;
+  }
+
+  main .masthead-instrument .radar-instrument {
+    min-height: 0;
+  }
+}
+
+/* Wide and short: the controls share the figures row, left of the instrument. */
+@media (min-width: 80rem) and (max-height: 62rem) {
+  main .titlebar.masthead {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr) 14.5rem;
+    grid-template-areas: "copy art";
+    align-items: start;
+  }
+
+  main .masthead .title-controls {
+    position: absolute;
+    right: calc(14.5rem + var(--s-6));
+    bottom: var(--s-3);
+  }
+
+  main .masthead-instrument {
+    align-self: start;
+  }
+}
+
+/* Tablet widths have no instrument: title and controls share a row. */
+@media (min-width: 52.0625rem) and (max-width: 64rem) {
+  main .titlebar.masthead {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "copy controls";
+    align-items: end;
+  }
+
+  main .masthead .title-controls {
+    justify-content: flex-end;
+  }
+
+  /* The scope tabs already name what they list; the note would wrap a second row. */
+  main .index-scope-note {
+    display: none;
+  }
+}
+
+/* Touch: every clear-search control is a full 44px target. The tripled class
+   outranks the per-view desktop sizes without touching their files. */
+@media (max-width: 52rem), (pointer: coarse) {
+  body .clear-search.clear-search.clear-search {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+/* Auto Snapshot edition only (the root carries data-edition, set by the build;
+   the live page never has it and is untouched). Touch: the small text links,
+   disclosure summaries and link buttons that size themselves by their line of
+   text are at least 24px high (the WCAG 2.2 target-size minimum). Everything is
+   inside :where(), so the rule adds no specificity and one that already sizes
+   an element larger still wins. */
+@media (max-width: 52rem), (pointer: coarse) {
+  :where(:root[data-edition="snapshot"])
+    :where(
+      .overview-data-notes summary,
+      .overview-data-notes button,
+      .source-meta .external,
+      .platform-availability-source .external,
+      .lp-address .external,
+      .lp-evidence .external,
+      .lp-contracts li .external,
+      .lp-link,
+      .lp-contracts > summary,
+      .lp-unattributed > summary,
+      .lp-unresolved > summary
+    ) {
+    min-height: 1.5rem;
+  }
+}
+
+/* Without a hook-update feed (the Auto Snapshot edition records none) the
+   monitor plate takes the whole row, and the watchlist shortcut that stood
+   inside the feed sits alone beside it, level with the plate's top edge. */
+:where(:root[data-edition="snapshot"])
+  .monitor-row:not(:has(.registry-updates)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.registry-updates.registry-shortcut .watch-callout {
+  margin-top: 0;
+}
+
+/* The status strip keeps one height while analytics arrive (its button grows to
+   a 44px target), so the directory never jumps on hydration. */
+@media (max-width: 60rem) {
+  main .coverage-strip {
+    min-height: 3rem;
+  }
+}
+
+/* Small phones: one row of status actions, a one-line spotlight story and
+   icon-only spotlight controls, so the first project is visible in the first
+   screen. Every control keeps its accessible name. */
+@media (max-width: 30rem) {
+  /* The actions always take the strip's second row, whether they are still
+     loading or ready, so their arrival moves nothing. */
+  main .coverage-actions {
+    flex: 1 1 100%;
+    gap: var(--s-1) var(--s-3);
+  }
+
+  main .hook-spotlight {
+    min-height: 9.1rem;
+    margin-bottom: var(--s-3);
+    padding: var(--s-2) var(--s-3) var(--s-3);
+  }
+
+  main .hook-spotlight .spotlight-topline {
+    margin-bottom: var(--s-1);
+  }
+
+  /* The use-case label gives way to the disclosure; the project card repeats it. */
+  main .hook-spotlight .spotlight-angle {
+    display: none;
+  }
+
+  main .hook-spotlight .spotlight-purpose {
+    min-height: 0;
+    -webkit-line-clamp: 1;
+  }
+
+  main .hook-spotlight .spotlight-playback,
+  main .hook-spotlight .spotlight-explore {
+    gap: 0;
+    font-size: 0;
+  }
+
+  main .hook-spotlight .spotlight-explore {
+    padding: 0 var(--s-3);
+  }
+
+  main .hook-spotlight .spotlight-rail {
+    margin: var(--s-2) calc(var(--s-3) * -1) calc(var(--s-3) * -1);
+  }
+}
+
+/* Phones: the figures disclosure is one slim line; its scope is already named by
+   the Projects / All hooks tabs below. */
+@media (max-width: 52rem) {
+  main .overview-data-notes {
+    margin-bottom: var(--s-2);
+  }
+}
+
+@media (max-width: 30rem) {
+  main .overview-data-notes .overview-scope {
+    display: none;
+  }
+}
+
+/* Touch screens: no form control below 16px, so iOS Safari never zooms on focus. */
+@media (pointer: coarse) {
+  main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  main select,
+  main textarea {
+    font-size: max(1rem, 16px);
+  }
+}
+
+/* Smallest phones drop the duplicate Dynamic fees shortcut; the filter panel
+   keeps the same capability with full-size targets. */
+@media (max-width: 22.5rem) {
+  main .discovery-quickviews > button {
+    display: none;
+  }
+}
+
+/* Narrowest phones: the controls take half the plate's top row, so the label
+   keeps that row and the plain disclosure replaces the progress rail below. */
+@media (max-width: 22.5rem) {
+  main .hook-spotlight.spotlight-placeholder {
+    min-height: 9.8rem;
+  }
+
+  main .hook-spotlight {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "top controls"
+      "open open"
+      "note note";
+    margin-bottom: var(--s-2);
+    padding-bottom: var(--s-2);
+  }
+
+  main .hook-spotlight .spotlight-topline {
+    display: contents;
+  }
+
+  main .hook-spotlight .spotlight-label {
+    grid-area: top;
+  }
+
+  main .hook-spotlight .spotlight-note,
+  main .hook-spotlight .spotlight-position,
+  main .hook-spotlight .spotlight-rail {
+    display: none;
+  }
+
+  main .hook-spotlight .spotlight-note-short {
+    display: block;
+    grid-area: note;
+    padding-top: var(--s-1);
+    color: var(--ink-muted);
+  }
+}
+
+/* A table that scrolls sideways shows a soft edge on the side that has more:
+   the cover layers (attached to the content) hide each edge glow once that
+   end is reached, so nothing shows when the table fits. */
+.projects-section .table-scroll {
+  background:
+    linear-gradient(to right, var(--ground), var(--ground)) left center / 2rem 100% no-repeat local,
+    linear-gradient(to left, var(--ground), var(--ground)) right center / 2rem 100% no-repeat local,
+    linear-gradient(to right, rgba(255, 92, 169, 0.2), transparent) left center / 1.25rem 100% no-repeat scroll,
+    linear-gradient(to left, rgba(255, 92, 169, 0.2), transparent) right center / 1.25rem 100% no-repeat scroll;
+}
+
+/* Between the dock and the full desktop header the status pill gives up its
+   icon and part of its label rather than touching the navigation. */
+@media (min-width: 60.0625rem) and (max-width: 66rem) {
+  .topbar .source-status {
+    max-width: 9.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar .source-status > svg {
+    display: none;
+  }
+
+  /* The eight destinations take their closest spacing here. */
+  .topbar nav {
+    --nav-pad: 0.3125rem;
+    gap: 0;
+    margin-left: 0;
+  }
+}
+
+/* Tablet widths: two figures per row, no dividers (a wrapped divider would sit
+   at the start of the second row), and the controls drop under the figures. */
+@media (min-width: 52.0625rem) and (max-width: 56rem) {
+  main .titlebar.masthead {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "copy"
+      "controls";
+  }
+
+  main .masthead .title-controls {
+    justify-content: flex-start;
+  }
+}
+
+@media (min-width: 52.0625rem) and (max-width: 56rem) {
+  main .masthead-figures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    gap: var(--s-3) var(--s-7);
+  }
+
+  main .masthead-figures > div,
+  main .masthead-figures > div:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+/* Short of the stacked layout the figures share one row beside the controls;
+   the captions would wrap it, so they move to each figure's tooltip and stay
+   in Data details. */
+@media (min-width: 56.0625rem) and (max-width: 64rem) {
+  main .masthead-figures {
+    gap: var(--s-3) var(--s-5);
+  }
+
+  main .masthead-figures > div,
+  main .masthead-figures > div:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  main .masthead-note {
+    display: none;
+  }
+}
+
+/* ── Keyboard focus is never hidden behind a fixed layer ────────────────── */
+/* The bottom dock (and the compare tray, at every width) overlay the page, so
+   focus scrolling leaves their height clear. */
+@media (max-width: 60rem) {
+  html {
+    scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  html:has(.application-shell.has-comparison) {
+    scroll-padding-bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+html:has(.application-shell.has-comparison) {
+  scroll-padding-bottom: 6.5rem;
+}
+
+/* Rings inside clipping scrollers sit inside the control so they are not cut. */
+.topbar nav button:focus-visible,
+.index-scope-switch button:focus-visible,
+.chains-section-nav a:focus-visible,
+.comparison-scroll :focus-visible,
+.hook-comparison summary:focus-visible {
+  outline-offset: -3px;
+}
+
+/* ── Forced colours (Windows High Contrast) ─────────────────────────────── */
+/* Selected and current states keep a system-colour fill so they remain visible
+   when authored backgrounds and shadows are removed. */
+@media (forced-colors: active) {
+  [aria-pressed="true"],
+  [aria-selected="true"],
+  [aria-current="page"],
+  .control.selected,
+  .window-switch button.selected {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+
+  /* The header navigation sets its own current-page colour with higher
+     specificity; repeat the system pair so text on the Highlight fill reads. */
+  .topbar nav button.active,
+  .topbar nav button[aria-current="page"] {
+    color: HighlightText;
+  }
+
+  .topbar nav button[aria-current="page"]::after,
+  .topbar nav button.active::after {
+    background: Highlight;
+  }
+
+  :focus-visible {
+    outline: 2px solid CanvasText;
+  }
+}
+
+/* The status strip keeps one height from first paint, so loading analytics
+   never nudges the table down (phones pin theirs above). */
+@media (min-width: 60.0625rem) {
+  main .coverage-strip {
+    min-height: 1.75rem;
+  }
+}
+
+/* Large system text on phones: selects and measurement cells shrink to the
+   column instead of pushing the page sideways. */
+.mobile-sort select,
+.metric-measurement,
+.analytics-toolbar-actions .control {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ── Tablet widths (portrait tablets and small laptops) ──────────────────── */
+/* Four masthead figures need about 530px next to controls about 410px wide, so
+   below ~1000px the controls leave the figures' row and the fourth figure is
+   never alone on a second line. Above it the first project must still fit a
+   1024x768 screen (guarded by e2e), so the figures stay beside the controls and
+   take a smaller pixel size instead. */
+@media (min-width: 62.8125rem) and (max-width: 64rem) {
+  main .masthead-figures dd:not(.masthead-note) {
+    font-size: 1.5rem;
+  }
+
+  main .masthead-figures {
+    gap: var(--s-3) var(--s-4);
+  }
+}
+
+@media (min-width: 52.0625rem) and (max-width: 62.75rem) {
+  main .titlebar.masthead {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "copy"
+      "controls";
+  }
+
+  main .masthead .title-controls {
+    justify-content: flex-start;
+  }
+}
+
+/* The toolbar takes its own row under the heading, so Search, Filters and the
+   two selects sit together instead of leaving one select on a line alone. */
+@media (min-width: 52.0625rem) and (max-width: 68rem) {
+  .table-tools .table-controls {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
+  .table-tools .table-controls .search-box {
+    max-width: none;
+  }
+}
+
+/* The directory table scrolls sideways below ~1150px: its Compare and Open
+   actions stay pinned at the right edge instead of scrolling out of reach. */
+@media (min-width: 52.0625rem) and (max-width: 72rem) {
+  .projects-section table {
+    min-width: 62rem;
+  }
+
+  .projects-section th:nth-child(2) {
+    min-width: 14rem;
+  }
+
+  .projects-section th:last-child,
+  .projects-section td:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: var(--ground);
+    box-shadow: -1px 0 0 var(--rule);
+  }
+
+  .projects-section tbody tr:hover td:last-child {
+    background: var(--surface-1);
+  }
+}

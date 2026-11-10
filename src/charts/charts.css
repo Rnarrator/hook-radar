@@ -1,0 +1,1212 @@
+/* Hook Radar chart kit · Observatory styles.
+   Chart-local tokens derive from the design tokens; components never
+   hard-code colours. Text never wears a data colour: values, labels and
+   legends use ink tokens and a coloured mark beside them carries identity. */
+
+:root {
+  --chart-series: color-mix(in oklab, var(--ink-soft) 58%, var(--surface-4));
+  --chart-unattributed: var(--ink-faint);
+  --chart-missing: var(--ink-faint);
+  --chart-line: var(--brass);
+  --chart-track: var(--surface-2);
+}
+
+/* ── Frame ───────────────────────────────────────────────────────────────── */
+.chart-frame {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.chart-frame:not(.plate) {
+  padding: 0;
+}
+
+.chart-frame-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-4);
+  min-width: 0;
+}
+
+.chart-frame-titles {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.chart-kicker {
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.chart-title {
+  font-family: var(--font-ui);
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  color: var(--ink);
+}
+
+.chart-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-2);
+  max-width: 72ch;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: var(--lh-snug);
+}
+
+.chart-freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.chart-freshness-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.chart-freshness[data-tone="current"] .chart-freshness-dot {
+  background: var(--lagoon);
+}
+
+.chart-freshness[data-tone="stale"] {
+  color: var(--brass);
+}
+
+.chart-freshness[data-tone="stale"] .chart-freshness-dot {
+  background: var(--brass);
+}
+
+.chart-frame-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.chart-frame-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+}
+
+.chart-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 1.6rem;
+  padding: 0 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--brass) 38%, transparent);
+  border-radius: var(--r-pill);
+  background: var(--brass-wash);
+  color: var(--brass);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+}
+
+.chart-frame-body {
+  position: relative;
+  min-width: 0;
+}
+
+.chart-frame-body[aria-busy="true"] > :not(.chart-skeleton) {
+  opacity: 0.55;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+.chart-skeleton {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4) 0;
+}
+
+.chart-skeleton .skeleton {
+  display: block;
+  height: 0.75rem;
+}
+
+.chart-skeleton .skeleton:nth-child(2) {
+  width: 72%;
+}
+
+.chart-skeleton .skeleton:nth-child(3) {
+  width: 46%;
+}
+
+.chart-state {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5);
+  border-left: 2px solid var(--rule-strong);
+  color: var(--ink-soft);
+}
+
+.chart-state[data-kind="stale"] {
+  border-left-color: var(--brass);
+}
+
+.chart-state[data-kind="error"] {
+  border-left-color: var(--danger);
+}
+
+.chart-state-rule {
+  display: none;
+}
+
+.chart-state strong {
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.chart-state p {
+  max-width: 60ch;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.chart-partial-note {
+  margin-top: var(--s-3);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.chart-partial-note strong {
+  color: var(--brass);
+  font-weight: 500;
+}
+
+.chart-frame-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  min-width: 0;
+}
+
+.chart-frame-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.chart-table-disclosure {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.chart-table-disclosure > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 2.5rem;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.chart-table-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.chart-table-disclosure > summary:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.chart-table-disclosure > summary > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+.chart-table-disclosure > summary small {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.chart-table-chevron,
+.chart-expand svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.chart-table-disclosure[open] > summary .chart-table-chevron,
+.chart-expand[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.chart-table-body {
+  margin-top: var(--s-3);
+  min-width: 0;
+}
+
+/* Positioned so visually hidden (absolute) descendants stay inside the
+   scroll container instead of widening the page. */
+.chart-table-scroll {
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+}
+
+.chart-table-scroll:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+.chart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+/* Neutralise legacy global table rules (fixed widths, 76px rows). */
+.chart-table thead {
+  background: none;
+}
+
+.chart-table th {
+  width: auto;
+  color: inherit;
+  font-size: inherit;
+}
+
+.chart-table tbody tr {
+  height: auto;
+  border-bottom: 0;
+}
+
+.chart-table tbody tr:hover {
+  background: none;
+}
+
+.chart-table caption {
+  padding: var(--s-2) var(--s-3);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  text-align: left;
+}
+
+.chart-table th,
+.chart-table td {
+  padding: 0.55rem var(--s-3);
+  border-top: 1px solid var(--rule);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.chart-table thead th {
+  border-top: 0;
+  background: var(--surface-2);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.chart-table th:first-child,
+.chart-table td:first-child {
+  text-align: left;
+}
+
+.chart-table td {
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-table tbody th {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.chart-table tr[data-selected="true"] > * {
+  background: var(--signal-wash);
+  color: var(--ink);
+}
+
+.chart-footnote {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+}
+
+.chart-footnote p + p {
+  margin-top: var(--s-2);
+}
+
+/* ── Axes and inspection (shared SVG) ────────────────────────────────────── */
+.chart-line-chart,
+.chart-scatter {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.chart-line-chart > svg,
+.chart-scatter > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  touch-action: pan-y;
+}
+
+.chart-grid {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.chart-baseline {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+
+.chart-axis-label,
+.chart-axis-sublabel,
+.chart-axis-unit {
+  fill: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-axis-unit {
+  letter-spacing: 0.06em;
+}
+
+.chart-crosshair {
+  stroke: var(--ink-muted);
+  stroke-width: 1;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.chart-slider {
+  cursor: crosshair;
+  outline: none;
+}
+
+.chart-slider:focus-visible {
+  stroke: var(--signal);
+  stroke-width: 2;
+  box-shadow: none;
+}
+
+.chart-tooltip {
+  position: absolute;
+  z-index: var(--z-popover);
+  display: grid;
+  gap: 2px;
+  min-width: 11rem;
+  max-width: 17rem;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule-focus);
+  border-radius: var(--r-2);
+  background: var(--surface-3);
+  box-shadow: var(--elev-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: var(--lh-snug);
+  pointer-events: none;
+  transform: translate(14px, -50%);
+}
+
+.chart-tooltip[data-flip] {
+  transform: translate(calc(-100% - 14px), -50%);
+}
+
+.chart-tooltip strong {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tooltip time,
+.chart-tooltip-scope,
+.chart-tooltip small {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.chart-tooltip-series {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+/* ── Line chart ──────────────────────────────────────────────────────────── */
+.chart-line {
+  fill: none;
+  stroke: var(--chart-line);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-area {
+  fill: var(--chart-line);
+  fill-opacity: 0.08;
+  stroke: none;
+}
+
+.chart-observations-ring {
+  fill: none;
+  stroke: var(--surface-1);
+  stroke-width: 11;
+  stroke-linecap: round;
+}
+
+.chart-observations {
+  fill: none;
+  stroke: var(--chart-line);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+.chart-gap-band {
+  fill: var(--surface-2);
+  fill-opacity: 0.55;
+}
+
+.chart-gap-edge {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+
+.chart-gap-label {
+  fill: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: 12px;
+}
+
+.chart-inspected-halo {
+  fill: var(--signal);
+  fill-opacity: 0.16;
+  pointer-events: none;
+}
+
+.chart-inspected-point {
+  fill: var(--signal);
+  stroke: var(--surface-1);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.chart-pinned-point {
+  fill: none;
+  stroke: var(--signal);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+/* ── Scatter ─────────────────────────────────────────────────────────────── */
+.chart-dot {
+  fill-opacity: 0.88;
+  stroke: var(--surface-1);
+  stroke-width: 1.5;
+  pointer-events: none;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+.chart-dot[data-hollow] {
+  fill: var(--surface-1);
+  fill-opacity: 1;
+  stroke-width: 1.75;
+}
+
+.chart-dot[data-dimmed] {
+  opacity: 0.3;
+}
+
+.chart-dot[data-selected] {
+  stroke: var(--ink);
+  stroke-width: 2;
+  opacity: 1;
+}
+
+.chart-dot-ring {
+  fill: none;
+  stroke: var(--signal);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+/* ── Ranked bars ─────────────────────────────────────────────────────────── */
+.chart-barlist {
+  display: grid;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.chart-barlist-rows {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart-bar-row {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.55rem var(--s-3) 0.6rem var(--s-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  color: var(--ink-soft);
+  text-align: left;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out);
+}
+
+.chart-barlist:not([data-ranked]) .chart-bar-row {
+  grid-template-columns: minmax(0, 1fr);
+  padding-left: var(--s-3);
+}
+
+.chart-bar-row:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.chart-bar-row[data-selected] {
+  border-color: var(--rule-focus);
+  background: var(--surface-3);
+}
+
+.chart-bar-row[data-dimmed]:not([data-selected]) {
+  opacity: 0.42;
+}
+
+.chart-bar-row:disabled {
+  cursor: default;
+}
+
+.chart-bar-rank {
+  padding-top: 0.1rem;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.chart-bar-body {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.chart-bar-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.chart-bar-label > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-bar-swatch {
+  flex: none;
+  align-self: center;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 2px;
+}
+
+.chart-bar-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-left: auto;
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chart-bar-value small {
+  min-width: 3.2rem;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  text-align: right;
+}
+
+.chart-bar-track {
+  position: relative;
+  display: block;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 0 3px 3px 0;
+  background: var(--chart-track);
+}
+
+.chart-bar-track[data-unmeasured] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--rule-strong) 0 1px,
+    transparent 1px 6px
+  );
+}
+
+.chart-bar-fill,
+.chart-bar-overlay {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  border-radius: 0 3px 3px 0;
+  transition: width var(--dur-3) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out);
+}
+
+.chart-bar-fill {
+  background: var(--bar-color, var(--chart-series));
+}
+
+.chart-bar-fill[data-positive] {
+  min-width: 2px;
+}
+
+.chart-bar-fill[data-zero] {
+  width: 2px !important;
+  background: var(--ink-muted);
+}
+
+.chart-bar-overlay {
+  min-width: 2px;
+  background: var(--bar-overlay, var(--signal));
+}
+
+.chart-bar-track:has(.chart-bar-overlay) .chart-bar-fill {
+  opacity: 0.32;
+}
+
+.chart-bar-row[data-selected] .chart-bar-track {
+  overflow: visible;
+}
+
+.chart-bar-row[data-selected] .chart-bar-fill {
+  outline: 1px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.chart-bar-sublabel {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-bar-label > strong {
+  flex: 0 1 auto;
+  max-width: 60%;
+}
+
+.chart-barlist {
+  container-type: inline-size;
+}
+
+/* Narrow lists: the value and share never clip; secondary text wraps under
+   the label instead of competing for the same line. */
+@container (max-width: 26rem) {
+  .chart-bar-label {
+    flex-wrap: wrap;
+    row-gap: 0.1rem;
+  }
+  .chart-bar-label > strong {
+    max-width: none;
+  }
+  .chart-bar-sublabel {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+.chart-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  justify-self: start;
+  min-height: 2.5rem;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.chart-expand:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* ── Stacked evidence bar ────────────────────────────────────────────────── */
+.chart-stack {
+  display: grid;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.chart-stack-bar {
+  display: flex;
+  gap: 2px;
+  height: 0.875rem;
+  overflow: hidden;
+  border-radius: var(--r-1);
+  background: var(--chart-track);
+}
+
+.chart-stack-segment {
+  min-width: 2px;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+.chart-stack-segment[data-hatched],
+.chart-stack-legend i[data-hatched] {
+  background: repeating-linear-gradient(
+    135deg,
+    currentColor 0 1.5px,
+    transparent 1.5px 5px
+  );
+}
+
+.chart-stack-segment[data-dimmed],
+.chart-stack-legend li[data-dimmed] {
+  opacity: 0.4;
+}
+
+.chart-stack-legend {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart-stack-legend li {
+  display: grid;
+  grid-template-columns: 0.7rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-size: var(--fs-small);
+}
+
+.chart-stack-legend i {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  transform: translateY(1px);
+}
+
+.chart-stack-label {
+  display: grid;
+  min-width: 0;
+  color: var(--ink-soft);
+}
+
+.chart-stack-label small,
+.chart-stack-value small {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.chart-stack-value {
+  display: grid;
+  justify-items: end;
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Freshness window ────────────────────────────────────────────────────── */
+.chart-window {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.chart-window-track {
+  position: relative;
+  height: 1.25rem;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.chart-window-tick {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 0.45rem;
+  background: var(--rule-strong);
+}
+
+.chart-window-tick:last-child {
+  height: 1.25rem;
+  background: var(--brass);
+}
+
+.chart-window-band {
+  position: absolute;
+  bottom: 0.3rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--lagoon) 55%, transparent);
+  box-shadow: inset 0 0 0 1px var(--lagoon);
+}
+
+.chart-window-marker {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 1.25rem;
+  margin-left: -1px;
+  background: var(--lagoon);
+}
+
+.chart-window-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+@media (forced-colors: active) {
+  .chart-bar-fill,
+  .chart-bar-overlay,
+  .chart-stack-segment {
+    forced-color-adjust: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-bar-fill,
+  .chart-bar-overlay,
+  .chart-dot,
+  .chart-stack-segment {
+    transition: none;
+  }
+}
+
+/* ── Polish: livelier bars, composition ribbon, age meter ────────────────── */
+:root {
+  /* One periwinkle for single-series bars (colour follows the entity, never the
+     rank); the eight use-case tokens stay reserved for use cases. */
+  --chart-series: color-mix(in oklab, var(--iris) 78%, var(--surface-4));
+}
+
+.chart-bar-track {
+  height: 0.625rem;
+  border-radius: 0 4px 4px 0;
+  background:
+    linear-gradient(90deg, transparent, color-mix(in oklab, var(--ink) 4%, transparent)),
+    var(--chart-track);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 5%, transparent);
+}
+
+.chart-bar-fill {
+  --bar-base: var(--bar-color, var(--chart-series));
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--bar-base) 52%, transparent),
+    var(--bar-base) 70%,
+    color-mix(in oklab, var(--bar-base) 82%, white)
+  );
+  box-shadow: 0 0 12px -2px color-mix(in oklab, var(--bar-base) 55%, transparent);
+}
+
+.chart-bar-fill[data-zero] {
+  background: var(--ink-muted);
+  box-shadow: none;
+}
+
+.chart-bar-row {
+  position: relative;
+}
+
+.chart-bar-row::before {
+  content: "";
+  position: absolute;
+  inset: 0.4rem auto 0.4rem 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--signal);
+  opacity: 0;
+  transform: scaleY(0.4);
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+.chart-bar-row:hover:not(:disabled)::before,
+.chart-bar-row[data-selected]::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.chart-bar-row:hover:not(:disabled) .chart-bar-fill {
+  filter: brightness(1.14) saturate(1.08);
+}
+
+.chart-bar-row:hover:not(:disabled) .chart-bar-rank {
+  color: var(--ink-soft);
+}
+
+.chart-bar-value {
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Bars grow from the baseline once, in order, when a list first appears. The
+     width itself is never animated from zero, so its measured value stays exact. */
+  .chart-bar-fill {
+    transform-origin: left center;
+    animation: chart-bar-grow 720ms var(--ease-out) both;
+    animation-delay: calc(var(--row-index, 0) * 48ms);
+  }
+
+  .chart-ribbon-bar {
+    animation: chart-ribbon-reveal 900ms var(--ease-out) both;
+  }
+}
+
+@keyframes chart-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes chart-ribbon-reveal {
+  from {
+    clip-path: inset(0 100% 0 0 round 4px);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 4px);
+  }
+}
+
+/* Composition ribbon */
+.chart-ribbon {
+  display: grid;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.chart-ribbon-bar {
+  display: flex;
+  gap: 2px;
+  height: 0.875rem;
+}
+
+/* A finger needs more than 14px: touch screens get a taller bar. */
+@media (pointer: coarse) {
+  .chart-ribbon-bar {
+    height: 1.375rem;
+  }
+}
+
+.chart-ribbon-segment {
+  flex: 1 1 0;
+  min-width: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--ribbon-color);
+  box-shadow: 0 0 16px -4px color-mix(in oklab, var(--ribbon-color) 60%, transparent);
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out),
+    filter var(--dur-2) var(--ease-out);
+}
+
+.chart-ribbon-segment:first-child {
+  border-radius: 4px 2px 2px 4px;
+}
+
+.chart-ribbon-segment:last-child {
+  border-radius: 2px 4px 4px 2px;
+}
+
+.chart-ribbon-segment:only-child {
+  border-radius: 4px;
+}
+
+button.chart-ribbon-segment {
+  cursor: pointer;
+}
+
+button.chart-ribbon-segment:hover:not(:disabled) {
+  filter: brightness(1.18);
+  transform: scaleY(1.35);
+}
+
+button.chart-ribbon-segment:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+button.chart-ribbon-segment[data-selected] {
+  outline: 1px solid var(--ink);
+  outline-offset: 2px;
+}
+
+button.chart-ribbon-segment:disabled {
+  cursor: default;
+}
+
+.chart-ribbon-segment[data-dimmed] {
+  opacity: 0.32;
+}
+
+.chart-ribbon-segment[data-hatched] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--ribbon-color) 0 1px,
+    transparent 1px 5px
+  );
+  box-shadow: none;
+}
+
+.chart-ribbon-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+}
+
+.chart-ribbon-legend li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+.chart-ribbon-legend li[data-dimmed] {
+  opacity: 0.4;
+}
+
+.chart-ribbon-legend i {
+  align-self: center;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 2px;
+  background: var(--ribbon-color);
+}
+
+.chart-ribbon-legend i[data-hatched] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--ribbon-color) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+.chart-ribbon-legend small {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+/* Ratio meter: one measured ratio, drawn from the baseline. */
+.chart-ratio-meter {
+  position: relative;
+  display: block;
+  flex: 1 0 100%;
+  height: 4px;
+  margin-top: 0.2rem;
+  overflow: hidden;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--ink) 9%, transparent);
+}
+
+.chart-ratio-meter::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--ratio, 0) * 100%);
+  min-width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(90deg, color-mix(in oklab, var(--chart-series) 55%, transparent), var(--chart-series));
+}
+
+@media (forced-colors: active) {
+  .chart-ribbon-segment,
+  .chart-ratio-meter::after,
+  .chart-bar-fill {
+    forced-color-adjust: none;
+  }
+}
+
+/* Hovering one segment quiets its neighbours, so a thin slice is easy to find. */
+@media (hover: hover) and (pointer: fine) {
+  .chart-ribbon-bar:has(button.chart-ribbon-segment:hover:not(:disabled))
+    .chart-ribbon-segment:not(:hover, [data-selected]) {
+    opacity: 0.55;
+  }
+}

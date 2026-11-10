@@ -1,0 +1,132 @@
+/* The frame of the page that is loading: shimmering blocks in the page's own
+   proportions. They carry no data and are hidden from assistive technology. */
+
+.loading-plates {
+  display: grid;
+  gap: var(--s-4);
+  justify-self: stretch;
+  width: 100%;
+  margin-top: var(--s-5);
+  text-align: left;
+}
+
+.loading-plates .skeleton {
+  display: block;
+}
+
+.loading-plates [data-size="label"] {
+  width: 58%;
+  height: 0.75rem;
+}
+
+.loading-plates [data-size="figure"] {
+  width: 74%;
+  height: 2.25rem;
+}
+
+.loading-plates [data-size="note"] {
+  width: 46%;
+  height: 0.75rem;
+}
+
+.loading-plates [data-size="title"] {
+  width: 14rem;
+  max-width: 60%;
+  height: 1.25rem;
+  margin-bottom: var(--s-2);
+}
+
+.loading-plates [data-size="bar"] {
+  height: 0.875rem;
+}
+
+.loading-plates [data-size="avatar"] {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--r-2);
+}
+
+.loading-plates [data-size="line"] {
+  width: min(16rem, 70%);
+  height: 0.9375rem;
+}
+
+.loading-plates [data-size="subline"] {
+  width: min(26rem, 94%);
+  height: 0.75rem;
+}
+
+.loading-plates [data-size="value"] {
+  width: 5.5rem;
+  height: 1rem;
+}
+
+.loading-plates-figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--rule);
+}
+
+.loading-plates-figure {
+  display: grid;
+  gap: var(--s-3);
+  align-content: start;
+  padding: var(--s-4) var(--s-4) var(--s-4);
+  border-left: 1px solid var(--rule);
+}
+
+.loading-plates-figure:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.loading-plates-plate {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-5);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background: var(--surface-1);
+}
+
+.loading-plates-list {
+  display: grid;
+  border-top: 1px solid var(--rule);
+}
+
+.loading-plates-row {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.loading-plates-lines {
+  display: grid;
+  gap: var(--s-2);
+}
+
+@media (max-width: 52rem) {
+  .loading-plates-figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .loading-plates-figure:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .loading-plates-figure:nth-child(n + 3) {
+    border-top: 1px solid var(--rule);
+  }
+
+  .loading-plates-row {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+  }
+
+  .loading-plates-row > [data-size="value"] {
+    display: none;
+  }
+}

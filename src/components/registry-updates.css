@@ -1,0 +1,403 @@
+/* Ecosystem insights · registry updates.
+   A restrained editorial feed: what the radar observed, in which scope, and
+   when. Observation times are never presented as deployment dates. */
+
+.registry-updates.signal-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: var(--s-5) 0 0;
+  border: 0;
+  border-top: 1px solid var(--rule-strong);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.registry-updates .panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin: 0;
+}
+
+.registry-kicker {
+  display: block;
+  margin-bottom: var(--s-2);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.registry-updates .panel-heading h2 {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: 400;
+  line-height: var(--lh-tight);
+}
+
+.registry-refresh.icon-button {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.registry-refresh.icon-button:disabled {
+  opacity: 0.45;
+}
+
+/* Scope: a two-way segmented choice built on native radios. */
+.registry-scope.segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  margin: var(--s-4) 0 0;
+  min-inline-size: 0;
+}
+
+.registry-scope label {
+  position: relative;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.registry-scope input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.registry-scope span {
+  display: grid;
+  place-items: center;
+  min-height: 2.25rem;
+  padding: 0 var(--s-3);
+  border-radius: 6px;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.registry-scope label:hover input:not(:checked) + span {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.registry-scope input:checked + span {
+  background: var(--surface-4);
+  color: var(--ink);
+  box-shadow:
+    var(--edge-light),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    inset 0 -2px 0 var(--signal);
+}
+
+.registry-scope input:focus-visible + span {
+  box-shadow: var(--focus-ring);
+}
+
+.registry-updates .registry-scope-note {
+  margin: var(--s-2) 0 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.registry-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+  margin: var(--s-3) 0 0;
+  color: var(--brass);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+}
+
+.registry-feedback button,
+.registry-empty-action {
+  min-height: 2.5rem;
+  color: var(--signal);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.registry-feedback button:hover,
+.registry-empty-action:hover {
+  color: var(--signal-hover);
+}
+
+/* ── Events ──────────────────────────────────────────────────────────────── */
+.registry-updates .signal-events {
+  width: 100%;
+  max-height: min(34rem, 75vh);
+  margin-top: var(--s-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border-top: 1px solid var(--rule);
+}
+
+.registry-updates .signal-events:focus-visible {
+  border-radius: var(--r-1);
+  box-shadow: var(--focus-ring);
+}
+
+.registry-updates .signal-event {
+  display: grid;
+  grid-template-columns: 0.5rem minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 0;
+  padding: var(--s-3) var(--s-1);
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+.registry-updates .signal-event:hover:not(:disabled) {
+  background: var(--surface-1);
+}
+
+.registry-updates .signal-event:hover:not(:disabled) strong {
+  color: var(--signal-hover);
+}
+
+.registry-updates .signal-event:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.registry-updates .signal-event:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--signal);
+}
+
+.registry-updates .event-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-top: 0.4rem;
+  border: 1px solid var(--rule-focus);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.registry-updates .event-dot.teal {
+  border-color: var(--lagoon);
+  background: var(--lagoon);
+}
+
+.registry-updates .signal-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.registry-event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-2);
+  margin: 0;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.registry-event-meta > span + span::before {
+  content: "· ";
+}
+
+.registry-updates .signal-copy strong {
+  display: block;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  transition: color var(--dur-1) var(--ease-out);
+}
+
+.registry-updates .signal-copy small {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.registry-updates .signal-event time {
+  margin-top: 1px;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.registry-more {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 var(--s-1);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.registry-more svg {
+  color: var(--ink-muted);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.registry-more[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.registry-more:hover {
+  color: var(--signal-hover);
+}
+
+.registry-more > span {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+/* ── Quiet states ────────────────────────────────────────────────────────── */
+.registry-updates .quiet-feed {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-2);
+  flex: none;
+  margin-top: var(--s-3);
+  padding: var(--s-5) 0;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-muted);
+}
+
+.registry-updates .quiet-feed svg {
+  display: block;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0.5rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--surface-1);
+  color: var(--ink-muted);
+}
+
+.registry-updates .quiet-feed strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.registry-updates .quiet-feed p {
+  max-width: 40ch;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.registry-footnote {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-1) var(--s-3);
+  margin-top: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+}
+
+/* The watchlist shortcut supplied by the page (App) sits at the foot. */
+.registry-updates .watch-callout {
+  display: grid;
+  gap: var(--s-1);
+  width: 100%;
+  min-height: 0;
+  align-self: stretch;
+  margin-top: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink-soft);
+  text-align: left;
+  box-shadow: var(--edge-light);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.registry-updates .watch-callout:hover {
+  border-color: var(--rule-focus);
+  background: var(--surface-2);
+}
+
+.registry-updates .watch-callout .eyebrow {
+  margin: 0;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+}
+
+.registry-updates .watch-callout > span:not(.eyebrow) {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.registry-updates .watch-callout strong {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.registry-updates .watch-callout strong svg {
+  color: var(--signal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .registry-updates .signal-event,
+  .registry-more svg,
+  .registry-updates .watch-callout {
+    transition: none;
+  }
+}

@@ -1,0 +1,194 @@
+# Hook Radar Auto Snapshot: collect a fresh sample, build the site and publish it
+# to GitHub Pages every three hours. No computer of yours needs to be on.
+#
+# The safeguard that matters most: the deploy job needs the collect job. If the
+# collector refuses to publish (too few pools with a current volume, a provider
+# refused us, a validator failed) the collect job fails, nothing is deployed and
+# the site keeps showing the last good snapshot, still dated.
+
+name: Snapshot
+
+on:
+  schedule:
+    # Every three hours at minute 17 (UTC). GitHub can start a scheduled run a
+    # few minutes late when it is busy.
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+
+# One run at a time. A run that starts while another is going waits for it.
+concurrency:
+  group: hook-radar-snapshot
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    name: Collect and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Fails early, before any data provider is contacted, when GitHub Pages
+      # has not been switched on (Settings, Pages, Source: GitHub Actions).
+      - name: Check that GitHub Pages is switched on
+        uses: actions/configure-pages@v5
+
+      - name: Work out where the site will be served
+        id: site
+        run: |
+          set -eu
+          repo="${GITHUB_REPOSITORY#*/}"
+          owner="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          lower_repo="$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')"
+          cname=""
+          if [ -f public/CNAME ]; then cname="public/CNAME"; elif [ -f CNAME ]; then cname="CNAME"; fi
+          # A file such as CNAME.txt (Notepad and File Explorer on Windows add the
+          # .txt) or cname is not read: say so instead of building for the wrong
+          # address and publishing a blank page on the custom domain.
+          if [ -z "${cname}" ]; then
+            for stray in ./* ./public/*; do
+              [ -f "${stray}" ] || continue
+              case "$(basename "${stray}" | tr '[:upper:]' '[:lower:]')" in
+                cname|cname.*)
+                  echo "::error::${stray#./} is not read. The custom-domain file must be named exactly public/CNAME (capital letters, no .txt). Rename it, or remove it if you do not use a custom domain."
+                  exit 1 ;;
+              esac
+            done
+          fi
+          if [ -n "${cname}" ]; then
+            domain="$(head -n 1 "${cname}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+            case "${domain}" in
+              ""|*[!a-z0-9.-]*) echo "::error::${cname} must contain one domain name such as www.example.com"; exit 1 ;;
+            esac
+            echo "base=./" >> "${GITHUB_OUTPUT}"
+            echo "url=https://${domain}/" >> "${GITHUB_OUTPUT}"
+          elif [ "${lower_repo}" = "${owner}.github.io" ]; then
+            echo "base=/" >> "${GITHUB_OUTPUT}"
+            echo "url=https://${owner}.github.io/" >> "${GITHUB_OUTPUT}"
+          else
+            echo "base=/${repo}/" >> "${GITHUB_OUTPUT}"
+            echo "url=https://${owner}.github.io/${repo}/" >> "${GITHUB_OUTPUT}"
+          fi
+
+      # Exits non-zero when it will not publish. Nothing below runs then.
+      - name: Collect the snapshot
+        run: node collector/run.mjs
+
+      - name: Build the site
+        run: npm run build:static -- --require-data
+        env:
+          VITE_BASE: ${{ steps.site.outputs.base }}
+          VITE_SITE_URL: ${{ steps.site.outputs.url }}
+
+      # The last gate, run on the files that will be published: refuses data
+      # that is missing a snapshot, was made by an offline fixture replay, or
+      # whose files come from different runs.
+      - name: Check that the data is a live snapshot
+        run: node scripts/check-edition-data.mjs dist/data
+
+      # Only state/ is committed (known pools, history, the registry copy).
+      # [skip ci] keeps this commit from starting the checks workflow.
+      - name: Save state
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state
+          if git diff --cached --quiet; then
+            echo "state/ is unchanged"
+            exit 0
+          fi
+          git commit -m "Update snapshot state [skip ci]"
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          done
+          echo "::error::Could not push state/ after three attempts"
+          exit 1
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      # Optional. Set the repository variable PUBLISH_SITE_BRANCH to true to
+      # also keep the finished site, built to work at any address, on a branch
+      # named "site" that Vercel, Cloudflare Pages or similar hosts can serve
+      # without building. A failure here does not stop the GitHub Pages deploy.
+      # The repository variable SITE_URL (the address of that other host, for the
+      # link-preview picture) is read here; unset, it is empty and no picture is
+      # added. A SITE_URL the build would refuse (typed without https://, for
+      # example) must not leave the site branch stale with the run still green:
+      # the picture is left out and a warning names the variable. The test is
+      # the same one vite.config.ts applies (editionSiteUrl).
+      - name: Mirror build for other hosts
+        id: mirror-build
+        if: ${{ vars.PUBLISH_SITE_BRANCH == 'true' }}
+        continue-on-error: true
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          set -eu
+          site_url="${SITE_URL:-}"
+          if [ -n "${site_url}" ] && ! node -e '
+            try {
+              const u = new URL(process.argv[1]);
+              if (u.protocol !== "https:" || u.username || u.password || u.search || u.hash) process.exit(1);
+            } catch {
+              process.exit(1);
+            }
+          ' "${site_url}"; then
+            echo "::warning::The repository variable SITE_URL is not used: it must be a full address that starts with https:// and has nothing after a ? or #. The site branch is updated without the link-preview picture. Correct SITE_URL and run Snapshot again."
+            site_url=""
+          fi
+          VITE_SITE_URL="${site_url}" npm run build:static -- --require-data --outDir site-mirror
+
+      - name: Mirror to the site branch
+        if: ${{ vars.PUBLISH_SITE_BRANCH == 'true' }}
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          cd site-mirror
+          git init -q
+          git checkout -q -b site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Site build from run ${GITHUB_RUN_ID}"
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" site
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: collect
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

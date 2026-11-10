@@ -1,0 +1,441 @@
+/* Sources dialog · pricing coverage (Observatory). Loaded globally by App;
+   every rule is scoped to .market-coverage. */
+
+.market-coverage {
+  display: grid;
+  gap: var(--s-4);
+  margin: var(--s-5) 0;
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--rule-strong);
+  font-family: var(--font-ui);
+}
+
+.market-coverage .market-coverage-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+}
+
+.market-coverage h3 {
+  color: var(--ink);
+  font-size: var(--fs-h3);
+  font-weight: 600;
+}
+
+.market-coverage .market-coverage-heading > span {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.market-coverage .market-network-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 2.75rem;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.market-coverage .market-network-select:focus-within {
+  border-color: var(--signal-line);
+  box-shadow: 0 0 0 3px var(--signal-wash);
+}
+
+.market-coverage .market-network-select select {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 var(--s-5) 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  appearance: none;
+  cursor: pointer;
+}
+
+.market-coverage .market-network-select select:focus-visible {
+  box-shadow: none;
+}
+
+.market-coverage .market-network-select select option {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.market-coverage .market-network-select > svg {
+  position: absolute;
+  right: var(--s-3);
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+
+.market-coverage .market-fresh-pricing {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+}
+
+.market-coverage .market-fresh-heading {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.market-coverage .market-fresh-pricing dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+  margin: 0;
+}
+
+.market-coverage .market-fresh-pricing dl > div {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.market-coverage .market-fresh-pricing dt {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.market-coverage .market-fresh-pricing dd {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0;
+}
+
+.market-coverage .market-fresh-pricing dd strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: var(--lh-tight);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.market-coverage .market-fresh-pricing dd span {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.market-coverage .market-lookup-explanation {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+}
+
+.market-coverage .market-lookup-progress-copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.market-coverage .market-lookup-progress-copy p {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.market-coverage .market-lookup-progress-copy strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 400;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.market-coverage .market-lookup-progress-copy > span {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+}
+
+.market-coverage .market-lookup-progress {
+  display: flex;
+  gap: 2px;
+  height: 0.75rem;
+  overflow: hidden;
+  border-radius: var(--r-1);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--rule-strong) 0 1px,
+    transparent 1px 5px
+  );
+}
+
+.market-coverage .market-lookup-progress > span {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  background: var(--lagoon);
+}
+
+.market-coverage .market-lookup-progress > span[data-part="missing"] {
+  background: var(--brass);
+}
+
+.market-coverage .market-lookup-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+  margin: 0;
+  padding: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  list-style: none;
+}
+
+.market-coverage .market-lookup-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.market-coverage .market-lookup-legend i {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+  background: var(--lagoon);
+}
+
+.market-coverage .market-lookup-legend i[data-part="missing"] {
+  background: var(--brass);
+}
+
+.market-coverage .market-lookup-legend i[data-part="pending"] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--ink-muted) 0 1px,
+    transparent 1px 4px
+  );
+}
+
+.market-coverage .market-lookup-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+  margin: 0;
+}
+
+.market-coverage .market-lookup-totals > div {
+  display: grid;
+  gap: 0.15rem;
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--rule);
+}
+
+.market-coverage .market-lookup-totals dt {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.market-coverage .market-lookup-totals dd {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.market-coverage .market-lookup-networks {
+  border-top: 1px solid var(--rule);
+}
+
+.market-coverage .market-lookup-networks > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 2.75rem;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.market-coverage .market-lookup-networks > summary::-webkit-details-marker {
+  display: none;
+}
+
+.market-coverage .market-network-count {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 400;
+}
+
+.market-coverage .market-lookup-networks > summary > svg {
+  margin-left: auto;
+  color: var(--ink-muted);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.market-coverage .market-lookup-networks[open] > summary > svg {
+  transform: rotate(180deg);
+}
+
+.market-coverage .market-network-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.market-coverage .market-network-list > li {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.market-coverage .market-network-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.market-coverage .market-network-heading strong {
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.market-coverage .market-network-heading > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+}
+
+.market-coverage .market-network-heading > span::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.market-coverage .market-network-heading > span[data-state="live"]::before {
+  background: var(--lagoon);
+}
+
+.market-coverage .market-network-heading > span[data-state="cached"]::before {
+  background: var(--brass);
+}
+
+.market-coverage .market-network-heading > span[data-state="unavailable"]::before {
+  background: var(--danger);
+}
+
+.market-coverage .market-network-numbers,
+.market-coverage .market-network-pricing {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2) var(--s-3);
+  margin: 0;
+}
+
+.market-coverage .market-network-pricing {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.market-coverage .market-network-numbers > div,
+.market-coverage .market-network-pricing > div {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.market-coverage .market-network-numbers dt,
+.market-coverage .market-network-pricing dt {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.market-coverage .market-network-numbers dd,
+.market-coverage .market-network-pricing dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1rem var(--s-2);
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.market-coverage .market-network-numbers dd strong {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-coverage .market-network-numbers dd span {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.market-coverage .market-network-pricing dd {
+  display: grid;
+}
+
+.market-coverage .market-pricing-context {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.market-coverage .market-network-missing {
+  color: var(--brass);
+  font-size: var(--fs-micro);
+}
+
+.market-coverage .market-lookup-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-left: 3px solid var(--brass);
+  border-radius: 0 var(--r-2) var(--r-2) 0;
+  background: var(--brass-wash);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.market-coverage .market-lookup-warning svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--brass);
+}
+
+@media (max-width: 30rem) {
+  .market-coverage .market-lookup-totals,
+  .market-coverage .market-network-numbers {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .market-coverage .market-fresh-pricing dl,
+  .market-coverage .market-network-pricing {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

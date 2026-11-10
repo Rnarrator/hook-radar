@@ -1,0 +1,144 @@
+/* Hook Radar · Observatory design tokens.
+   One source of truth for colour, type, space, depth and motion. Every
+   stylesheet uses these semantic names; the pre-Observatory aliases (--pink,
+   --muted, --panel …) were removed with the legacy stylesheets. */
+
+:root {
+  color-scheme: dark;
+
+  /* Ground: midnight ink, lit from the upper left. */
+  --ground: #080a12;
+  --surface-1: #0d111c;
+  --surface-2: #131929;
+  --surface-3: #1b2236;
+  --surface-4: #252e48;
+
+  /* Rules: hairline instrument linework. */
+  --rule: rgba(160, 176, 255, 0.1);
+  --rule-strong: rgba(160, 176, 255, 0.2);
+  --rule-focus: rgba(160, 176, 255, 0.38);
+
+  /* Ink. Every step is at least 4.5:1 on --ground, --surface-1 and --surface-2
+     (WCAG AA for normal text). --ink-faint is the quietest: icons, dividers and
+     tertiary labels. Disabled states may go lower. */
+  --ink: #f3f5fc;
+  --ink-soft: #bdc4da;
+  --ink-muted: #939bb7;
+  --ink-faint: #7a83a3;
+
+  /* Signal: the sweep. Selection, live state, primary action. */
+  --signal: #ff5ca9;
+  --signal-hover: #ff7bbb;
+  --signal-deep: #e5338a;
+  --signal-wash: rgba(255, 92, 169, 0.12);
+  --signal-line: rgba(255, 92, 169, 0.42);
+  --on-signal: #1a0510;
+
+  /* Instrument accents. Brass = measurement and provenance; lagoon = current
+     and healthy; iris/sky/violet/ember are chart categories. */
+  --brass: #e0b872;
+  --lagoon: #5bd9be;
+  --iris: #9097ff;
+  --sky: #62bdff;
+  --violet: #c9a0ff;
+  --ember: #ff9c70;
+  --mist: #94a0c0;
+  --danger: #ff7a8a;
+
+  --brass-wash: rgba(224, 184, 114, 0.12);
+  --lagoon-wash: rgba(91, 217, 190, 0.12);
+  --danger-wash: rgba(255, 122, 138, 0.12);
+
+  /* Use-case colours, shared by every chart, chip and legend. The three cool
+     hues differ in luminance (MEV deep, Oracles mid, Orders light) so they stay
+     separable for colour-blind readers; labels and patterns always accompany them. */
+  --cat-launches: #ff5ca9;
+  --cat-liquidity: #5bd9be;
+  --cat-fees: #e0b872;
+  --cat-mev: #6f7dff;
+  --cat-orders: #86dcff;
+  --cat-oracles: #d6b0ff;
+  --cat-access: #ff9c70;
+  --cat-other: #94a0c0;
+
+  /* Typography. */
+  --font-display:
+    "Press Start 2P", "Geist Mono", ui-monospace, "Cascadia Mono", Consolas,
+    monospace;
+  --font-ui:
+    "Geist", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    sans-serif;
+  --font-data:
+    "Geist Mono", ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas,
+    monospace;
+
+  --fs-micro: 0.75rem; /* 12px */
+  --fs-small: 0.8125rem; /* 13px */
+  --fs-body: 0.9375rem; /* 15px */
+  --fs-lead: 1.0625rem; /* 17px */
+  --fs-h3: 1.125rem; /* 18px */
+  --fs-h2: clamp(1.5rem, 1.2rem + 1vw, 1.875rem);
+  --fs-h1: clamp(2.25rem, 1.4rem + 3.4vw, 3.75rem);
+  --fs-stat: clamp(2rem, 1.4rem + 1.8vw, 3.25rem);
+
+  --lh-tight: 1.1;
+  --lh-snug: 1.3;
+  --lh-body: 1.5;
+
+  --tracking-caps: 0.09em;
+
+  /* Space: 4px grid. */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4rem;
+  --gutter: clamp(1rem, 0.4rem + 2.4vw, 2.5rem);
+  --content-max: 1440px;
+
+  /* Shape. */
+  --r-1: 4px;
+  --r-2: 8px;
+  --r-3: 14px;
+  --r-pill: 999px;
+
+  /* Depth: one key light, hairline top highlight, three elevations. */
+  --edge-light: inset 0 1px 0 rgba(190, 205, 255, 0.06);
+  --elev-1: var(--edge-light), 0 1px 2px rgba(0, 0, 0, 0.45);
+  --elev-2: var(--edge-light), 0 10px 28px -12px rgba(0, 0, 0, 0.7);
+  --elev-3: var(--edge-light), 0 28px 64px -20px rgba(0, 0, 0, 0.85),
+    0 0 0 1px var(--rule-strong);
+  --key-light: radial-gradient(
+    120% 90% at 0% 0%,
+    rgba(144, 151, 255, 0.07),
+    transparent 62%
+  );
+
+  /* Motion: explain state, never decorate. */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+
+  /* Focus: same ring everywhere. */
+  --focus-ring: 0 0 0 2px var(--ground), 0 0 0 4px var(--signal);
+
+  /* Layers. */
+  --z-sticky: 20;
+  --z-nav: 40;
+  --z-popover: 60;
+  --z-overlay: 80;
+  --z-toast: 100;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 0.01ms;
+    --dur-2: 0.01ms;
+    --dur-3: 0.01ms;
+  }
+}

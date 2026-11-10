@@ -1,0 +1,554 @@
+/* Platform listing · Observatory.
+   Availability is a first-class readout; the launch path makes the
+   launchpad → protocol → hooks/pools relationship (or its absence) legible;
+   market data stays explicitly unavailable unless attributed. */
+
+/* ── Status pill (shared by hero, relationships and networks) ─────────── */
+.project-detail .status-pill {
+  --status: var(--ink-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 1.5rem;
+  padding: 0 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--status) 45%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--status) 12%, transparent);
+  color: var(--status);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.project-detail [data-status="live"] {
+  --status: var(--lagoon);
+}
+
+.project-detail [data-status="restricted"] {
+  --status: var(--brass);
+}
+
+.project-detail [data-status="deprecated"] {
+  --status: var(--danger);
+}
+
+.project-detail [data-status="planned"] {
+  --status: var(--iris);
+}
+
+.project-detail [data-status="unverified"] {
+  --status: var(--ink-soft);
+}
+
+.project-detail .status-dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--status, var(--ink-muted));
+}
+
+/* Unverified is a hollow dot: an absence of a check, not a state. */
+.project-detail [data-status="unverified"] .status-dot,
+.project-detail .status-pill[data-status="unverified"] .status-dot {
+  border: 1.5px solid var(--ink-muted);
+  background: transparent;
+}
+
+.project-detail .status-pill[data-status="unverified"] {
+  border-style: dashed;
+  background: transparent;
+}
+
+/* ── Availability + market plate ─────────────────────────────────────── */
+.platform-detail .platform-status {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--s-5);
+  margin: 0;
+  padding: var(--s-5);
+}
+
+.platform-detail .platform-availability {
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.platform-detail .platform-availability .kicker {
+  color: var(--brass);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+}
+
+.platform-detail .platform-availability-state {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.platform-detail .platform-availability-state .status-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.platform-detail .platform-availability-state .readout-value {
+  color: var(--status);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.5rem + 1.4vw, 2.625rem);
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.platform-detail
+  .platform-availability-state[data-status="unverified"]
+  .readout-value {
+  color: var(--ink-soft);
+}
+
+.platform-detail .platform-availability p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+}
+
+/* What the status word means is a legend: quieter than the finding it labels. */
+.platform-detail .platform-availability .platform-availability-description {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+/* The finding: the point first, its support as a short list under it. */
+.platform-detail .platform-availability .platform-availability-lead {
+  margin-top: var(--s-2);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+.platform-detail .platform-availability-findings {
+  display: grid;
+  gap: var(--s-2);
+  margin: var(--s-1) 0 0;
+  padding: 0 0 0 var(--s-3);
+  border-left: 2px solid var(--rule-strong);
+  list-style: none;
+}
+
+.platform-detail .platform-availability-findings li {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+}
+
+.platform-detail .platform-availability .platform-availability-reviewed {
+  margin-top: var(--s-1);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+/* Snapshot edition: dates a finding that quotes the live index's pool count. */
+.platform-detail .platform-availability .platform-availability-asof {
+  margin-top: var(--s-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.platform-detail
+  .platform-availability
+  .platform-availability-asof
+  + .platform-availability-lead {
+  margin-top: 0;
+}
+
+.platform-detail .platform-availability-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--s-3);
+  color: var(--ink-muted);
+}
+
+.platform-detail .platform-market {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto auto auto;
+  align-content: start;
+  gap: var(--s-1) var(--s-4);
+  min-width: 0;
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--rule);
+}
+
+.platform-detail .platform-market > .readout {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: var(--s-1);
+  min-width: 0;
+}
+
+.platform-detail .platform-market .readout-label {
+  align-self: end;
+}
+
+.platform-detail .platform-market-note {
+  margin-top: var(--s-2);
+}
+
+.platform-detail .platform-market .readout-label {
+  font-size: var(--fs-micro);
+}
+
+.platform-detail .platform-market .readout-value {
+  color: var(--ink);
+  font-size: clamp(2rem, 1.5rem + 1.4vw, 2.625rem);
+}
+
+.platform-detail .platform-market .readout-value[data-unavailable] {
+  color: var(--ink-muted);
+}
+
+.platform-detail .platform-market .readout-note {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.platform-detail .platform-market-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.55;
+}
+
+/* ── Section heads ───────────────────────────────────────────────────── */
+.platform-detail .platform-section-head {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.platform-detail .platform-section-head .kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-micro);
+}
+
+.platform-detail .platform-section-head h3 {
+  color: var(--ink);
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.platform-detail .platform-section-head p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+/* ── Launch path ─────────────────────────────────────────────────────── */
+.platform-detail .platform-relationships,
+.platform-detail .platform-networks {
+  display: grid;
+  gap: var(--s-4);
+  margin: 0;
+  padding: var(--s-5) 0 0;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.platform-detail .platform-route {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform-detail .platform-route-node {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--s-1);
+  min-width: 0;
+  padding: var(--s-3) var(--s-4) var(--s-3) var(--s-5);
+  border: 1px solid var(--rule-strong);
+  background: var(--surface-1);
+}
+
+.platform-detail .platform-route-node:first-child {
+  padding-left: var(--s-4);
+  border-radius: var(--r-2) 0 0 var(--r-2);
+}
+
+.platform-detail .platform-route-node:last-child {
+  border-radius: 0 var(--r-2) var(--r-2) 0;
+}
+
+.platform-detail .platform-route-node + .platform-route-node {
+  border-left: 0;
+}
+
+.platform-detail .platform-route-node:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 1.2rem;
+  right: -0.42rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-top: 1px solid var(--rule-strong);
+  border-right: 1px solid var(--rule-strong);
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+/* Unattributed stations are drawn as outlines: a gap, not a value. */
+.platform-detail .platform-route-node[data-known="false"] {
+  border-style: dashed;
+  background: var(--ground);
+}
+
+.platform-detail
+  .platform-route-node[data-known="false"]
+  + .platform-route-node {
+  border-left: 0;
+}
+
+.platform-detail .platform-route-node[data-known="false"] strong {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.platform-detail .platform-route-label {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.platform-detail .platform-route-node strong {
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.platform-detail .platform-route-note {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.platform-detail .platform-attribution {
+  display: grid;
+  gap: var(--s-2);
+  max-width: 64ch;
+}
+
+.platform-detail .platform-attribution p,
+.platform-detail .platform-relationship-caveat {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+.platform-detail .platform-relationship-caveat {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+
+.platform-detail .platform-relationship-caveat svg {
+  margin-top: 3px;
+  color: var(--brass);
+}
+
+.platform-detail .platform-attribution .external,
+.platform-detail .platform-relationships > .external {
+  justify-self: start;
+  min-height: 2.5rem;
+}
+
+.platform-detail .platform-relationship-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.platform-detail .platform-relationship {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.platform-detail .platform-relationship-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.platform-detail .platform-relationship-head strong {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.platform-detail .platform-relationship p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.platform-detail .platform-relationship-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--s-3);
+  margin-left: calc(-1 * var(--s-2));
+}
+
+.platform-detail .platform-relationship-links .external {
+  min-height: 2.5rem;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-1);
+}
+
+.platform-detail .platform-relationship-links .external:hover {
+  background: var(--surface-2);
+  text-decoration: none;
+}
+
+/* ── Networks ────────────────────────────────────────────────────────── */
+.platform-detail .platform-network-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform-detail .platform-network-links li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.platform-detail .platform-network-links a {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-width: 0;
+  min-height: 3rem;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--edge-light);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.platform-detail .platform-network-links a:hover {
+  border-color: var(--signal-line);
+  background: var(--surface-2);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.platform-detail .platform-network-links a svg {
+  color: var(--signal);
+}
+
+/* Snapshot edition, on touch and narrow screens only (the same query as the
+   24px rule in design/compact.css; a desktop keeps the links' own size): links
+   that stand alone on a line (Availability evidence, Explorer, Source, the
+   indexed-as link) are at least 24px tall. The whole selector sits in
+   :where(), so the rule has no specificity of its own and any min-height set
+   above or in the other drawer sheets (the 44px primary buttons) still wins
+   whatever the bundle order. */
+@media (max-width: 52rem), (pointer: coarse) {
+  :where(.platform-detail.is-snapshot) :where(.external, .lp-link) {
+    min-height: 1.5rem;
+  }
+}
+
+@media (max-width: 37.5rem) {
+  .platform-detail .platform-status {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+    padding: var(--s-4);
+  }
+
+  .platform-detail .platform-market {
+    padding: var(--s-4) 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .platform-detail .platform-route {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .platform-detail .platform-route-node,
+  .platform-detail .platform-route-node:first-child,
+  .platform-detail .platform-route-node:last-child {
+    padding: var(--s-3) var(--s-4);
+    border-radius: 0;
+  }
+
+  .platform-detail .platform-route-node:first-child {
+    border-radius: var(--r-2) var(--r-2) 0 0;
+  }
+
+  .platform-detail .platform-route-node:last-child {
+    border-radius: 0 0 var(--r-2) var(--r-2);
+  }
+
+  .platform-detail .platform-route-node + .platform-route-node,
+  .platform-detail
+    .platform-route-node[data-known="false"]
+    + .platform-route-node {
+    border-left: 1px solid var(--rule-strong);
+    border-top: 0;
+  }
+
+  .platform-detail
+    .platform-route-node[data-known="false"]
+    + .platform-route-node {
+    border-left-style: dashed;
+  }
+
+  .platform-detail .platform-route-node:not(:last-child)::after {
+    top: auto;
+    right: auto;
+    bottom: -0.42rem;
+    left: 1.5rem;
+    border-top: 0;
+    border-right: 1px solid var(--rule-strong);
+    border-bottom: 1px solid var(--rule-strong);
+  }
+
+  .platform-detail .platform-network-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

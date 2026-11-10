@@ -1,0 +1,474 @@
+/* Ecosystem map · Observatory. A squarified treemap of use-case regions:
+   area = listed projects (a directory count, never value or market share).
+   Phones get a proportional strip plus a region list. `.map-root` and
+   `.map-node` keep their historical hooks for tests; every legacy property
+   they inherit from the low-priority layer is reset here. */
+
+.eco-map {
+  display: grid;
+  gap: var(--s-3);
+  min-width: 0;
+  margin-top: var(--s-2);
+}
+
+.eco-map .map-root,
+.eco-map-heading {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  text-align: left;
+}
+
+.eco-map .map-root::before,
+.eco-map .map-root::after {
+  content: none;
+  display: none;
+}
+
+.eco-map-kicker {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.eco-map-heading h2 {
+  margin-top: var(--s-1);
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: 400;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+}
+
+.eco-map-total {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.eco-map-caption {
+  max-width: 96ch;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.eco-map-caption b {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.eco-map-frame {
+  position: relative;
+  min-width: 0;
+}
+
+/* ── Treemap ─────────────────────────────────────────────────────────────── */
+.eco-treemap {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background: var(--ground);
+  box-shadow: var(--elev-1);
+}
+
+.eco-tile {
+  position: absolute;
+  padding: 1px;
+}
+
+.eco-tile-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  height: 100%;
+  overflow: hidden;
+  padding: var(--s-3);
+  border-top: 2px solid var(--region);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--region) 11%, transparent),
+      color-mix(in srgb, var(--region) 4%, transparent) 70%
+    ),
+    var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  transition: background var(--dur-2) var(--ease-out);
+}
+
+.eco-tile:hover .eco-tile-inner,
+.eco-tile:focus-within .eco-tile-inner {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--region) 17%, transparent),
+      color-mix(in srgb, var(--region) 7%, transparent) 70%
+    ),
+    var(--surface-2);
+}
+
+/* Region header: the region's one action and its keyboard anchor. */
+.eco-region-header {
+  display: grid;
+  gap: 2px;
+  width: calc(100% + var(--s-2));
+  min-width: 0;
+  margin: calc(var(--s-1) * -1);
+  padding: var(--s-1);
+  border-radius: var(--r-2);
+  color: var(--ink);
+  text-align: left;
+}
+
+.eco-region-header:hover .eco-region-name {
+  text-decoration: underline;
+  text-decoration-color: var(--region);
+  text-underline-offset: 4px;
+}
+
+.eco-region-title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.eco-region-title i {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  background: var(--region);
+}
+
+.eco-region-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eco-region-title svg {
+  margin-left: auto;
+  color: var(--ink-muted);
+  transition:
+    transform var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.eco-region-header:hover .eco-region-title svg {
+  color: var(--ink);
+  transform: translateX(2px);
+}
+
+.eco-region-figure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--s-2);
+}
+
+.eco-region-count {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.2rem + 1.2vw, 2.5rem);
+  line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.eco-region-share {
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.eco-region-detail {
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eco-tile[data-compact="true"] .eco-region-count {
+  font-size: 1.375rem;
+}
+
+.eco-tile[data-compact="true"] .eco-region-name {
+  font-size: var(--fs-small);
+}
+
+.eco-tile[data-narrow="true"] .eco-region-title svg {
+  display: none;
+}
+
+.eco-tile[data-narrow="true"] .eco-tile-inner {
+  padding-inline: var(--s-2);
+}
+
+/* Project nodes: logo, name, listed hooks · networks. */
+.eco-nodes {
+  display: grid;
+  gap: 2px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eco-map .map-node {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--s-1) var(--s-2);
+  border: 0;
+  border-radius: var(--r-1);
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-soft);
+  text-align: left;
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+.eco-map .map-node::before,
+.eco-map .map-node::after {
+  content: none;
+  display: none;
+}
+
+.eco-map .map-node:hover {
+  background: color-mix(in srgb, var(--surface-4) 55%, transparent);
+  border-color: transparent;
+  color: var(--ink);
+}
+
+.eco-map .map-node .protocol-logo {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 7px;
+  font-size: 0.75rem;
+}
+
+.eco-map .map-node .protocol-logo img {
+  width: calc(100% - 0.4rem);
+  height: calc(100% - 0.4rem);
+}
+
+.eco-map .map-node:hover .protocol-logo {
+  border-color: var(--rule-focus);
+  background:
+    linear-gradient(180deg, rgba(190, 205, 255, 0.05), transparent 60%),
+    var(--surface-2);
+}
+
+.eco-node-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.eco-node-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A narrow tile wraps its counts onto a second line instead of cutting them. */
+.eco-node-meta {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.eco-map .map-node .family-fingerprint {
+  display: block;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eco-tile-more {
+  margin-top: auto;
+  padding: 0 var(--s-2);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+/* ── Phone: proportional strip and region list ───────────────────────────── */
+.eco-strip {
+  display: flex;
+  gap: 2px;
+  height: 1rem;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.eco-strip > span {
+  flex-basis: 0;
+  min-width: 2px;
+  background: var(--region);
+}
+
+.eco-region-list {
+  display: grid;
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eco-region {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.eco-region .eco-region-header {
+  width: 100%;
+  margin: 0;
+  padding: var(--s-1) 0;
+}
+
+.eco-region .eco-region-detail {
+  white-space: normal;
+}
+
+.eco-region-bar {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-3);
+}
+
+.eco-region-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--region);
+}
+
+.eco-region .map-node {
+  min-height: 2.75rem;
+  padding-inline: 0;
+}
+
+.eco-region .eco-tile-more {
+  padding: 0;
+}
+
+/* ── Table fallback ──────────────────────────────────────────────────────── */
+.eco-map-table {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.eco-map-table > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 2.5rem;
+  color: var(--ink-soft);
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+}
+
+.eco-map-table > summary::-webkit-details-marker {
+  display: none;
+}
+
+.eco-map-table > summary:hover {
+  color: var(--ink);
+}
+
+.eco-map-table > summary svg {
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.eco-map-table[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.eco-map-table-scroll {
+  margin-top: var(--s-2);
+  overflow-x: auto;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.eco-map-table table {
+  width: 100%;
+  min-width: 40rem;
+}
+
+.eco-map-table th,
+.eco-map-table td {
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.eco-map-table thead th {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.eco-map-table tbody th {
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.eco-map-table .numeric {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.eco-table-swatch {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: var(--s-2);
+  border-radius: 2px;
+  background: var(--region);
+}

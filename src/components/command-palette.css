@@ -1,0 +1,434 @@
+/* Jump palette (Ctrl or ⌘ + K) and its header button. A quiet instrument: the
+   only colour is the selection tick, in the same signal as the horizon bar. */
+
+/* ── Header button ─────────────────────────────────────────────────────────
+   The horizon bar is full between about 960px and 1340px, so the button is an
+   icon on phones, tablets and wide laptops, gains its label and key hint from
+   1440px, and steps aside in between (the shortcut still works there). */
+.topbar .palette-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  flex: none;
+  margin-left: auto;
+  width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface-1);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.topbar .palette-trigger:hover {
+  border-color: var(--rule-focus);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.topbar .palette-trigger + .source-status {
+  margin-left: 0;
+}
+
+.palette-trigger kbd,
+.palette-field kbd,
+.palette-foot kbd,
+.footer-jump kbd,
+.footer-shortcuts kbd,
+.palette-enter {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  padding: 0.0625rem 0.375rem;
+  border: 1px solid var(--rule-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--r-1);
+  background: var(--surface-2);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+}
+
+.topbar .palette-trigger span,
+.topbar .palette-trigger kbd {
+  display: none;
+}
+
+@media (min-width: 60.0625rem) and (max-width: 83.7rem) {
+  .topbar .palette-trigger {
+    display: none;
+  }
+}
+
+/* From 1440px: the icon and its key hint. From 1600px: the label as well. */
+@media (min-width: 90rem) {
+  .topbar .palette-trigger {
+    width: auto;
+    padding: 0 var(--s-2) 0 var(--s-3);
+  }
+
+  .topbar .palette-trigger kbd {
+    display: inline-grid;
+  }
+}
+
+@media (min-width: 100rem) {
+  .topbar .palette-trigger span {
+    display: inline;
+  }
+}
+
+@media (max-width: 60rem) {
+  .topbar .palette-trigger {
+    width: 2.5rem;
+    min-height: 2.5rem;
+  }
+}
+
+/* On the narrowest phones the status text needs the room; the footer link and
+   the shortcut remain. */
+@media (max-width: 21rem) {
+  .topbar .palette-trigger {
+    display: none;
+  }
+}
+
+.footer-jump kbd {
+  margin-left: var(--s-1);
+}
+
+/* ── Palette ─────────────────────────────────────────────────────────────── */
+.palette-overlay {
+  align-items: flex-start;
+  padding-top: clamp(2.5rem, 12vh, 8rem);
+}
+
+.modal.palette {
+  position: relative;
+  width: min(40rem, 100%);
+  max-height: min(36rem, calc(100dvh - 5rem));
+  overflow: hidden;
+  animation-name: palette-in;
+}
+
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.99);
+  }
+}
+
+/* The horizon bar's left tick, repeated: this panel is the same instrument. */
+.modal.palette::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: var(--s-4);
+  width: 2rem;
+  height: 1px;
+  background: var(--signal);
+}
+
+.palette-field {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex: none;
+  padding: 0 var(--s-4);
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-muted);
+  transition: box-shadow var(--dur-2) var(--ease-out);
+}
+
+.palette-field:focus-within {
+  box-shadow: inset 0 -2px 0 var(--signal);
+}
+
+.palette-field:focus-within > svg {
+  color: var(--signal);
+}
+
+.palette-field input {
+  flex: 1;
+  min-width: 0;
+  height: 3.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+}
+
+.palette-field input::placeholder {
+  color: var(--ink-faint);
+}
+
+/* The field's own underline is its focus indicator, so the global ring stays off. */
+.palette-field input:focus,
+.palette-field input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Forced colours drop shadows, so the field gets a real outline there. */
+@media (forced-colors: active) {
+  .palette-field:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .palette-option[aria-selected="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
+
+/* Escape is for a keyboard; a touch screen gets a close button instead. */
+.palette-close {
+  display: none;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--r-2);
+  color: var(--ink-muted);
+}
+
+.palette-close:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+@media (hover: none) {
+  .palette-field .palette-esc {
+    display: none;
+  }
+
+  .palette-close {
+    display: inline-grid;
+  }
+}
+
+.palette-note {
+  margin: 0;
+  padding: var(--s-2) var(--s-4);
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.palette-decode > div .palette-decode-issue {
+  color: var(--brass);
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+}
+
+.palette-decode > div .palette-decode-note {
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+}
+
+.palette-decode {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  flex: none;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface-2);
+}
+
+.palette-decode .permission-glyph {
+  --cell: 0.75rem;
+  --gap: 0.25rem;
+}
+
+.palette-decode > div {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.palette-decode strong {
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.palette-decode span {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  overflow-wrap: anywhere;
+}
+
+.palette-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--s-2);
+  scroll-padding-block: var(--s-2);
+  overscroll-behavior: contain;
+}
+
+.palette-group {
+  padding: var(--s-3) var(--s-3) var(--s-1);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.palette-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 2.75rem;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-2);
+  cursor: pointer;
+}
+
+.palette-option[aria-selected="true"] {
+  background: var(--surface-3);
+}
+
+.palette-option[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--signal);
+}
+
+.palette-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-1);
+  background: var(--ground);
+  color: var(--ink-muted);
+}
+
+.palette-option[aria-selected="true"] .palette-icon {
+  border-color: var(--rule-strong);
+  color: var(--ink);
+}
+
+.palette-icon .protocol-logo {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+}
+
+.palette-icon .protocol-logo img {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+}
+
+.palette-text {
+  display: grid;
+  gap: 0.0625rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.palette-label {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-hint {
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-badge {
+  flex: none;
+  padding: 0.0625rem var(--s-2);
+  border-radius: var(--r-pill);
+  background: var(--lagoon-wash);
+  color: var(--lagoon);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.palette-foot {
+  display: flex;
+  gap: var(--s-4);
+  flex: none;
+  padding: var(--s-2) var(--s-4);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.palette-foot > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+@media (hover: none) {
+  .palette-foot,
+  .palette-enter {
+    display: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .palette-overlay {
+    padding: var(--s-3);
+    padding-top: var(--s-4);
+  }
+
+  .modal.palette {
+    max-height: calc(100dvh - 2rem);
+  }
+
+  .palette-hint {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal.palette {
+    animation: none;
+  }
+}
+
+/* A key hint means nothing on a touch screen or a very narrow one. */
+@media (hover: none), (max-width: 30rem) {
+  .footer-jump kbd {
+    display: none;
+  }
+}

@@ -1,0 +1,15 @@
+# Keep original protocol artwork byte-for-byte, including its recorded hash.
+public/protocols/*.svg -text
+public/protocols/*.png -text
+server/bootstrap/census/*.json -text
+server/bootstrap/census/*.gz -text
+# Recorded provider responses are checked against the byte counts in their
+# manifest, so a checkout never converts their line ends.
+collector/fixtures/** -text
+# Deployment files are consumed by Linux services even from Windows checkouts.
+deploy/*.service text eol=lf
+deploy/Caddyfile text eol=lf
+deploy/*.example text eol=lf
+# Auto Snapshot edition
+.github/** text eol=lf
+*.sh text eol=lf

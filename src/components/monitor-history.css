@@ -1,0 +1,47 @@
+/* Recorded history marks: real saved observations only. Lines break across
+   unrecorded intervals (shaded); isolated observations keep a round mark. */
+
+.observation-series {
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 1.75;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.observation-gap {
+  fill: var(--ink-faint);
+  fill-opacity: 0.06;
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  pointer-events: none;
+}
+
+.observation-marker {
+  fill: var(--brass);
+  pointer-events: none;
+}
+
+.observation-isolated {
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.observation-active-marker {
+  fill: var(--ground);
+  stroke: var(--signal);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.observation-gap-note {
+  display: block;
+  margin-top: var(--s-1);
+  color: var(--ink-muted);
+}

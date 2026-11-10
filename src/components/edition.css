@@ -1,0 +1,182 @@
+/* Auto Snapshot edition only: the dated status line, the dated census and the
+   source credit. Tokens come from src/design/tokens.css. */
+
+.snapshot-line {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-4);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: var(--lh-snug);
+}
+
+.snapshot-line strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.snapshot-line-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.snapshot-line-age {
+  white-space: nowrap;
+}
+
+/* The status check found a later run: a calm second sentence with a Reload
+   button, on its own line. Empty (and taking no room) until then. */
+.snapshot-line-newer:not(:empty) {
+  display: block;
+  margin-top: var(--s-2);
+  color: var(--ink);
+}
+
+.snapshot-line-newer .snapshot-reload {
+  margin-left: var(--s-1);
+}
+
+/* With the offer the line is two lines: the light stays at the first one. */
+.snapshot-line:has(.snapshot-line-newer:not(:empty)) {
+  align-items: flex-start;
+}
+
+.snapshot-line:has(.snapshot-line-newer:not(:empty)) .status-led {
+  margin-top: 0.45em;
+}
+
+/* A snapshot older than the schedule explains: said plainly, in the signal
+   colour and at reading size, with the time its figures are from. */
+.snapshot-line.is-stale {
+  align-items: flex-start;
+  color: var(--signal);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.snapshot-line.is-stale strong {
+  color: var(--signal);
+}
+
+.snapshot-line.is-stale .status-led {
+  margin-top: 0.5em;
+  color: var(--signal);
+}
+
+.snapshot-line.is-stale time {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Beside the strip's two actions the longer stale sentence wraps on its own
+   side instead of squeezing the buttons' labels onto two lines. (Below this
+   width the strip stacks and nothing is squeezed.) */
+@media (min-width: 60.0625rem) {
+  .coverage-strip > .snapshot-line.is-stale {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .coverage-strip > .snapshot-line.is-stale + .coverage-actions {
+    flex: none;
+  }
+}
+
+/* Inside the data strip it takes the place of the live status text. */
+.coverage-strip > .snapshot-line {
+  margin: 0;
+}
+
+@media (max-width: 60rem) {
+  .snapshot-line {
+    margin-bottom: var(--s-3);
+  }
+
+  .coverage-strip > .snapshot-line {
+    margin-bottom: 0;
+  }
+}
+
+main .titlebar-copy .masthead-census {
+  margin: var(--s-3) 0 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: var(--lh-snug);
+}
+
+/* Phones show the totals in the Stats disclosure, not under the masthead. */
+@media (max-width: 52rem) {
+  main .titlebar-copy .masthead-census {
+    display: none;
+  }
+}
+
+/* "census as of <date>" beside a figure that comes from the census. */
+.census-note {
+  display: block;
+  margin-top: var(--s-1);
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: var(--lh-snug);
+  text-transform: none;
+}
+
+.edition-run {
+  display: grid;
+  gap: var(--s-2);
+  margin: var(--s-4) 0 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.edition-run > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-3);
+}
+
+.edition-run dt {
+  min-width: 10rem;
+  color: var(--ink-soft);
+}
+
+.edition-run dd {
+  margin: 0;
+}
+
+/* The notes under "Data & sources" quote GitHub addresses that cannot be broken,
+   which made every row wider than a phone and cut its sentences off. Only the
+   dialog that shows this edition's collection run is affected. */
+.modal-body:has(.edition-run) .source-item p {
+  overflow-wrap: anywhere;
+}
+
+.footer .footer-credit {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-body);
+}
+
+.footer .footer-credit a {
+  color: var(--ink-muted);
+}
+
+.footer .footer-credit a:hover {
+  color: var(--signal);
+}
+
+/* The notices link stands among the words of its sentence, in a colour close to
+   theirs: an underline (and the weight of the credit links above) tells it apart
+   without relying on colour. */
+.footer .footer-notices a {
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}

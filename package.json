@@ -1,0 +1,39 @@
+{
+  "name": "v4-hooks-radar",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Hook Radar, Auto Snapshot edition: a Uniswap v4 hooks radar published as static files.",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "collect": "node collector/run.mjs",
+    "collect:offline": "node collector/run.mjs --offline --no-publish",
+    "build": "node scripts/build-static-edition.mjs",
+    "build:static": "node scripts/build-static-edition.mjs",
+    "check": "tsc -b",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "test": "node --test --test-concurrency=4 tests/collector-*.test.mjs tests/edition-*.test.mjs",
+    "test:edition": "node --test --test-concurrency=4 tests/collector-*.test.mjs tests/edition-*.test.mjs",
+    "test:edition-browser": "node -e \"if (!process.env.RADAR_TEST_DIST) { console.error('RADAR_TEST_DIST is not set. Build the edition (npm run build:static -- --outDir <folder>), then run again with RADAR_TEST_DIST=<folder>.'); process.exit(1) }\" && node --test --test-concurrency=1 scripts/static-edition-*.test.mjs scripts/edition-*-browser.test.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "1.59.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "0.186.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "prettier": "3.9.10",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7"
+  }
+}

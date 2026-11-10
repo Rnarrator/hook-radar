@@ -1,0 +1,228 @@
+/* Small details: the things that make the instrument feel built, not assembled.
+   Everything here is presentation: it moves no data, and all motion sits behind
+   prefers-reduced-motion: no-preference. Loaded before compact.css. */
+
+/* ── Key light that follows the pointer ──────────────────────────────────── */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .plate,
+  .hook-spotlight,
+  .eco-region,
+  .learn-decoder-plate,
+  .learn-flow-plate {
+    position: relative;
+  }
+
+  .plate::after,
+  .hook-spotlight::after,
+  .eco-region::after,
+  .learn-decoder-plate::after,
+  .learn-flow-plate::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      20rem circle at var(--mx, 50%) var(--my, 0%),
+      color-mix(in srgb, var(--signal) 6.5%, transparent),
+      transparent 68%
+    );
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-3) var(--ease-out);
+  }
+
+  .plate:hover::after,
+  .hook-spotlight:hover::after,
+  .eco-region:hover::after,
+  .learn-decoder-plate:hover::after,
+  .learn-flow-plate:hover::after {
+    opacity: 1;
+  }
+}
+
+/* ── Key figures stay on one line: font size steps down only when they would overflow ─ */
+[data-fit="measure"],
+[data-fit="shrink"] {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+/* On the narrowest phones the bar spends its width on the status text. */
+@media (max-width: 30rem) {
+  .topbar {
+    gap: var(--s-2);
+  }
+}
+
+/* In the desktop bar the navigation keeps its natural width and the status
+   pill, which can carry long messages ("Analytics unavailable"), is the part
+   that gives way, with an ellipsis. */
+@media (min-width: 60.0625rem) {
+  .topbar nav {
+    flex: none;
+  }
+
+  .topbar .source-status {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+}
+
+/* The status pill truncates with an ellipsis rather than a hard cut. */
+.source-status-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Key figures scan in, one stepped sweep, like the pixel face they use ── */
+@media (prefers-reduced-motion: no-preference) {
+  .readout-value,
+  .metric-value {
+    animation: figure-scan 520ms steps(10, end) backwards;
+  }
+
+  .readout:nth-child(2) .readout-value {
+    animation-delay: 70ms;
+  }
+
+  .readout:nth-child(3) .readout-value {
+    animation-delay: 140ms;
+  }
+
+  .readout:nth-child(4) .readout-value {
+    animation-delay: 210ms;
+  }
+}
+
+@keyframes figure-scan {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ── The horizon bar lifts off the page once content scrolls beneath it ──── */
+.topbar {
+  transition: box-shadow var(--dur-3) var(--ease-out);
+}
+
+:root[data-scrolled="true"] .topbar {
+  box-shadow: 0 14px 24px -18px rgba(0, 0, 0, 0.95);
+}
+
+/* ── Navigation: one indicator that travels between destinations ─────────── */
+@media (min-width: 60.0625rem) {
+  .topbar nav {
+    position: relative;
+  }
+
+  .topbar nav[data-ink="ready"]::after {
+    content: "";
+    position: absolute;
+    left: calc(var(--ink-x, 0px) + var(--nav-pad));
+    bottom: -1px;
+    width: calc(var(--ink-w, 0px) - 2 * var(--nav-pad));
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: var(--signal);
+    pointer-events: none;
+  }
+
+  .topbar nav[data-ink="ready"] button.active::after,
+  .topbar nav[data-ink="ready"] button[aria-current="page"]::after {
+    content: none;
+  }
+}
+
+@media (min-width: 60.0625rem) and (prefers-reduced-motion: no-preference) {
+  .topbar nav[data-ink="ready"]::after {
+    transition:
+      left var(--dur-3) var(--ease-out),
+      width var(--dur-3) var(--ease-out);
+  }
+}
+
+/* ── Copy buttons confirm themselves for a moment ─────────────────────────── */
+/* Doubled :root so the cue outranks each button's own colour rule. */
+:root:root button[data-copied="true"],
+:root:root a[data-copied="true"] {
+  color: var(--lagoon);
+}
+
+:root:root button[data-copied="true"] svg {
+  color: var(--lagoon);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button[data-copied="true"] svg {
+    transform: scale(1.18);
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+}
+
+/* ── The mark: one sweep when the pointer arrives ────────────────────────── */
+.radar-logo-sweep {
+  transform-origin: 32px 32px;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .brand:hover .radar-logo-sweep,
+  .brand:focus-visible .radar-logo-sweep {
+    animation: logo-sweep 900ms var(--ease-in-out) 1;
+  }
+}
+
+@keyframes logo-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Empty states carry a drawn instrument rather than a lone icon ────────── */
+.empty-state > svg.empty-instrument {
+  width: 4.5rem;
+  height: 4.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink-muted);
+}
+
+/* ── Night sky ───────────────────────────────────────────────────────────── */
+/* A static field of faint stars behind everything: atmosphere for the
+   observatory ground, never data. It sits under the content, takes no input,
+   adds no motion and is dropped for forced colours and print. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(1.2px 1.2px at 7% 12%, rgba(206, 214, 255, 0.85) 50%, transparent 52%),
+    radial-gradient(1px 1px at 21% 63%, rgba(206, 214, 255, 0.6) 50%, transparent 52%),
+    radial-gradient(1.4px 1.4px at 33% 27%, rgba(255, 190, 224, 0.7) 50%, transparent 52%),
+    radial-gradient(1px 1px at 46% 84%, rgba(206, 214, 255, 0.55) 50%, transparent 52%),
+    radial-gradient(1.2px 1.2px at 58% 9%, rgba(206, 214, 255, 0.75) 50%, transparent 52%),
+    radial-gradient(1px 1px at 69% 47%, rgba(206, 214, 255, 0.5) 50%, transparent 52%),
+    radial-gradient(1.6px 1.6px at 81% 71%, rgba(206, 214, 255, 0.8) 50%, transparent 52%),
+    radial-gradient(1px 1px at 92% 22%, rgba(255, 190, 224, 0.55) 50%, transparent 52%),
+    radial-gradient(1px 1px at 14% 91%, rgba(206, 214, 255, 0.5) 50%, transparent 52%),
+    radial-gradient(1.2px 1.2px at 74% 93%, rgba(206, 214, 255, 0.6) 50%, transparent 52%);
+  background-size: 720px 720px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.55) 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.55) 55%, transparent 100%);
+}
+
+@media (forced-colors: active), print {
+  body::before {
+    display: none;
+  }
+}

@@ -1,0 +1,295 @@
+{
+ "schemaVersion": 1,
+ "presentation": {
+  "profile": "analytics-overview",
+  "version": 1,
+  "detail": "deferred"
+ },
+ "ready": true,
+ "publication": {
+  "id": "fixture-publication",
+  "generatedAt": "2026-10-28T14:05:00.000Z",
+  "status": "partial"
+ },
+ "request": {
+  "chain": "robinhood",
+  "window": "h24"
+ },
+ "asOf": "2026-10-28T14:05:00.000Z",
+ "networks": [
+  {
+   "slug": "base",
+   "name": "Base"
+  },
+  {
+   "slug": "ethereum",
+   "name": "Ethereum"
+  },
+  {
+   "slug": "robinhood",
+   "name": "Robinhood"
+  }
+ ],
+ "sources": [
+  {
+   "id": "registry",
+   "name": "Uniswap hooklist",
+   "url": "https://github.com/Uniswap/hooklist",
+   "status": "live",
+   "updatedAt": "2026-10-28T13:41:20.000Z",
+   "note": "Hook registry, 1 request, fetched at the start of the run."
+  },
+  {
+   "id": "dexscreener",
+   "name": "DEX Screener",
+   "url": "https://dexscreener.com/",
+   "status": "live",
+   "updatedAt": "2026-10-28T14:04:58.000Z",
+   "note": "Pool measurements in one burst: 4 requests, 12 pools returned, 0 rate limits."
+  },
+  {
+   "id": "geckoterminal",
+   "name": "GeckoTerminal",
+   "url": "https://www.geckoterminal.com/",
+   "status": "live",
+   "updatedAt": "2026-10-28T13:58:02.000Z",
+   "note": "Pool discovery pages: 3 requests, 12 seconds apart."
+  },
+  {
+   "id": "v4xyz",
+   "name": "v4.xyz indexer",
+   "url": "https://www.v4.xyz",
+   "status": "live",
+   "updatedAt": "2026-10-28T13:52:30.000Z",
+   "note": "Pool identity only (which hook, which two currencies) for newly discovered pools: 5 requests between 13:50 UTC and 13:52 UTC. It supplies no amounts."
+  },
+  {
+   "id": "census",
+   "name": "Pool census",
+   "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+   "status": "cached",
+   "updatedAt": "2026-10-27T20:11:09.000Z",
+   "note": "Hook Radar's index of PoolManager events, exported 27 Oct 2026, 20:11 UTC. Shown as it stood on 27 Oct 2026, 20:11 UTC; this edition does not refresh it."
+  }
+ ],
+ "inventory": {
+  "generatedAt": "2026-10-27T20:11:09.000Z",
+  "running": false,
+  "poolCount": 480,
+  "hookPoolCount": 93,
+  "hookCount": 31,
+  "networks": [
+   {
+    "chain": "base",
+    "chainId": 8453,
+    "name": "Base",
+    "manager": "0x1111111111111111111111111111111111118453",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 300,
+    "hookPoolCount": 61,
+    "hookCount": 17,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   },
+   {
+    "chain": "ethereum",
+    "chainId": 1,
+    "name": "Ethereum",
+    "manager": "0x1111111111111111111111111111111111111111",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 150,
+    "hookPoolCount": 28,
+    "hookCount": 11,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   },
+   {
+    "chain": "robinhood",
+    "chainId": 4663,
+    "name": "Robinhood",
+    "manager": "0x1111111111111111111111111111111111114663",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 30,
+    "hookPoolCount": 4,
+    "hookCount": 3,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   }
+  ]
+ },
+ "totals": {
+  "volumeUsd": null,
+  "liquidityUsd": null,
+  "samplePools": 1,
+  "volumePools": 0,
+  "liquidityPools": 0,
+  "activePools": 0,
+  "attributedProjects": 0,
+  "unattributedPools": 0,
+  "unattributedVolumeUsd": null,
+  "unlistedProjects": 0,
+  "concentration": null,
+  "freshness": {
+   "maxAgeMs": 300000,
+   "expiresAt": null,
+   "liquidity": {
+    "observedPools": 1,
+    "currentPools": 0,
+    "stalePools": 1,
+    "unknownPools": 0,
+    "oldestAt": null,
+    "newestAt": null,
+    "latestObservedAt": "2026-10-28T13:57:30.000Z",
+    "expiresAt": null
+   },
+   "volume": {
+    "h1": {
+     "observedPools": 1,
+     "currentPools": 0,
+     "stalePools": 1,
+     "unknownPools": 0,
+     "oldestAt": null,
+     "newestAt": null,
+     "latestObservedAt": "2026-10-28T13:57:30.000Z",
+     "expiresAt": null
+    },
+    "h6": {
+     "observedPools": 1,
+     "currentPools": 0,
+     "stalePools": 1,
+     "unknownPools": 0,
+     "oldestAt": null,
+     "newestAt": null,
+     "latestObservedAt": "2026-10-28T13:57:30.000Z",
+     "expiresAt": null
+    },
+    "h24": {
+     "observedPools": 1,
+     "currentPools": 0,
+     "stalePools": 1,
+     "unknownPools": 0,
+     "oldestAt": null,
+     "newestAt": null,
+     "latestObservedAt": "2026-10-28T13:57:30.000Z",
+     "expiresAt": null
+    }
+   }
+  }
+ },
+ "networkTotals": [
+  {
+   "volumeUsd": null,
+   "liquidityUsd": null,
+   "samplePools": 1,
+   "volumePools": 0,
+   "liquidityPools": 0,
+   "activePools": 0,
+   "attributedProjects": 0,
+   "unattributedPools": 0,
+   "unattributedVolumeUsd": null,
+   "unlistedProjects": 0,
+   "concentration": null,
+   "freshness": {
+    "maxAgeMs": 300000,
+    "expiresAt": null,
+    "liquidity": {
+     "observedPools": 1,
+     "currentPools": 0,
+     "stalePools": 1,
+     "unknownPools": 0,
+     "oldestAt": null,
+     "newestAt": null,
+     "latestObservedAt": "2026-10-28T13:57:30.000Z",
+     "expiresAt": null
+    },
+    "volume": {
+     "h1": {
+      "observedPools": 1,
+      "currentPools": 0,
+      "stalePools": 1,
+      "unknownPools": 0,
+      "oldestAt": null,
+      "newestAt": null,
+      "latestObservedAt": "2026-10-28T13:57:30.000Z",
+      "expiresAt": null
+     },
+     "h6": {
+      "observedPools": 1,
+      "currentPools": 0,
+      "stalePools": 1,
+      "unknownPools": 0,
+      "oldestAt": null,
+      "newestAt": null,
+      "latestObservedAt": "2026-10-28T13:57:30.000Z",
+      "expiresAt": null
+     },
+     "h24": {
+      "observedPools": 1,
+      "currentPools": 0,
+      "stalePools": 1,
+      "unknownPools": 0,
+      "oldestAt": null,
+      "newestAt": null,
+      "latestObservedAt": "2026-10-28T13:57:30.000Z",
+      "expiresAt": null
+     }
+    }
+   },
+   "chain": "robinhood",
+   "name": "Robinhood",
+   "volumeShare": null,
+   "inventory": {
+    "chain": "robinhood",
+    "chainId": 4663,
+    "name": "Robinhood",
+    "manager": "0x1111111111111111111111111111111111114663",
+    "dataset": null,
+    "startBlock": 0,
+    "scannedToBlock": 1000,
+    "targetBlock": 1000,
+    "status": "complete",
+    "poolCount": 30,
+    "hookPoolCount": 4,
+    "hookCount": 3,
+    "updatedAt": "2026-10-27T20:11:09.000Z",
+    "headCheckedAt": "2026-10-27T20:10:30.000Z",
+    "lastError": null,
+    "finality": "finalized"
+   },
+   "caughtUp": true,
+   "headFresh": false
+  }
+ ],
+ "categories": {
+  "volume": [],
+  "reserves": []
+ },
+ "history": {
+  "available": false,
+  "points": []
+ },
+ "contributions": {
+  "version": 1,
+  "scope": "initial-current-cohort",
+  "projects": [],
+  "rows": []
+ }
+}

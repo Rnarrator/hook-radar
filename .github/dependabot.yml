@@ -1,0 +1,9 @@
+# Keeps the pinned versions of the actions used by the workflows current.
+# Dependabot opens a pull request when a newer release exists; nothing changes
+# until you merge it.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

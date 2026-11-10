@@ -1,0 +1,322 @@
+/* Analytics · what changed (recorded rolling 24h volume). */
+
+.analytics-history-panel .chart-frame-body {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.history-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 18.5rem);
+  align-items: start;
+  gap: var(--s-5);
+}
+
+.history-plot {
+  display: grid;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.history-chart-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.history-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+}
+
+.history-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.history-legend-line {
+  position: relative;
+  width: 1.5rem;
+  height: 2px;
+  background: var(--chart-line);
+}
+
+.history-legend-line::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--chart-line);
+  transform: translate(-50%, -50%);
+}
+
+.history-legend-gap {
+  width: 1rem;
+  height: 0.75rem;
+  border-inline: 1px solid var(--rule-strong);
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+}
+
+.history-chart-footer p span {
+  color: var(--ink-muted);
+}
+
+.history-state-note,
+.history-metric-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin: 0;
+  color: var(--brass);
+  font-size: var(--fs-small);
+}
+
+.history-metric-note {
+  padding: var(--s-2) var(--s-3);
+  border-left: 2px solid var(--brass);
+  background: var(--brass-wash);
+  border-radius: 0 var(--r-1) var(--r-1) 0;
+}
+
+/* Inspected observation panel */
+.history-readout {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+}
+
+.history-selected-value {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.history-readout-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.history-label-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--chart-line);
+}
+
+.history-label-dot.selected {
+  background: var(--signal);
+}
+
+.history-selected-value > strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--fs-stat);
+  font-weight: 400;
+  line-height: var(--lh-tight);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.history-selected-value > time {
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+}
+
+.history-inspect-meta {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+}
+
+.history-inspect-meta > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.history-inspect-meta dt {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.history-inspect-meta dd {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+.history-inspect-meta dd small {
+  display: block;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.history-change {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+}
+
+.history-observation-count {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.history-observation-count strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.history-navigation-buttons {
+  display: inline-flex;
+  gap: var(--s-1);
+}
+
+.history-latest {
+  padding: 0 var(--s-3);
+}
+
+/* Empty and unavailable states stay compact (never a chart-sized blank). */
+.history-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  border-left: 2px solid var(--rule-strong);
+}
+
+.history-empty > div {
+  display: grid;
+  gap: var(--s-1);
+  max-width: 68ch;
+}
+
+.history-empty strong,
+.history-empty h3 {
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.history-empty p {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.history-empty-note {
+  color: var(--ink-muted);
+}
+
+.analytics-history-panel[data-history-empty="true"] {
+  gap: var(--s-3);
+}
+
+/* Recorded values table (View recorded values). */
+.history-values-scroll {
+  max-height: 26rem;
+  overflow: auto;
+}
+
+.history-values-scroll thead th {
+  position: sticky;
+  top: 0;
+}
+
+.history-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.history-pagination > div {
+  display: inline-flex;
+  gap: var(--s-2);
+}
+
+@media (max-width: 1024px) {
+  .history-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .history-readout {
+    order: -1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .history-navigation {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 40rem) {
+  .analytics-history-panel .chart-frame-controls {
+    width: 100%;
+  }
+  .analytics-history-range {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+  }
+  .analytics-history-range button {
+    min-height: 2.75rem;
+    padding: 0 var(--s-1);
+    white-space: normal;
+    line-height: 1.15;
+  }
+  .history-readout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-3);
+    padding: var(--s-3);
+  }
+  /* The caption already states the rolling scope; keep the panel short. */
+  .history-inspect-meta > div:nth-child(2) {
+    display: none;
+  }
+  .history-inspect-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s-2) var(--s-3);
+  }
+  .history-chart-footer p span {
+    display: none;
+  }
+}

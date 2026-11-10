@@ -1,0 +1,861 @@
+/* Frontier extensions · Observatory.
+   Hook → pool → modules. The pool view shows the exact modules a pool runs,
+   staged and ordered; the catalog view is visibly a catalog (dashed, muted)
+   so published availability is never mistaken for a pool's configuration. */
+
+.project-detail .hook-extensions {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  min-width: 0;
+}
+
+.project-detail .extensions-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 3rem;
+  margin: 0;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--signal-line);
+  border-radius: var(--r-2);
+  background: linear-gradient(90deg, var(--signal-wash), transparent 85%);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-align: left;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
+}
+
+.project-detail .extensions-toggle:hover {
+  border-color: var(--signal);
+  background: var(--signal-wash);
+}
+
+.project-detail .extensions-toggle[aria-expanded="true"] {
+  border-color: var(--signal);
+}
+
+.project-detail .extensions-toggle > svg:first-child {
+  color: var(--signal);
+}
+
+.project-detail .extensions-toggle-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.project-detail .extension-count {
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.project-detail .extension-panel {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+  margin: 0;
+  padding: var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-3);
+  background: var(--ground);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.project-detail .extension-panel-head {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.project-detail .extension-heading {
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .extension-intro {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+/* ── Pipeline ────────────────────────────────────────────────────────────── */
+.project-detail .extension-pipeline {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr) minmax(0, 0.9fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-detail .pipeline-node {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--s-1);
+  min-width: 0;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--rule-strong);
+  background: var(--surface-1);
+}
+
+.project-detail .pipeline-node:first-child {
+  border-radius: var(--r-2) 0 0 var(--r-2);
+}
+
+.project-detail .pipeline-node:last-child {
+  border-radius: 0 var(--r-2) var(--r-2) 0;
+}
+
+.project-detail .pipeline-node + .pipeline-node {
+  border-left: 0;
+}
+
+/* The chevron joint: each station's tip points into the next one. */
+.project-detail .pipeline-node:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 1.15rem;
+  right: -0.42rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-top: 1px solid var(--rule-strong);
+  border-right: 1px solid var(--rule-strong);
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+.project-detail .pipeline-node[data-active="true"] {
+  background: color-mix(in srgb, var(--signal) 9%, var(--surface-1));
+}
+
+.project-detail .pipeline-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.project-detail .pipeline-label > span {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  color: var(--ink-soft);
+  letter-spacing: 0;
+}
+
+.project-detail .pipeline-node[data-active="true"] .pipeline-label > span {
+  border-color: var(--signal-line);
+  background: var(--signal-wash);
+  color: var(--ink);
+}
+
+.project-detail .pipeline-value {
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .pipeline-muted {
+  color: var(--ink-muted);
+  font-weight: 400;
+}
+
+.project-detail .pipeline-meta {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  overflow-wrap: anywhere;
+}
+
+.project-detail .pipeline-meta code {
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .extension-selector {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+  margin: 0;
+}
+
+.project-detail .extension-selector label {
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+}
+
+/* The native select fills its control exactly (arrow included). */
+.project-detail .extension-selector .select-control {
+  min-height: 2.75rem;
+  padding: 0;
+}
+
+.project-detail .extension-selector select {
+  width: 100%;
+  max-width: none;
+  min-height: 2.625rem;
+  padding: 0 2.25rem 0 var(--s-3);
+  font-size: var(--fs-small);
+  text-overflow: ellipsis;
+}
+
+.project-detail .extension-choice-note {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .extension-pool-identity {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-1);
+  background: var(--ground);
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .extension-pool-identity:hover {
+  border-color: var(--rule-focus);
+  color: var(--ink);
+}
+
+.project-detail .extension-pool-identity code {
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+/* ── States ──────────────────────────────────────────────────────────────── */
+.project-detail .extension-state {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--brass);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.project-detail .extension-state[role="alert"] {
+  border-left-color: var(--danger);
+}
+
+.project-detail .extension-state strong {
+  color: var(--ink);
+}
+
+.project-detail .extension-state p {
+  margin: 0;
+}
+
+.project-detail .extension-state.extension-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.project-detail .extension-state.extension-loading svg {
+  color: var(--signal);
+}
+
+.project-detail .extension-skeleton {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.project-detail .extension-skeleton > span {
+  display: block;
+  height: 3.5rem;
+  border-radius: var(--r-2);
+}
+
+.project-detail .extension-skeleton > span:nth-child(2) {
+  width: 86%;
+}
+
+.project-detail .extension-skeleton > span:nth-child(3) {
+  width: 64%;
+}
+
+/* ── View heading ────────────────────────────────────────────────────────── */
+.project-detail .extension-view-heading {
+  display: grid;
+  gap: var(--s-1);
+  margin: 0;
+  padding-top: var(--s-1);
+}
+
+.project-detail .extension-view-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.project-detail .extension-view-heading h4 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.625rem;
+  font-weight: 400;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .extension-view-heading p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.project-detail .extension-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 2.5rem;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-1);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.project-detail .extension-back:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.project-detail .extension-catalog-caveat {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border-left: 2px solid var(--brass);
+  border-radius: 0 var(--r-1) var(--r-1) 0;
+  background: var(--brass-wash);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+/* ── Stages ──────────────────────────────────────────────────────────────── */
+.project-detail .extension-catalog {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.project-detail .extension-group {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  column-gap: var(--s-3);
+  margin: 0;
+  min-width: 0;
+}
+
+/* The rail that joins stage markers. */
+.project-detail .extension-group:has(+ .extension-group)::before {
+  content: "";
+  position: absolute;
+  top: 2.25rem;
+  bottom: calc(-1 * var(--s-4) + 0.25rem);
+  left: calc(1rem - 0.5px);
+  width: 1px;
+  background: var(--rule-strong);
+}
+
+.project-detail .extension-stage {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+}
+
+.project-detail .extension-catalog[data-mode="pool"] .extension-stage {
+  border-color: var(--signal-line);
+  background: var(--signal-wash);
+  color: var(--ink);
+}
+
+.project-detail .extension-stage-body {
+  display: grid;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.project-detail .extension-group-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 2rem;
+}
+
+.project-detail .extension-stage-note {
+  margin: calc(-1 * var(--s-2)) 0 var(--s-1);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .extension-sequence {
+  display: grid;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-detail .extension-sequence > li {
+  display: grid;
+  justify-items: stretch;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.project-detail .extension-sequence-arrow {
+  justify-self: center;
+  color: var(--ink-faint);
+  transform: rotate(90deg);
+}
+
+.project-detail .extension-group-empty {
+  margin: 0;
+  padding: var(--s-3);
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--r-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.project-detail .extension-fixed-fee {
+  display: grid;
+  gap: var(--s-1);
+  border-style: solid;
+  border-left: 2px solid var(--brass);
+  background: var(--surface-1);
+}
+
+.project-detail .extension-fixed-fee strong {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+.project-detail .extension-fixed-fee p {
+  margin: 0;
+}
+
+/* ── Module cards ────────────────────────────────────────────────────────── */
+.project-detail .extension-card {
+  display: grid;
+  gap: var(--s-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  box-shadow: var(--edge-light);
+}
+
+.project-detail .extension-catalog[data-mode="catalog"] .extension-card {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+
+.project-detail .extension-catalog[data-mode="pool"] .extension-card {
+  box-shadow:
+    var(--edge-light),
+    inset 2px 0 0 var(--lagoon);
+}
+
+.project-detail
+  .extension-catalog[data-mode="pool"]
+  .extension-card[data-status="unrecognized"] {
+  box-shadow:
+    var(--edge-light),
+    inset 2px 0 0 var(--brass);
+}
+
+.project-detail .extension-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.project-detail .extension-title h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  min-width: 0;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .extension-order {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.3rem;
+  border-radius: var(--r-1);
+  background: var(--surface-3);
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+}
+
+.project-detail .extension-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}
+
+.project-detail .extension-kind,
+.project-detail .extension-flag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-pill);
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.project-detail .extension-card[data-status="configured"] .extension-kind,
+.project-detail .extension-card[data-status="unrecognized"] .extension-kind {
+  border-color: color-mix(in srgb, var(--lagoon) 40%, transparent);
+  background: var(--lagoon-wash);
+  color: var(--lagoon);
+}
+
+.project-detail .extension-kind.coming-soon {
+  border-style: dashed;
+  color: var(--ink-muted);
+}
+
+.project-detail .extension-flag {
+  border-color: color-mix(in srgb, var(--brass) 45%, transparent);
+  background: var(--brass-wash);
+  color: var(--brass);
+}
+
+.project-detail .extension-description {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .extension-parent {
+  margin: 0;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .extension-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--s-2);
+  margin: 0 calc(-1 * var(--s-2)) calc(-1 * var(--s-1)) 0;
+}
+
+.project-detail .extension-address {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .extension-card-foot .detail-disclosure {
+  margin-left: auto;
+}
+
+.project-detail .extension-technical {
+  display: grid;
+  gap: var(--s-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  background: var(--ground);
+  overflow-wrap: anywhere;
+}
+
+.project-detail .extension-technical .address-row {
+  margin: 0;
+}
+
+.project-detail .extension-technical dl {
+  display: grid;
+  margin: 0;
+}
+
+.project-detail .extension-config-field {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 11rem) minmax(0, 1fr);
+  gap: var(--s-1) var(--s-3);
+  padding: var(--s-2) 0;
+  border-top: 1px solid var(--rule);
+  min-width: 0;
+}
+
+.project-detail .extension-config-field:first-child {
+  border-top: 0;
+}
+
+.project-detail .extension-config-field dt {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  overflow-wrap: anywhere;
+}
+
+.project-detail .extension-config-field dd {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  min-width: 0;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+.project-detail .extension-technical code {
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.project-detail .extension-raw-size {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .extension-copy-config {
+  justify-self: start;
+  max-width: 100%;
+  min-height: 2.5rem;
+  height: auto;
+  padding-block: var(--s-2);
+  line-height: 1.3;
+  text-align: left;
+  white-space: normal;
+}
+
+.project-detail .extension-technical-links .external {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.project-detail .extension-legacy code {
+  display: block;
+  margin-top: var(--s-1);
+}
+
+.project-detail .extension-technical-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-4);
+}
+
+.project-detail .extension-technical-links .external {
+  min-height: 2.5rem;
+}
+
+.project-detail .extension-config-details {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0 0 0 calc(2rem + var(--s-3) - var(--s-2));
+}
+
+.project-detail .extension-config-details > .detail-disclosure {
+  justify-self: start;
+}
+
+/* ── Source footer ───────────────────────────────────────────────────────── */
+.project-detail .extension-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+  margin: 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.project-detail .extension-source-time {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.project-detail .extension-source-time::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--lagoon);
+}
+
+.project-detail .extension-source[data-state="stale"] .extension-source-time {
+  color: var(--brass);
+}
+
+.project-detail
+  .extension-source[data-state="stale"]
+  .extension-source-time::before {
+  background: var(--brass);
+}
+
+.project-detail .extension-source .external {
+  min-height: 2.5rem;
+  font-size: var(--fs-micro);
+}
+
+.project-detail .extension-source .control {
+  min-height: 2.5rem;
+  margin-left: auto;
+}
+
+.project-detail .extension-cache-note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--brass);
+  font-size: var(--fs-micro);
+}
+
+@media (max-width: 37.5rem) {
+  .project-detail .extension-panel {
+    padding: var(--s-3);
+  }
+
+  .project-detail .extension-pipeline {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-detail .pipeline-node,
+  .project-detail .pipeline-node:first-child,
+  .project-detail .pipeline-node:last-child {
+    border-radius: 0;
+  }
+
+  .project-detail .pipeline-node:first-child {
+    border-radius: var(--r-2) var(--r-2) 0 0;
+  }
+
+  .project-detail .pipeline-node:last-child {
+    border-radius: 0 0 var(--r-2) var(--r-2);
+  }
+
+  .project-detail .pipeline-node + .pipeline-node {
+    border-left: 1px solid var(--rule-strong);
+    border-top: 0;
+  }
+
+  .project-detail .pipeline-node:not(:last-child)::after {
+    top: auto;
+    right: auto;
+    bottom: -0.42rem;
+    left: 1.6rem;
+    border-top: 0;
+    border-right: 1px solid var(--rule-strong);
+    border-bottom: 1px solid var(--rule-strong);
+  }
+
+  .project-detail .extension-selector select {
+    font-size: 1rem;
+  }
+
+  .project-detail .extension-group {
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+    column-gap: var(--s-2);
+  }
+
+  .project-detail .extension-stage {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: 0.25rem;
+    font-size: var(--fs-micro);
+  }
+
+  .project-detail .extension-group:has(+ .extension-group)::before {
+    left: calc(0.75rem - 0.5px);
+  }
+
+  .project-detail .extension-card {
+    padding: var(--s-3);
+  }
+
+  .project-detail .extension-config-field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-detail .extension-technical {
+    padding: var(--s-2);
+  }
+
+  .project-detail .extension-config-details {
+    margin-left: 0;
+  }
+
+  .project-detail .extension-source .control {
+    margin-left: 0;
+  }
+}

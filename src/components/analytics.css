@@ -1,0 +1,1276 @@
+/* Analytics · investigation workflow (Observatory).
+   What is measured → what changed → who contributed → evidence → drill down.
+   This sheet is loaded globally by App, so every rule is scoped to the
+   analytics workspace or to analytics-only class names. */
+
+.analytics-workspace {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+
+/* Neutralise legacy global table rules (fixed column widths, 76px rows,
+   tinted thead) so each analytics table sizes to its content. */
+.analytics-workspace thead {
+  background: none;
+}
+
+.analytics-workspace th {
+  width: auto;
+  color: inherit;
+  font-size: inherit;
+}
+
+.analytics-workspace tbody tr {
+  height: auto;
+  border-bottom: 0;
+}
+
+.analytics-workspace tbody tr:hover {
+  background: none;
+}
+
+/* ── Sticky control bar ──────────────────────────────────────────────────── */
+.analytics-workspace .analytics-commandbar {
+  position: sticky;
+  top: 4rem;
+  z-index: var(--z-sticky);
+  display: grid;
+  gap: var(--s-2);
+  margin: calc(var(--s-4) * -1) calc(var(--gutter) * -1) var(--s-5);
+  padding: var(--s-3) var(--gutter);
+  border-bottom: 1px solid var(--rule);
+  background: var(--ground);
+  box-shadow: 0 12px 24px -20px rgba(0, 0, 0, 0.9);
+}
+
+.analytics-commandbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-5);
+  min-width: 0;
+}
+
+.analytics-sections {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.analytics-sections a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-1);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.analytics-sections a:hover {
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--surface-2);
+}
+
+.analytics-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-2) var(--s-3);
+  min-width: 0;
+}
+
+.analytics-metric-switch button {
+  min-height: 2.25rem;
+}
+
+.analytics-network-select {
+  min-width: 13rem;
+  max-width: 18rem;
+}
+
+.analytics-network-select > svg:first-child {
+  position: static;
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.analytics-network-select select {
+  padding-left: 0;
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.analytics-scope-caption {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.analytics-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.analytics-text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 2.5rem;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.analytics-text-button:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.analytics-text-button:disabled {
+  opacity: 0.5;
+}
+
+/* Focus: the cross-filter stays visible while scrolling. */
+.analytics-focus-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  animation: analytics-focus-in var(--dur-2) var(--ease-out);
+}
+
+@keyframes analytics-focus-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.analytics-focus-kind {
+  color: var(--signal);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.analytics-focus-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 2rem;
+  padding: 0 var(--s-2) 0 var(--s-3);
+  border: 1px solid var(--signal-line);
+  border-radius: var(--r-pill);
+  background: var(--signal-wash);
+  color: var(--ink);
+  font-size: var(--fs-small);
+}
+
+.analytics-focus-chip strong {
+  font-weight: 600;
+}
+
+.analytics-focus-chip span {
+  color: var(--ink-soft);
+}
+
+.analytics-focus-chip:hover {
+  border-color: var(--signal);
+}
+
+.analytics-focus-chip svg {
+  color: var(--ink-muted);
+}
+
+.analytics-focus-detail {
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-focus-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  margin-left: auto;
+}
+
+.analytics-export-notice {
+  min-height: 0;
+  margin: 0;
+  color: var(--lagoon);
+  font-size: var(--fs-small);
+}
+
+.analytics-export-notice:empty {
+  display: none;
+}
+
+.analytics-refresh-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 1.5rem;
+  margin-left: auto;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.analytics-refresh-status svg {
+  color: var(--ink-muted);
+}
+
+.analytics-invalid-scope {
+  margin-bottom: var(--s-5);
+}
+
+/* ── Investigation steps ─────────────────────────────────────────────────── */
+.analytics-step {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+  margin-top: var(--s-7);
+  scroll-margin-top: 9rem;
+}
+
+.analytics-workspace > :is(.analytics-measured, .analytics-step):first-of-type {
+  margin-top: 0;
+}
+
+.analytics-workspace > .analytics-history-panel {
+  margin-top: var(--s-7);
+  scroll-margin-top: 9rem;
+}
+
+.analytics-step-head {
+  display: grid;
+  gap: var(--s-1);
+  max-width: 76ch;
+}
+
+.analytics-step-kicker,
+.analytics-section-number {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.analytics-step-kicker::before {
+  content: "";
+  width: 1.25rem;
+  height: 1px;
+  background: var(--signal);
+}
+
+.analytics-step-head h2 {
+  font-size: var(--fs-h3);
+}
+
+.analytics-step-head p {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+/* ── 01 · What is measured ───────────────────────────────────────────────── */
+.analytics-measured {
+  margin-top: 0;
+}
+
+.analytics-step-head-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+  max-width: none;
+}
+
+.analytics-scope-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.analytics-coverage-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.6rem;
+  padding: 0 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--brass) 40%, transparent);
+  border-radius: var(--r-pill);
+  background: var(--brass-wash);
+  color: var(--brass);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.analytics-workspace .analytics-metrics {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule);
+}
+
+.analytics-workspace .analytics-metric {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+  min-width: 0;
+  padding: var(--s-5) var(--s-5) var(--s-4) 0;
+}
+
+.analytics-workspace .analytics-metric + .analytics-metric {
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--rule);
+}
+
+.analytics-workspace .analytics-metric[data-active]::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 2.75rem;
+  height: 2px;
+  background: var(--signal);
+}
+
+.analytics-workspace .analytics-metric + .analytics-metric[data-active]::before {
+  left: var(--s-5);
+}
+
+.analytics-metric-label {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.analytics-workspace .analytics-metric > strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--fs-stat);
+  font-weight: 400;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.analytics-workspace .analytics-metric-primary > strong {
+  font-size: clamp(2.5rem, 1.6rem + 2.6vw, 4.25rem);
+}
+
+.analytics-metric-caption {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: var(--lh-snug);
+}
+
+.analytics-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--lagoon);
+}
+
+.analytics-metric-switch-link {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: var(--s-1);
+  min-height: 2.5rem;
+  margin: calc(var(--s-2) * -1) 0 calc(var(--s-3) * -1);
+  padding: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  opacity: 0.8;
+  transition:
+    color var(--dur-1) var(--ease-out),
+    opacity var(--dur-1) var(--ease-out);
+}
+
+.analytics-metric-switch-link:hover:not(:disabled),
+.analytics-metric-switch-link:focus-visible {
+  color: var(--signal);
+  opacity: 1;
+}
+
+.analytics-method {
+  border-bottom: 1px solid var(--rule);
+}
+
+.analytics-method > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  min-height: 2.75rem;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  list-style: none;
+}
+
+.analytics-method > summary::-webkit-details-marker {
+  display: none;
+}
+
+.analytics-method > summary:hover {
+  color: var(--ink);
+}
+
+.analytics-method-summary {
+  color: var(--ink-muted);
+}
+
+.analytics-method > summary > svg {
+  margin-left: auto;
+  color: var(--ink-muted);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.analytics-method[open] > summary > svg {
+  transform: rotate(180deg);
+}
+
+.analytics-method-body {
+  display: grid;
+  gap: var(--s-3);
+  max-width: 78ch;
+  padding: 0 0 var(--s-4);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.analytics-method-body .analytics-text-button {
+  justify-self: start;
+  padding: 0;
+}
+
+/* ── Shared plate pieces ─────────────────────────────────────────────────── */
+.analytics-workspace .plate {
+  min-width: 0;
+}
+
+.analytics-panel-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.analytics-panel-heading > div {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.analytics-panel-heading h3 {
+  font-size: var(--fs-h3);
+}
+
+.analytics-panel-caption,
+.analytics-panel-count {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.analytics-panel-count {
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.analytics-panel-footnote {
+  margin-top: var(--s-4);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+}
+
+.analytics-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5);
+  border-left: 2px solid var(--rule-strong);
+  color: var(--ink-soft);
+}
+
+.analytics-empty > svg {
+  color: var(--ink-muted);
+}
+
+.analytics-empty strong {
+  color: var(--ink);
+}
+
+.analytics-empty p {
+  max-width: 60ch;
+  font-size: var(--fs-small);
+}
+
+/* ── Leading hooks (ranked projects) ─────────────────────────────────────── */
+.analytics-hooks-plate {
+  scroll-margin-top: 9rem;
+}
+
+.analytics-project-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+
+.analytics-project-search {
+  position: relative;
+  display: flex;
+  flex: 1 1 18rem;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 0 0 var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink-muted);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.analytics-project-search:focus-within {
+  border-color: var(--signal-line);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 3px var(--signal-wash);
+}
+
+.analytics-project-search input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  height: 2.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-body);
+}
+
+.analytics-project-search input:focus-visible {
+  box-shadow: none;
+}
+
+.analytics-project-search .icon-button {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.analytics-project-sort {
+  flex: 0 0 auto;
+  gap: var(--s-2);
+  min-height: 2.75rem;
+}
+
+.analytics-project-sort > span {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.analytics-project-sort select {
+  font-size: var(--fs-small);
+}
+
+.analytics-project-columns,
+.analytics-project-list > li {
+  display: grid;
+  grid-template-columns:
+    2rem minmax(0, 1.25fr) minmax(12rem, 1fr) minmax(7rem, 9rem)
+    2.5rem;
+  align-items: center;
+  gap: var(--s-4);
+}
+
+.analytics-project-columns {
+  padding: 0 var(--s-2) var(--s-2);
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+}
+
+.analytics-project-columns > span:nth-child(4) {
+  text-align: right;
+}
+
+.analytics-project-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.analytics-project-list > li {
+  min-height: 3.75rem;
+  padding: var(--s-2);
+  border-bottom: 1px solid var(--rule);
+  transition:
+    background var(--dur-1) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out);
+}
+
+.analytics-project-list > li:hover {
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+}
+
+.analytics-project-list > li[data-selected] {
+  background: var(--surface-3);
+  box-shadow: inset 2px 0 0 var(--signal);
+}
+
+.analytics-project-list > li[data-dimmed] {
+  opacity: 0.45;
+}
+
+.analytics-rank {
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+.analytics-project-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0;
+  color: var(--ink);
+  text-align: left;
+}
+
+.analytics-project-identity .protocol-logo,
+.analytics-project-identity > :first-child:not(span) {
+  flex: none;
+}
+
+.analytics-project-identity > span {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.analytics-project-identity strong {
+  overflow: hidden;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-project-identity > span > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.analytics-project-identity .category-tag {
+  min-height: 1.25rem;
+}
+
+.analytics-project-identity:hover strong {
+  color: var(--signal-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.analytics-project-bar {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  text-align: left;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
+}
+
+.analytics-project-bar:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.analytics-project-bar[aria-pressed="true"] {
+  border-color: var(--rule-focus);
+}
+
+.analytics-project-bar[aria-pressed="true"] .chart-bar-track {
+  overflow: visible;
+}
+
+.analytics-project-bar[aria-pressed="true"] .chart-bar-fill {
+  outline: 1px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.analytics-project-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-project-value strong {
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.analytics-project-value small {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.analytics-project-reserves {
+  display: grid;
+  justify-items: end;
+  gap: 0.1rem;
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.analytics-project-reserves strong {
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.analytics-project-reserves small {
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.analytics-mobile-metric-label {
+  display: none;
+}
+
+.analytics-event-button {
+  justify-self: end;
+}
+
+.analytics-ranking-note {
+  margin-top: var(--s-3);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.analytics-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 2.5rem;
+  margin-top: var(--s-3);
+  padding: 0 var(--s-3);
+  border-radius: var(--r-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.analytics-expand:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.analytics-expand[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+/* ── Index coverage tables (footprint + overview coverage) ──────────────── */
+.analytics-footprint-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin-bottom: var(--s-4);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.analytics-footprint-summary strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 400;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.analytics-footprint-scroll {
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+}
+
+.analytics-footprint-scroll:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+.analytics-footprint-table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.analytics-footprint-table thead th {
+  background: var(--surface-2);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+.analytics-footprint-table th,
+.analytics-footprint-table td {
+  padding: 0.7rem var(--s-4);
+  border-top: 1px solid var(--rule);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-footprint-table thead th {
+  border-top: 0;
+}
+
+.analytics-footprint-table td {
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+}
+
+.analytics-footprint-table th:first-child {
+  text-align: left;
+}
+
+.analytics-footprint-table tbody th {
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.analytics-footprint-table tbody tr[data-focused] > * {
+  background: var(--signal-wash);
+}
+
+.analytics-footprint-table td:nth-child(5),
+.analytics-footprint-table th:nth-child(5),
+.analytics-footprint-table td:nth-child(6),
+.analytics-footprint-table th:nth-child(6) {
+  text-align: left;
+}
+
+.analytics-footprint-table thead th:last-child {
+  width: 3rem;
+}
+
+.analytics-footprint-table td:last-child {
+  padding: 0.25rem var(--s-2);
+}
+
+.analytics-footprint-table.analytics-overview-coverage-table {
+  min-width: 520px;
+}
+
+.analytics-overview-coverage-table td:last-child {
+  padding: 0.7rem var(--s-4);
+}
+
+.analytics-footprint-table.analytics-overview-coverage-table
+  thead
+  th:last-child {
+  width: auto;
+}
+
+.analytics-overview-coverage-scroll {
+  min-width: 0;
+  width: 100%;
+}
+
+/* Long network lists scroll inside their own labelled region, header kept. */
+.analytics-evidence-grid .analytics-footprint-scroll {
+  max-height: 36rem;
+  overflow: auto;
+}
+
+.analytics-evidence-grid .analytics-footprint-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.analytics-index-state {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-soft);
+}
+
+.analytics-block-range {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-muted);
+}
+
+.analytics-head-current {
+  color: var(--lagoon);
+}
+
+.analytics-head-old {
+  color: var(--brass);
+}
+
+.analytics-scroll-hint {
+  display: none;
+  margin-top: var(--s-2);
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+}
+
+@media (max-width: 52rem) {
+  .analytics-scroll-hint {
+    display: block;
+  }
+}
+
+/* ── Drill-down teaser (overview) ────────────────────────────────────────── */
+.analytics-drill-teaser {
+  justify-items: start;
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--rule-strong);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1400px) {
+  .analytics-scope-caption {
+    display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .analytics-workspace .analytics-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .analytics-workspace .analytics-metric:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .analytics-workspace .analytics-metric:nth-child(3)[data-active]::before {
+    left: 0;
+  }
+  .analytics-workspace .analytics-metric:nth-child(n + 3) {
+    border-top: 1px solid var(--rule);
+  }
+  .analytics-project-columns,
+  .analytics-project-list > li {
+    grid-template-columns: 1.75rem minmax(0, 1fr) minmax(10rem, 0.9fr) 6.5rem 2.5rem;
+    gap: var(--s-3);
+  }
+}
+
+@media (max-width: 52rem) {
+  .analytics-workspace .analytics-commandbar {
+    position: static;
+    margin: 0 0 var(--s-5);
+    padding: 0 0 var(--s-3);
+    background: transparent;
+    box-shadow: none;
+  }
+  .analytics-commandbar-row {
+    display: grid;
+    justify-content: stretch;
+    gap: var(--s-2);
+  }
+  .analytics-sections {
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 calc(var(--gutter) * -1);
+    padding: 0 var(--gutter);
+  }
+  .analytics-sections::-webkit-scrollbar {
+    display: none;
+  }
+  .analytics-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+  }
+  .analytics-metric-switch {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .analytics-metric-switch button {
+    min-height: 2.75rem;
+    padding: 0 var(--s-2);
+    white-space: normal;
+    line-height: 1.15;
+  }
+  .analytics-network-select {
+    min-width: 0;
+    max-width: none;
+    min-height: 2.75rem;
+  }
+  .analytics-toolbar-actions {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 30rem) and (max-width: 52rem) {
+  .analytics-toolbar {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    align-items: center;
+  }
+  .analytics-toolbar-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 52rem) {
+  .analytics-toolbar-actions .control {
+    min-height: 2.75rem;
+  }
+  .analytics-focus-actions {
+    margin-left: 0;
+  }
+  .analytics-step,
+  .analytics-workspace > .analytics-history-panel {
+    margin-top: var(--s-6);
+    scroll-margin-top: 4.5rem;
+  }
+  .analytics-workspace .analytics-metric {
+    padding: var(--s-4) var(--s-3) var(--s-3) 0;
+  }
+  .analytics-workspace .analytics-metric + .analytics-metric {
+    padding-left: var(--s-3);
+  }
+  .analytics-workspace .analytics-metric:nth-child(3) {
+    padding-left: 0;
+  }
+  .analytics-workspace .analytics-metric + .analytics-metric[data-active]::before {
+    left: var(--s-3);
+  }
+  .analytics-workspace .analytics-metric:nth-child(3)[data-active]::before {
+    left: 0;
+  }
+  .analytics-project-columns {
+    display: none;
+  }
+  .analytics-project-list > li {
+    grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+    grid-template-areas:
+      "rank identity identity"
+      "bar bar bar"
+      ". reserves action";
+    gap: var(--s-2);
+    padding: var(--s-3) 0;
+  }
+  .analytics-project-list .analytics-rank {
+    grid-area: rank;
+  }
+  .analytics-project-list .analytics-project-identity {
+    grid-area: identity;
+  }
+  .analytics-project-list .analytics-project-bar {
+    grid-area: bar;
+  }
+  .analytics-project-list .analytics-project-reserves {
+    grid-area: reserves;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: var(--s-1) var(--s-2);
+    justify-self: start;
+    text-align: left;
+  }
+  .analytics-project-list .analytics-event-button {
+    grid-area: action;
+  }
+  .analytics-mobile-metric-label {
+    display: inline;
+    color: var(--ink-muted);
+    font-family: var(--font-ui);
+    font-size: var(--fs-micro);
+  }
+}
+
+@media (max-width: 22.5rem) {
+  .analytics-workspace .analytics-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .analytics-workspace .analytics-metric,
+  .analytics-workspace .analytics-metric + .analytics-metric {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .analytics-workspace .analytics-metric + .analytics-metric {
+    border-top: 1px solid var(--rule);
+  }
+  .analytics-workspace .analytics-metric[data-active]::before,
+  .analytics-workspace .analytics-metric + .analytics-metric[data-active]::before {
+    left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analytics-focus-bar {
+    animation: none;
+  }
+}
+
+/* ── Composition ribbons under the readouts ──────────────────────────────── */
+.analytics-composition {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-4) 0 var(--s-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.analytics-composition:empty {
+  display: none;
+}
+
+.analytics-composition-row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--s-2) var(--s-4);
+}
+
+.analytics-composition-label {
+  padding-top: 0.05rem;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+@media (max-width: 40rem) {
+  .analytics-composition-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Auto Snapshot edition only (the root carries data-edition, set by the build;
+   the live page never has it and is untouched). Touch and narrow screens: a
+   composition-bar segment is 14px high (22px on touch), under the 24px target
+   size, and has to stay that thin to read as a bar. Its hit area grows with a
+   transparent pseudo-element instead, so the bar looks exactly as before. The
+   growth is vertical only, up to 24px: segments are 2px apart and must not
+   overlap. A bar already 24px high gets none. */
+@media (max-width: 52rem), (pointer: coarse) {
+  :where(:root[data-edition="snapshot"]) button.chart-ribbon-segment {
+    position: relative;
+  }
+
+  :where(:root[data-edition="snapshot"]) button.chart-ribbon-segment::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block: min(0px, calc((100% - 1.5rem) / 2));
+  }
+
+  /* A visitor who allows motion sees the bar revealed by a clip-path animation
+     (charts.css) whose fill-mode is "both": the last keyframe's clip-path stays
+     on the bar for good, and a clip-path clips hit-testing as well as paint, so
+     the extended hit area above would do nothing. The reveal still plays
+     ("backwards" holds the first keyframe until it starts) but nothing is held
+     after it. These two selectors are not in :where() so they outrank the
+     shorthand in charts.css whichever sheet is bundled first. The clip also hid
+     the segments' glow (box-shadow); that is switched off here so the bar looks
+     as it did, and a visitor with reduced motion, who never had the clip, sees
+     the same bar. */
+  :root[data-edition="snapshot"] .chart-ribbon-bar {
+    animation-fill-mode: backwards;
+  }
+
+  :root[data-edition="snapshot"] .chart-ribbon-segment {
+    box-shadow: none;
+  }
+}
+
+/* ── Readout tiles: the active metric is lit, the rest answer the pointer ── */
+.analytics-workspace .analytics-metric {
+  transition: background var(--dur-2) var(--ease-out);
+}
+
+.analytics-workspace .analytics-metric:hover {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--ink) 3.5%, transparent), transparent 80%);
+}
+
+.analytics-workspace .analytics-metric[data-active] {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--signal) 7%, transparent), transparent 75%);
+}
