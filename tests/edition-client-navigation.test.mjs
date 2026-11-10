@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   EDITION_RECHECK_MS,
   editionCatchUpDue,
@@ -59,12 +60,47 @@ test("without the edition navigation is returned exactly as parsed", () => {
   assert.equal(editionNavigation(state), state);
 });
 
-test("the edition's pages are the live pages minus Activity, in the same order", () => {
-  assert.deepEqual(
-    editionViews(allViews, true),
-    allViews.filter((view) => view !== "activity"),
-  );
+test("the edition's pages are the live pages minus Activity, with the guide last", () => {
+  assert.deepEqual(editionViews(allViews, true), [
+    "overview",
+    "analytics",
+    "chains",
+    "map",
+    "compare",
+    "watchlist",
+    "learn",
+  ]);
+  // The live order is untouched: the guide stays second and Activity stays.
   assert.deepEqual(editionViews(allViews, false), allViews);
+  assert.deepEqual(allViews.slice(0, 2), ["overview", "learn"]);
+});
+
+test("the guide goes last whatever else a list holds, and a list without it is only filtered", () => {
+  assert.deepEqual(
+    editionViews(["learn", "overview", "activity", "compare"], true),
+    ["overview", "compare", "learn"],
+  );
+  assert.deepEqual(editionViews(["overview", "map"], true), ["overview", "map"]);
+  assert.deepEqual(editionViews([], true), []);
+  // Called with no second argument it follows the build flag, which is unset
+  // when the tests run in Node: the live order.
+  assert.deepEqual(editionViews(allViews), allViews);
+});
+
+test("the Jump list and the header tabs read their order from the same function", () => {
+  const palette = readFileSync(
+    new URL("../src/components/CommandPalette.tsx", import.meta.url),
+    "utf8",
+  );
+  const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+  assert.match(
+    palette,
+    /for \(const view of editionViews\(pages\.map\(\(page\) => page\.view\)\)\)/,
+  );
+  assert.match(app, /editionViews\(\s*\[\s*"overview",\s*"learn",/);
+  // The phone's bottom tab bar is the same navigation element, styled by
+  // width, so there is no second list of tabs that could disagree.
+  assert.equal(app.match(/aria-label="Main navigation"/g)?.length, 1);
 });
 
 test("a long-open page asks again only after half an hour away", () => {

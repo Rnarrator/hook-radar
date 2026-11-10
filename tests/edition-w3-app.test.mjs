@@ -730,20 +730,27 @@ test("every footer but the guide's is given the sources of the file it stands un
     others.map((footer) => footer.match(/sources=\{([^}]+)\}/)?.[1]),
     ["overview.data?.sources", "snapshot?.sources", "snapshot.sources"],
   );
+  // Every footer takes the one way into the dialog, which is absent where the
+  // build has none (the edition by its owner's choice): no footer button.
+  assert.ok(
+    footers.every((footer) => /onSources=\{openSources\}/.test(footer)),
+    "each footer is given openSources, not its own opener",
+  );
   const footer = read("src/components/SiteFooter.tsx");
   // The notices link is a root-absolute literal, so the edition build makes it
   // relative to where the site is served from; it and the line stand only in the
-  // edition.
+  // edition, and only while the owner's switch (EDITION_SOURCES_DIALOG) is on.
   assert.match(footer, /href="\/third-party-notices\.txt"/);
   assert.match(footer, /Protocol logos belong to their owners\./);
   assert.match(
     footer,
-    /\{STATIC_EDITION && \(\s*<p\s+className="footer-credit footer-notices"/,
+    /\{FOOTER_CREDITS && \(\s*<p\s+className="footer-credit footer-notices"/,
   );
   assert.match(
     footer,
-    /\{STATIC_EDITION && <SourceCredit sources=\{sources\} \/>\}/,
+    /\{FOOTER_CREDITS && <SourceCredit sources=\{sources\} \/>\}/,
   );
+  assert.match(footer, /\{onSources && <button onClick=\{onSources\}>/);
 });
 
 test("each source card's link names its source for a screen reader, and the census card, which is Hook Radar's own index, has none", () => {

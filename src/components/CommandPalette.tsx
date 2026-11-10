@@ -30,7 +30,7 @@ import {
 } from "./Icons";
 import { Modal } from "./Primitives";
 import "./command-palette.css";
-import { STATIC_EDITION } from "../edition";
+import { STATIC_EDITION, editionViews } from "../edition";
 
 export type PaletteCommand =
   | { type: "view"; view: View }
@@ -180,9 +180,10 @@ export function CommandPalette({
   const items = useMemo(() => {
     const networkName = new Map(networks.map((item) => [item.id, item.name]));
     const list: Item[] = [];
-    for (const page of pages) {
-      // The static edition has no Activity page.
-      if (STATIC_EDITION && page.view === "activity") continue;
+    // The static edition has no Activity page and lists the guide last, as its
+    // tabs do; the live list keeps the order of `pages`.
+    for (const view of editionViews(pages.map((page) => page.view))) {
+      const page = pages.find((entry) => entry.view === view)!;
       list.push({
         key: `view:${page.view}`,
         group: "Pages",

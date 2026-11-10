@@ -47,7 +47,8 @@ interface Props {
   range: AnalyticsHistoryRange;
   setRange: (range: AnalyticsHistoryRange) => void;
   setChain: (chain: string) => void;
-  openSources: () => void;
+  /** Opens the Data & sources dialog; omitted where the build has none. */
+  openSources?: () => void;
   openDetails: () => void;
   /** The all-network history series has been read and has points. */
   seriesRecorded?: boolean;
@@ -296,13 +297,15 @@ export function AnalyticsOverview({
         disabled={disabled}
         actions={
           <>
-            <button
-              type="button"
-              className="analytics-text-button"
-              onClick={openSources}
-            >
-              <Info size={14} /> Data sources
-            </button>
+            {openSources && (
+              <button
+                type="button"
+                className="analytics-text-button"
+                onClick={openSources}
+              >
+                <Info size={14} /> Data sources
+              </button>
+            )}
             <button
               type="button"
               className="control"

@@ -28,7 +28,9 @@
 // (or, with RADAR_TEST_DATA, any folder holding the collector's published
 // files, such as a real collected snapshot) through
 // scripts/static-edition-server.mjs, which answers every /api path with 404.
-// Nothing is written and no network is used.
+// Nothing is written and no network is used. The Data & sources pages are read
+// on a second build of the same source with the dialog's switch on, because the
+// edition itself has no dialog (scripts/edition-sources-build.mjs).
 //
 //   RADAR_TEST_DIST=dist/test-build \
 //     node --test scripts/static-edition-timezone-browser.test.mjs
@@ -40,8 +42,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { startStaticEditionServer } from "./static-edition-server.mjs";
+import { sourcesDialogDist } from "./edition-sources-build.mjs";
 
 const DIST = resolve(process.env.RADAR_TEST_DIST || "dist");
+// The Data & sources dialog is hidden in the edition (its owner's choice,
+// EDITION_SOURCES_DIALOG in src/edition.ts); its pages are read on a build of the
+// same source with the switch on (scripts/edition-sources-build.mjs).
+const SOURCES_DIST = await sourcesDialogDist();
 const DATA = resolve(
   process.env.RADAR_TEST_DATA || "tests/fixtures/static-data/data",
 );
@@ -245,9 +252,9 @@ function savedState() {
 }
 
 /** A page on the edition in a visitor's time zone with the clock fixed. */
-async function visitor(t, timezoneId, size) {
+async function visitor(t, timezoneId, size, dist = DIST) {
   const server = await startStaticEditionServer({
-    distDir: DIST,
+    distDir: dist,
     dataDir: DATA,
   });
   const context = await browser.newContext({
@@ -541,6 +548,7 @@ const pages = [
       await expect(page.getByRole("dialog")).toBeVisible();
       await settle(page);
     },
+    "dialog",
   ],
   [
     "Data & sources on a network",
@@ -550,6 +558,7 @@ const pages = [
       await expect(page.getByRole("dialog")).toBeVisible();
       await settle(page);
     },
+    "dialog",
   ],
   [
     "Share dialog",
@@ -616,15 +625,18 @@ for (const [zone, offset] of ZONES)
     const hits = new Map();
     for (const size of [DESKTOP, PHONE]) {
       const s = await visitor(t, zone, size);
-      for (const [name, show] of pages) {
-        await show(s.page, s, size === PHONE);
+      // The pages that need the dialog are read on the build that has it.
+      const withDialog = await visitor(t, zone, size, SOURCES_DIST);
+      for (const [name, show, needs] of pages) {
+        const v = needs === "dialog" ? withDialog : s;
+        await show(v.page, v, size === PHONE);
         // The browser really is in the zone asked for, or nothing here proves anything.
-        const actual = await s.page.evaluate(() => ({
+        const actual = await v.page.evaluate(() => ({
           zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           offset: new Date(Date.now()).getTimezoneOffset(),
         }));
         assert.deepEqual(actual, { zone, offset }, `${name}: the zone in use`);
-        const { text, attributes } = await everything(s.page);
+        const { text, attributes } = await everything(v.page);
         for (const [shape, pattern] of [
           ["a local-time shape", LOCAL_TIME],
           ["the visitor's zone named", ZONE_NAME],
@@ -636,7 +648,7 @@ for (const [zone, offset] of ZONES)
             for (const found of value.matchAll(
               new RegExp(pattern.source, "g"),
             )) {
-              const at = await locate(s.page, found[0]);
+              const at = await locate(v.page, found[0]);
               const key = `${shape} "${found[0]}" in ${kind}: "${at.value.slice(0, 140)}", in ${at.where}`;
               hits.set(key, [
                 ...(hits.get(key) ?? []),
@@ -654,6 +666,7 @@ for (const [zone, offset] of ZONES)
         );
       }
       s.verify();
+      withDialog.verify();
     }
     assert.deepEqual(
       [...hits].map(

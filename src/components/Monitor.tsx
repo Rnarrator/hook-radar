@@ -43,7 +43,8 @@ interface Props {
   narrowed?: boolean;
   setCategory: (category: string) => void;
   openProject: (id: string) => void;
-  openSources: () => void;
+  /** Opens the Data & sources dialog; omitted where the build has none. */
+  openSources?: () => void;
   onClearScope: () => void;
 }
 
@@ -292,9 +293,11 @@ function Markets({
           Market sources haven’t returned volume for these projects. Pools and
           contracts remain available in the directory.
         </p>
-        <button className="control" onClick={openSources}>
-          View data coverage
-        </button>
+        {openSources && (
+          <button className="control" onClick={openSources}>
+            View data coverage
+          </button>
+        )}
       </div>
     );
   return (

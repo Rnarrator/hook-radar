@@ -45,9 +45,11 @@ At the time of writing, GitHub Actions on standard runners and GitHub Pages are 
 
 ## What visitors see
 
-The full Hook Radar page: Discover, the use-case map, Analytics, Networks, Compare, Watchlist, Learn, project details with pools and the hook-permission decoder, the command palette (Ctrl or Cmd + K), Data and sources, and downloads. A line at the top states when the snapshot was taken, for example "Snapshot taken 28 Oct 2026, 14:05 UTC · refreshed every few hours". Times on pools are absolute UTC times ("measured 14:03 UTC"), not "2 minutes ago". Everything that needs a live server is switched off: the Activity view and the Refresh button are not there.
+The full Hook Radar page: Discover, Analytics, Networks, the use-case map ("By use case"), Compare, Watchlist and, last of the tabs, Learn, project details with pools and the hook-permission decoder, the command palette (Ctrl or Cmd + K), and downloads. A line at the top states when the snapshot was taken, for example "Snapshot taken 28 Oct 2026, 14:05 UTC · refreshed every few hours". Times on pools are absolute UTC times ("measured 14:03 UTC"), not "2 minutes ago". Everything that needs a live server is switched off: the Activity view and the Refresh button are not there.
 
 Figures that cover only part of the market say so ("Partial coverage · Not total Uniswap volume"). Total tracked volume of hook pools is not total Uniswap volume and not a market share. [docs/TRUTH-RULES.md](docs/TRUTH-RULES.md) lists the rules the edition keeps.
+
+At your choice the page has no provider credit and no dialog that lists the data sources: no credit line in the footer and no button for it in the header or on a page. GeckoTerminal's terms ask for a visible credit link, and the other providers' terms must be read; you are responsible for whatever credit they require. One line in `src/edition.ts` brings the dialog and the credits back. [docs/PROVIDER-TERMS.md](docs/PROVIDER-TERMS.md) has the details.
 
 ## Other places to host it
 

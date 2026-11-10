@@ -289,12 +289,10 @@ test("the v4.xyz note comes before Pages is switched on, because from then on th
     item,
     /The site keeps measuring the pools it already knows through DEX Screener but stops learning new ones/,
   );
-  // No contact is invented: the maintainers are reached from the link the
-  // site's own dialog shows.
-  assert.match(
-    item,
-    /start from www\.v4\.xyz \(the same link the site's Data and sources dialog shows\) and ask in writing/,
-  );
+  // No contact is invented: the maintainers are reached from their own site
+  // (the page no longer has a dialog that lists it).
+  assert.match(item, /start from www\.v4\.xyz and ask in writing/);
+  assert.doesNotMatch(item, /Data and sources dialog/);
   assert.doesNotMatch(terms, /[\w.+-]+@[\w-]+\.\w+/, "no e-mail address");
   // The edit is real: the Collect line is the bare command in both workflows
   // (or the command with the flag, once the owner has made the edit: the
@@ -812,4 +810,82 @@ test("the guide's own cross-references name sections that exist, and no document
       `${name} does not point at a numbered step of the start guide`,
     );
   }
+});
+
+test("the documents say plainly that the page has no provider credit and no Data and sources dialog, whose responsibility the credit is, and the one line that brings them back", () => {
+  const terms = need("PROVIDER-TERMS.md");
+  const credit = section(
+    terms,
+    "Credit on the page: your choice, and your responsibility",
+  ).replace(/\s+/g, " ");
+  assert.match(
+    credit,
+    /At your choice, the page of this edition shows \*\*no provider credit and no Data and sources dialog\*\*/,
+  );
+  assert.match(credit, /GeckoTerminal's terms ask for a visible credit link/);
+  assert.match(
+    credit,
+    /The terms of the other providers must be read for what they ask/,
+  );
+  assert.match(
+    credit,
+    /You are responsible for whatever attribution the providers require/,
+  );
+  // The line named is the line in the source, and it is the one switch.
+  assert.match(
+    credit,
+    /`export const EDITION_SOURCES_DIALOG: boolean = false;` becomes `export const EDITION_SOURCES_DIALOG: boolean = true;`/,
+  );
+  assert.match(
+    read("src/edition.ts"),
+    /^export const EDITION_SOURCES_DIALOG: boolean = (?:false|true);$/m,
+  );
+  // The notices file is still published; nothing on the page links to it.
+  assert.match(credit, /`\/third-party-notices\.txt`/);
+  assert.ok(existsSync(join(root, "public", "third-party-notices.txt")));
+  // No document still says the page names its providers or has the dialog.
+  for (const name of [
+    "PROVIDER-TERMS.md",
+    "HOW-IT-WORKS.md",
+    "README-START-HERE.md",
+    "TRUTH-RULES.md",
+    "COLLECTOR-NOTES.md",
+    "HOSTING-CLOUDFLARE-PAGES.md",
+    "HOSTING-GITHUB-PAGES.md",
+    "HOSTING-NAMECHEAP.md",
+    "HOSTING-VERCEL.md",
+  ]) {
+    const body = doc(name);
+    if (body === null) continue;
+    const flat = body.replace(/\s+/g, " ");
+    assert.doesNotMatch(
+      flat,
+      /dialog and the footer of the site name every provider|The provider names and links must be visible|confirm that what the site shows \(the Data and sources dialog/,
+      name,
+    );
+    // Every sentence that mentions the dialog says it is switched off, or how
+    // to bring it back.
+    for (const sentence of flat.split(/(?<=[.!?])\s+/))
+      if (/Data (?:and|&) sources/.test(sentence))
+        assert.match(
+          sentence,
+          /switched off|no Data and sources|no dialog|brings the dialog|bring the dialog|at the owner's choice|At your choice|Credit on the page|the credit/i,
+          `${name}: "${sentence}"`,
+        );
+  }
+  // The start guide's list of what visitors see does not name it, and puts the
+  // guide last among the tabs.
+  const seen = section(start(), "What visitors see");
+  const list = seen.split("\n").find((line) => line.startsWith("The full"));
+  assert.ok(list, "the list of what visitors see");
+  assert.doesNotMatch(list, /Data and sources|Data & sources/);
+  assert.match(list, /Compare, Watchlist and, last of the tabs, Learn/);
+  assert.match(
+    seen,
+    /no provider credit and no dialog that lists the data sources/,
+  );
+  assert.match(
+    seen,
+    /One line in `src\/edition\.ts` brings the dialog and the credits back/,
+  );
 });

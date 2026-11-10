@@ -22,8 +22,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { startStaticEditionServer } from "./static-edition-server.mjs";
+import { sourcesDialogDist } from "./edition-sources-build.mjs";
 
 const DIST = resolve(process.env.RADAR_TEST_DIST || "dist");
+// "Data details" opens the Data & sources dialog, which the edition's page does
+// not have (its owner's choice, EDITION_SOURCES_DIALOG in src/edition.ts); the
+// pricing checks it lists are tested on a build of the same source with the
+// switch on (scripts/edition-sources-build.mjs).
+const SOURCES_DIST = await sourcesDialogDist();
 const FIXTURES = resolve("tests/fixtures/static-data/data");
 const OWN_DATA = process.env.RADAR_TEST_DATA
   ? resolve(process.env.RADAR_TEST_DATA)
@@ -150,10 +156,16 @@ after(async () => {
 
 async function site(
   t,
-  { size = DESKTOP, snapshot = null, history = null, dataDir = FIXTURES } = {},
+  {
+    size = DESKTOP,
+    snapshot = null,
+    history = null,
+    dataDir = FIXTURES,
+    dist = DIST,
+  } = {},
 ) {
   const server = await startStaticEditionServer({
-    distDir: DIST,
+    distDir: dist,
     dataDir,
     mount: "/",
     port: PORT,
@@ -248,8 +260,12 @@ for (const [label, size] of [
   ["desktop", DESKTOP],
   ["phone", PHONE],
 ]) {
-  test(`Data details (${label}): no pricing result is not a source that did not respond`, async (t) => {
-    const s = await site(t, { size, snapshot: pricingCases(false) });
+  test(`Data details (${label}), with the switch on: no pricing result is not a source that did not respond`, async (t) => {
+    const s = await site(t, {
+      size,
+      snapshot: pricingCases(false),
+      dist: SOURCES_DIST,
+    });
     await s.goto("?view=chains");
     const card = await openDataDetails(s.page);
     const zora = card.locator(".market-network-list li", { hasText: "Zora" });
@@ -270,8 +286,12 @@ for (const [label, size] of [
     s.verify();
   });
 
-  test(`Data details (${label}): a network the collector marked as not indexed says so`, async (t) => {
-    const s = await site(t, { size, snapshot: pricingCases(true) });
+  test(`Data details (${label}), with the switch on: a network the collector marked as not indexed says so`, async (t) => {
+    const s = await site(t, {
+      size,
+      snapshot: pricingCases(true),
+      dist: SOURCES_DIST,
+    });
     await s.goto("?view=chains");
     const card = await openDataDetails(s.page);
     for (const name of ["Zora", "X Layer"]) {

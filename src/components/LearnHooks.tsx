@@ -10,6 +10,7 @@ import {
   Network,
 } from "./Icons";
 import { HookAddressDecoder } from "./HookAddressDecoder";
+import { SOURCES_DIALOG } from "../edition";
 import "./learn-hooks.css";
 
 const operations = {
@@ -421,8 +422,10 @@ export function LearnHooks({
           <p className="learn-data-note">
             <strong>Check the scope and timestamp.</strong> Discovered pools and
             pools with fresh pricing are different sets. Missing or stale
-            measurements do not mean zero activity. Use data details to
-            understand what each figure covers.
+            measurements do not mean zero activity.{" "}
+            {SOURCES_DIALOG
+              ? "Use data details to understand what each figure covers."
+              : "Read the scope label beside a figure to see what it covers."}
           </p>
         </div>
       </section>

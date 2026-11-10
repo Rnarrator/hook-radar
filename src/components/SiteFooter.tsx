@@ -1,5 +1,5 @@
 import { inlineTime } from "../model";
-import { STATIC_EDITION, fullTimeLabel } from "../edition";
+import { FOOTER_CREDITS, STATIC_EDITION, fullTimeLabel } from "../edition";
 import { External } from "./Primitives";
 import { SourceCredit } from "./EditionStatus";
 import { paletteShortcutLabel } from "./CommandPalette";
@@ -17,7 +17,9 @@ export function SiteFooter({
   /** Edition: the sources the snapshot on the page names; the credit line is
    * built from them. Omit on pages that load no snapshot (nothing is credited). */
   sources?: readonly { id?: unknown; status?: unknown }[] | null;
-  onSources: () => void;
+  /** Opens the Data & sources dialog. Omit where the build has none (the
+   * edition without EDITION_SOURCES_DIALOG): the button is then left out. */
+  onSources?: () => void;
   /** Opens the jump palette: the way in where the header has no room for its button. */
   onJump?: () => void;
   /** Opens the keyboard shortcut list. Shown where there is a keyboard. */
@@ -49,13 +51,13 @@ export function SiteFooter({
             Shortcuts <kbd aria-hidden="true">?</kbd>
           </button>
         )}
-        <button onClick={onSources}>Data & sources</button>
+        {onSources && <button onClick={onSources}>Data & sources</button>}
         <External href="https://github.com/Uniswap/hooklist">
           Suggest a hook
         </External>
       </div>
-      {STATIC_EDITION && <SourceCredit sources={sources} />}
-      {STATIC_EDITION && (
+      {FOOTER_CREDITS && <SourceCredit sources={sources} />}
+      {FOOTER_CREDITS && (
         <p
           className="footer-credit footer-notices"
           data-testid="third-party-notices"

@@ -316,7 +316,7 @@ them.
 
 Terms to settle before launch (the owner's decision, repeated in
 `docs/PROVIDER-TERMS.md`): GeckoTerminal and CoinGecko ask for attribution (the
-snapshot's GeckoTerminal source says "Data provided by GeckoTerminal" and links it); DEX Screener sets its own terms and limits and may change or end access, so read its current terms; the v4.xyz paths are undocumented
+snapshot's GeckoTerminal source says "Data provided by GeckoTerminal" and links it, but the page's Data & sources dialog and footer credit, which showed it, are switched off at the owner's choice: see the section on credit in that file); DEX Screener sets its own terms and limits and may change or end access, so read its current terms; the v4.xyz paths are undocumented
 and can change without notice. A scheduled job from one cloud IP is a different
 load shape from the live app's, which is why the gaps are the contract's and may
 only be raised.

@@ -67,7 +67,8 @@ interface Props {
   /** Absent where the page has no activity view (the static edition). */
   inspectActivity?: (projectId: string, chain: string) => void;
   browseHooks: (chain: string) => void;
-  openSources: () => void;
+  /** Opens the Data & sources dialog; omitted where the build has none. */
+  openSources?: () => void;
   disabled?: boolean;
 }
 
@@ -910,13 +911,15 @@ export function AnalyticsWorkspace({
         disabled={disabled}
         actions={
           <>
-            <button
-              type="button"
-              className="analytics-text-button"
-              onClick={openSources}
-            >
-              <Info size={14} /> Data sources
-            </button>
+            {openSources && (
+              <button
+                type="button"
+                className="analytics-text-button"
+                onClick={openSources}
+              >
+                <Info size={14} /> Data sources
+              </button>
+            )}
             <button
               type="button"
               className="control"
@@ -1097,13 +1100,15 @@ export function AnalyticsWorkspace({
                   unverified freshness.
                 </p>
               )}
-              <button
-                type="button"
-                className="analytics-text-button"
-                onClick={openSources}
-              >
-                Check coverage and sources <ArrowRight size={14} />
-              </button>
+              {openSources && (
+                <button
+                  type="button"
+                  className="analytics-text-button"
+                  onClick={openSources}
+                >
+                  Check coverage and sources <ArrowRight size={14} />
+                </button>
+              )}
             </div>
           </details>
         }

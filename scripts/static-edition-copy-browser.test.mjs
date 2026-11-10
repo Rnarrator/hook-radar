@@ -13,6 +13,11 @@
 // every /api path with 404 and records every request. No production data, no
 // network, no service.
 //
+// The edition's page has no Data & sources dialog (its owner's choice,
+// EDITION_SOURCES_DIALOG in src/edition.ts), so the tests of what the dialog
+// says run on a second build of the same source with that switch on, made by
+// scripts/edition-sources-build.mjs (RADAR_TEST_SOURCES_DIST names one).
+//
 //   RADAR_TEST_DIST=dist/test-build \
 //     node --test scripts/static-edition-copy-browser.test.mjs
 //   RADAR_TEST_DIST=<build> RADAR_TEST_DATA=<real data folder> \
@@ -31,8 +36,12 @@ import {
   recentTradingCaption,
 } from "../src/edition.ts";
 import { snapshotFailureMessage } from "../src/edition-shell.ts";
+import { sourcesDialogDist } from "./edition-sources-build.mjs";
 
 const DIST = resolve(process.env.RADAR_TEST_DIST || "dist");
+// The edition hides the Data & sources dialog (its owner's choice); the tests
+// of what the dialog says run on a build of the same source with the switch on.
+const SOURCES_DIST = await sourcesDialogDist();
 const DATA = resolve(
   process.env.RADAR_TEST_DATA || "tests/fixtures/static-data/data",
 );
@@ -116,10 +125,11 @@ async function site(
     saved = null,
     at = generated + 2 * MINUTE,
     allow = () => false,
+    dist = DIST,
   } = {},
 ) {
   const server = await startStaticEditionServer({
-    distDir: DIST,
+    distDir: dist,
     dataDir: DATA,
     mount: "/",
   });
@@ -378,8 +388,8 @@ for (const [sizeName, size] of Object.entries({
   desktop: DESKTOP,
   phone: PHONE,
 }))
-  test(`[${sizeName}] Data & sources opened from the guide loads the snapshot and shows its sources`, async (t) => {
-    const s = await site(t, { size });
+  test(`[${sizeName}] with the dialog switched on, Data & sources opened from the guide loads the snapshot and shows its sources`, async (t) => {
+    const s = await site(t, { size, dist: SOURCES_DIST });
     await s.goto("?view=learn");
     await expect(s.page.getByRole("heading", { level: 1 }).first()).toBeVisible(
       { timeout: 30000 },
@@ -415,10 +425,11 @@ for (const [sizeName, size] of Object.entries({
     s.verify();
   });
 
-test("Data & sources opened from the guide when the snapshot cannot load says so and recovers", async (t) => {
+test("with the dialog switched on, Data & sources opened from the guide when the snapshot cannot load says so and recovers", async (t) => {
   const s = await site(t, {
     data: { "snapshot.json": null },
     allow: (m) => /status of/.test(m.text()),
+    dist: SOURCES_DIST,
   });
   await s.goto("?view=learn");
   await sourcesButton(s.page).click();
@@ -438,9 +449,9 @@ test("Data & sources opened from the guide when the snapshot cannot load says so
   ).toBeVisible({ timeout: 60000 });
 });
 
-test("the sources intro of an old snapshot claims no refresh rhythm, and says what the run did only for its own snapshot", async (t) => {
+test("with the dialog switched on, the sources intro of an old snapshot claims no refresh rhythm, and says what the run did only for its own snapshot", async (t) => {
   // The visitor opens a snapshot three days after it was taken.
-  const old = await site(t, { at: generated + 3 * DAY });
+  const old = await site(t, { at: generated + 3 * DAY, dist: SOURCES_DIST });
   await old.goto("");
   await old.ready();
   const banner = flat(await old.page.getByTestId("snapshot-line").innerText());
@@ -462,6 +473,7 @@ test("the sources intro of an old snapshot claims no refresh rhythm, and says wh
   // intro is the same, and a status file from a later run is not shown beside it.
   const older = await site(t, {
     data: { "snapshot.json": shiftTimes(snapshotText, -3 * DAY) },
+    dist: SOURCES_DIST,
   });
   await older.goto("");
   await older.ready();
@@ -480,7 +492,7 @@ test("the sources intro of an old snapshot claims no refresh rhythm, and says wh
   older.verify();
 
   // A fresh snapshot keeps its age on the banner and still no rhythm in the intro.
-  const fresh = await site(t);
+  const fresh = await site(t, { dist: SOURCES_DIST });
   await fresh.goto("");
   await fresh.ready();
   await expect(fresh.page.getByTestId("snapshot-line")).toContainText(
@@ -496,8 +508,8 @@ test("the sources intro of an old snapshot claims no refresh rhythm, and says wh
   fresh.verify();
 });
 
-test("the Data notes do not say registry changes are detected", async (t) => {
-  const s = await site(t);
+test("with the dialog switched on, the Data notes do not say registry changes are detected", async (t) => {
+  const s = await site(t, { dist: SOURCES_DIST });
   await s.goto("");
   await s.ready();
   await sourcesButton(s.page).click();

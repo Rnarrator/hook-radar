@@ -52,7 +52,8 @@ interface Props {
   inspectActivity?: (id: string, chain: string) => void;
   openAnalytics: (chain: string) => void;
   browseHooks: (chain: string) => void;
-  openSources: () => void;
+  /** Opens the Data & sources dialog; omitted where the build has none. */
+  openSources?: () => void;
   disabled?: boolean;
 }
 
@@ -621,12 +622,14 @@ export function ChainExplorer({
           </span>
           <span>{windows[windowKey]} window</span>
         </p>
-        <button
-          className="chains-text-button chains-sources-button"
-          onClick={openSources}
-        >
-          <Info size={14} /> Data sources
-        </button>
+        {openSources && (
+          <button
+            className="chains-text-button chains-sources-button"
+            onClick={openSources}
+          >
+            <Info size={14} /> Data sources
+          </button>
+        )}
       </div>
       {result.knownChain && (
         <nav className="chains-section-nav" aria-label="Chain sections">
@@ -692,9 +695,11 @@ export function ChainExplorer({
                 platform guide documents it. A launch platform may use its own hooks,
                 shared hooks or hookless pools.
               </p>
-              <button className="chains-text-button" onClick={openSources}>
-                View data sources <ArrowRight size={13} />
-              </button>
+              {openSources && (
+                <button className="chains-text-button" onClick={openSources}>
+                  View data sources <ArrowRight size={13} />
+                </button>
+              )}
             </div>
           </details>
         </>

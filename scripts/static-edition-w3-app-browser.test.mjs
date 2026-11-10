@@ -22,8 +22,14 @@ import { startStaticEditionServer } from "./static-edition-server.mjs";
 import AxeBuilder from "@axe-core/playwright";
 import { RELOAD_HINT, fullTimeLabel } from "../src/edition.ts";
 import { launchpadRegistry } from "../shared/launchpad-registry.ts";
+import { sourcesDialogDist } from "./edition-sources-build.mjs";
 
 const DIST = resolve(process.env.RADAR_TEST_DIST || "dist");
+// The edition's page has no Data & sources dialog, footer credit or notices line
+// (its owner's choice, EDITION_SOURCES_DIALOG in src/edition.ts); the tests of
+// what those say run on a build of the same source with the switch on, made by
+// scripts/edition-sources-build.mjs (RADAR_TEST_SOURCES_DIST names one).
+const SOURCES_DIST = await sourcesDialogDist();
 const DATA = resolve(
   process.env.RADAR_TEST_DATA || "tests/fixtures/static-data/data",
 );
@@ -85,10 +91,11 @@ async function site(
     clock = "fixed",
     at = generated + 2 * MINUTE,
     allow = () => false,
+    dist = DIST,
   } = {},
 ) {
   const server = await startStaticEditionServer({
-    distDir: DIST,
+    distDir: dist,
     dataDir: DATA,
     mount: MOUNT,
     cacheControl,
@@ -902,7 +909,7 @@ const withSources = (change) => {
   return JSON.stringify(copy);
 };
 
-test("the footer credits only the services this snapshot's sources say supplied something", async (t) => {
+test("with the switch on, the footer credits only the services this snapshot's sources say supplied something", async (t) => {
   const cases = {
     "as published": (sources) => sources,
     "DEX Screener supplied nothing": (sources) =>
@@ -924,6 +931,7 @@ test("the footer credits only the services this snapshot's sources say supplied 
     const sources = change(structuredClone(snapshot.sources));
     const s = await site(t, {
       data: { "snapshot.json": withSources(change) },
+      dist: SOURCES_DIST,
     });
     await s.goto("");
     await s.ready();
@@ -955,8 +963,8 @@ test("the footer credits only the services this snapshot's sources say supplied 
   }
 });
 
-test("the guide, which loads no snapshot, credits no provider but keeps the footer's own links and the notices", async (t) => {
-  const s = await site(t);
+test("with the switch on, the guide, which loads no snapshot, credits no provider but keeps the footer's own links and the notices", async (t) => {
+  const s = await site(t, { dist: SOURCES_DIST });
   await s.goto("?view=learn");
   await expect(
     s.page.getByRole("heading", { name: "Understand v4 hooks" }),
@@ -972,8 +980,8 @@ test("the guide, which loads no snapshot, credits no provider but keeps the foot
 });
 
 for (const [name, size] of Object.entries({ desktop: DESKTOP, phone: PHONE }))
-  test(`[${name}] the footer links to the third-party notices, and the link reaches the file wherever the site is served`, async (t) => {
-    const s = await site(t, { size });
+  test(`[${name}] with the switch on, the footer links to the third-party notices, and the link reaches the file wherever the site is served`, async (t) => {
+    const s = await site(t, { size, dist: SOURCES_DIST });
     await s.goto("");
     await s.ready();
     const notice = s.page.getByTestId("third-party-notices");
@@ -1076,8 +1084,8 @@ test("the built edition ships no file nothing references, and every file its pag
 const grouped = (value) => value.toLocaleString("en-US");
 
 for (const [name, size] of Object.entries({ desktop: DESKTOP, phone: PHONE }))
-  test(`[${name}] Data & sources counts the measured pools once, names each source's link, and gives the census no link`, async (t) => {
-    const s = await site(t, { size });
+  test(`[${name}] with the switch on, Data & sources counts the measured pools once, names each source's link, and gives the census no link`, async (t) => {
+    const s = await site(t, { size, dist: SOURCES_DIST });
     await s.goto("");
     await s.ready();
     await s.page

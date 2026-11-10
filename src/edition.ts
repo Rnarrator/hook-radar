@@ -30,6 +30,35 @@ function readBase(): string {
 
 export const STATIC_EDITION: boolean = readFlag();
 
+/** The owner's switch for the "Data & sources" dialog and everything that
+ * leads to it or credits the data providers on the edition's page: the header
+ * status pill, the "Data details" and "View data coverage" buttons, the
+ * Sources and Data sources buttons of Analytics and Networks, the footer
+ * button, and the footer's provider credit and logo-notices paragraphs. False
+ * hides all of them; setting it to true gives the dialog and every way into it
+ * back, with the credits. The dialog's own code stays in place either way. The
+ * live service always has the dialog (SOURCES_DIALOG), whatever this says. */
+export const EDITION_SOURCES_DIALOG: boolean = false;
+
+/** Whether a build has the Data & sources dialog and its entry points: the
+ * live service always, the edition when its owner's switch is on. */
+export const sourcesDialogOffered = (edition: boolean, ownerSwitch: boolean) =>
+  !edition || ownerSwitch;
+
+/** Whether a build's footer shows the provider credit and the logo notices:
+ * only the edition has them, and only with the owner's switch on. */
+export const footerCreditsShown = (edition: boolean, ownerSwitch: boolean) =>
+  edition && ownerSwitch;
+
+export const SOURCES_DIALOG: boolean = sourcesDialogOffered(
+  STATIC_EDITION,
+  EDITION_SOURCES_DIALOG,
+);
+export const FOOTER_CREDITS: boolean = footerCreditsShown(
+  STATIC_EDITION,
+  EDITION_SOURCES_DIALOG,
+);
+
 /** How the page describes its own update rhythm. */
 export const REFRESH_NOTE = "refreshed every few hours";
 
@@ -388,12 +417,19 @@ export function editionCatchUpDue(
   return lastLoadedAt !== null && visitorNow - lastLoadedAt > EDITION_RECHECK_MS;
 }
 
-/** The pages the edition offers, in navigation order. */
+/** The pages the edition offers, in navigation order. The guide ("learn") comes
+ * last here, after the Watchlist; the live service keeps it second. The one
+ * order serves the header tabs, the phone's bottom tab bar and the Jump list. */
 export function editionViews<T extends string>(
   views: readonly T[],
   enabled: boolean = STATIC_EDITION,
 ): T[] {
-  return enabled ? views.filter((view) => view !== "activity") : [...views];
+  if (!enabled) return [...views];
+  const offered = views.filter((view) => view !== "activity");
+  return [
+    ...offered.filter((view) => view !== "learn"),
+    ...offered.filter((view) => view === "learn"),
+  ];
 }
 
 /* ── Recorded history ──────────────────────────────────────────────────── */

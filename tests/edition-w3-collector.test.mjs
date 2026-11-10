@@ -1321,9 +1321,18 @@ test("the notes describe the gate, the size and the real runs as they are", () =
   assert.equal(how.includes("The run log and the"), false);
   assert.ok(
     how.includes(
-      "The Data & sources dialog and `data/status.json` say which providers answered",
+      "`data/status.json` says which providers answered and which did not",
     ),
   );
+  // The dialog that used to list them is switched off at the owner's choice,
+  // and the document says so rather than pointing to it.
+  assert.equal(
+    how.includes(
+      "The Data & sources dialog and `data/status.json` say which providers answered",
+    ),
+    false,
+  );
+  assert.match(how, /switched off at the owner's choice/);
   assert.match(how, /or fewer than 80% of the requested pools answered/);
   assert.equal(
     how.includes(

@@ -163,6 +163,7 @@ import {
   NO_MATCH_IN_SNAPSHOT,
   NO_POOLS_MEASURED,
   PROJECT_NOT_CARRIED,
+  SOURCES_DIALOG,
   STATIC_EDITION,
   censusLabel,
   editionNavigation,
@@ -506,9 +507,16 @@ export default function App() {
   const [selectedId, setSelectedIdState] = useState<string | null>(
     initial.project,
   );
-  const [modal, setModal] = useState<"sources" | "share" | "shortcuts" | null>(
-    null,
-  );
+  const [requestedModal, setModal] = useState<
+    "sources" | "share" | "shortcuts" | null
+  >(null);
+  // A build without the Data & sources dialog (the edition, by its owner's
+  // choice: EDITION_SOURCES_DIALOG) never has it open, whatever asked for it.
+  const modal =
+    requestedModal === "sources" && !SOURCES_DIALOG ? null : requestedModal;
+  // The one way into the dialog; undefined where the build has none, and every
+  // control that would open it is then left out.
+  const openSources = SOURCES_DIALOG ? () => setModal("sources") : undefined;
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [toastTone, setToastTone] = useState<"success" | "info" | "error">(
@@ -3546,6 +3554,15 @@ export default function App() {
     </section>
   );
 
+  // Where the strip offers the ecosystem Stats toggle (the lists, not the
+  // workspaces that carry their own figures).
+  const statsToggleShown =
+    view !== "compare" &&
+    view !== "activity" &&
+    view !== "analytics" &&
+    view !== "chains" &&
+    !(view === "watchlist" && watchlist.length === 0);
+
   const statusLabel = STATIC_EDITION
     ? "Data & sources"
     : error && !snapshot && !serviceStarting
@@ -3687,17 +3704,19 @@ export default function App() {
             <span>Jump to</span>
             <kbd aria-hidden="true">{paletteShortcutLabel()}</kbd>
           </button>
-          <button
-            className={`source-status ${headerStatus}`}
-            data-testid="sources-button"
-            onClick={() => setModal("sources")}
-          >
-            <span className="status-led" />
-            <span className="source-status-label" title={statusLabel}>
-              {phoneHeader ? (SHORT_STATUS[statusLabel] ?? statusLabel) : statusLabel}
-            </span>
-            <Info size={13} />
-          </button>
+          {openSources && (
+            <button
+              className={`source-status ${headerStatus}`}
+              data-testid="sources-button"
+              onClick={openSources}
+            >
+              <span className="status-led" />
+              <span className="source-status-label" title={statusLabel}>
+                {phoneHeader ? (SHORT_STATUS[statusLabel] ?? statusLabel) : statusLabel}
+              </span>
+              <Info size={13} />
+            </button>
+          )}
         </header>
         <main id="main" tabIndex={-1}>
           <section
@@ -3953,7 +3972,7 @@ export default function App() {
                 }}
               />
               <SiteFooter
-                onSources={() => setModal("sources")}
+                onSources={openSources}
                 onJump={() => setPaletteOpen(true)}
                 onShortcuts={() => setModal("shortcuts")}
               />
@@ -4006,7 +4025,7 @@ export default function App() {
                     range={analyticsRange}
                     setRange={changeAnalyticsRange}
                     setChain={changeAnalyticsChain}
-                    openSources={() => setModal("sources")}
+                    openSources={openSources}
                     openDetails={() => setAnalyticsExpanded(true)}
                     seriesRecorded={analyticsSeries}
                     refreshing={overview.loading}
@@ -4071,7 +4090,7 @@ export default function App() {
               {(overview.data || !overview.loading) && (
                 <SiteFooter
                   sources={overview.data?.sources}
-                  onSources={() => setModal("sources")}
+                  onSources={openSources}
                   onJump={() => setPaletteOpen(true)}
                   onShortcuts={() => setModal("shortcuts")}
                 />
@@ -4175,7 +4194,7 @@ export default function App() {
               <SiteFooter
                 updatedAt={discoveryContext.data.publication.generatedAt}
                 sources={snapshot?.sources}
-                onSources={() => setModal("sources")}
+                onSources={openSources}
                 onJump={() => setPaletteOpen(true)}
                 onShortcuts={() => setModal("shortcuts")}
               />
@@ -4319,12 +4338,11 @@ export default function App() {
                   )}
                 </span>
                 )}
-                <div className="coverage-actions">
-                  {view !== "compare" &&
-                    view !== "activity" &&
-                    view !== "analytics" &&
-                    view !== "chains" &&
-                    !(view === "watchlist" && watchlist.length === 0) && (
+                {/* No empty row of actions where the page has neither the Stats
+                    toggle nor the data dialog to offer. */}
+                {(statsToggleShown || openSources) && (
+                  <div className="coverage-actions">
+                    {statsToggleShown && (
                       <button
                         className="mobile-stats-toggle"
                         aria-expanded={mobileStatsOpen}
@@ -4350,10 +4368,13 @@ export default function App() {
                         <ChevronDown size={14} />
                       </button>
                     )}
-                  <button onClick={() => setModal("sources")}>
-                    Data details <ArrowRight size={13} />
-                  </button>
-                </div>
+                    {openSources && (
+                      <button onClick={openSources}>
+                        Data details <ArrowRight size={13} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
               {!serviceStarting &&
                 !error &&
@@ -4382,7 +4403,7 @@ export default function App() {
                       setFilters({ ...defaultFilters, chain, market: "all" });
                       setView("overview");
                     }}
-                    openSources={() => setModal("sources")}
+                    openSources={openSources}
                     disabled={serviceStarting}
                   />
                 </WorkspaceBoundary>
@@ -4402,7 +4423,7 @@ export default function App() {
                       setFilters({ ...defaultFilters, chain, market: "all" });
                       setView("overview");
                     }}
-                    openSources={() => setModal("sources")}
+                    openSources={openSources}
                     disabled={serviceStarting}
                   />
                 </WorkspaceBoundary>
@@ -4588,9 +4609,11 @@ export default function App() {
                             windowKey={windowKey}
                           />
                         )}
-                        <button onClick={() => setModal("sources")}>
-                          View data coverage <ArrowRight size={13} />
-                        </button>
+                        {openSources && (
+                          <button onClick={openSources}>
+                            View data coverage <ArrowRight size={13} />
+                          </button>
+                        )}
                       </details>
                     </>
                   )}
@@ -4660,7 +4683,7 @@ export default function App() {
                                 STATIC_EDITION && filters.market !== "projects"
                               }
                               openProject={(id) => setSelectedId(id, "pools")}
-                              openSources={() => setModal("sources")}
+                              openSources={openSources}
                               onClearScope={() => {
                                 resetFilters("overview");
                                 setView("overview");
@@ -4745,7 +4768,7 @@ export default function App() {
               <SiteFooter
                 updatedAt={snapshot.generatedAt}
                 sources={snapshot.sources}
-                onSources={() => setModal("sources")}
+                onSources={openSources}
                 onJump={() => setPaletteOpen(true)}
                 onShortcuts={() => setModal("shortcuts")}
               />
@@ -4902,7 +4925,7 @@ export default function App() {
           </Modal>
         ))
       )}
-      {modal === "sources" && (
+      {SOURCES_DIALOG && modal === "sources" && (
         <Modal title="Data & sources" onClose={closeModal}>
           <div className="modal-body">
             <h2>Data coverage</h2>

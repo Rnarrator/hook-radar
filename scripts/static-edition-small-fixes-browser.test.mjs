@@ -26,6 +26,10 @@ import { chromium, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { startStaticEditionServer } from "./static-edition-server.mjs";
 import { getLaunchpad } from "../shared/launchpad-registry.ts";
+import {
+  ownerShowsSources,
+  sourcesDialogDist,
+} from "./edition-sources-build.mjs";
 
 const DIST = resolve(process.env.RADAR_TEST_DIST || "dist");
 const LIVE = process.env.RADAR_TEST_LIVE_DIST
@@ -42,6 +46,11 @@ if (!/<html[^>]*\sdata-edition="snapshot"/.test(builtPage))
   throw new Error(
     `${DIST} is not an edition build: its index.html has no data-edition="snapshot" on the root element. Build with VITE_STATIC_EDITION=1 and name it in RADAR_TEST_DIST.`,
   );
+
+// The edition hides the Data & sources dialog (its owner's choice,
+// EDITION_SOURCES_DIALOG in src/edition.ts); the dialog's own presentation is
+// tested on a build of the same source with that switch on.
+const SOURCES_DIST = await sourcesDialogDist();
 
 const DESKTOP = { width: 1440, height: 1000 };
 const PHONE = { width: 390, height: 844 };
@@ -222,7 +231,7 @@ test("a recorded update brings the panel back, unchanged", async (t) => {
   s.verify();
 });
 
-test("Data & sources wraps long addresses inside the dialog on a phone", async (t) => {
+test("with the dialog switched on, Data & sources wraps long addresses inside the dialog on a phone", async (t) => {
   const long =
     "Fetched at the start of this snapshot run from https://raw.githubusercontent.com/Uniswap/hooklist/main/an-unbroken-path-that-is-far-longer-than-a-phone-is-wide-0123456789abcdef0123456789abcdef.json.";
   const base = snapshot();
@@ -236,6 +245,7 @@ test("Data & sources wraps long addresses inside the dialog on a phone", async (
     const s = await site(t, {
       size: viewport,
       data: { "snapshot.json": data },
+      dist: SOURCES_DIST,
     });
     await s.goto();
     await s.ready();
@@ -292,8 +302,23 @@ test("Data & sources wraps long addresses inside the dialog on a phone", async (
   }
 });
 
-test("the small links and the About these numbers line are at least 24px high on a phone", async (t) => {
+test("the About these numbers line is at least 24px high on a phone, and holds no coverage button", async (t) => {
   const s = await site(t, { size: PHONE });
+  await s.goto();
+  await s.ready();
+  const summary = s.page.locator(".overview-data-notes summary").first();
+  assert.ok((await box(s.page, ".overview-data-notes summary")).height >= 24);
+  await summary.click();
+  // The edition has no data dialog for a button to open (unless its owner's
+  // switch, EDITION_SOURCES_DIALOG, is on).
+  await expect(s.page.locator(".overview-data-notes button")).toHaveCount(
+    ownerShowsSources() ? 1 : 0,
+  );
+  s.verify();
+});
+
+test("with the dialog switched on, the small links and the About these numbers line are at least 24px high on a phone", async (t) => {
+  const s = await site(t, { size: PHONE, dist: SOURCES_DIST });
   await s.goto();
   await s.ready();
   const summary = s.page.locator(".overview-data-notes summary").first();
@@ -319,8 +344,8 @@ test("the small links and the About these numbers line are at least 24px high on
   s.verify();
 });
 
-test("on a desktop the small links keep their size", async (t) => {
-  const s = await site(t, { size: DESKTOP });
+test("with the dialog switched on, on a desktop the small links keep their size", async (t) => {
+  const s = await site(t, { size: DESKTOP, dist: SOURCES_DIST });
   await s.goto();
   await s.ready();
   assert.ok((await box(s.page, ".overview-data-notes summary")).height < 24);
@@ -474,11 +499,14 @@ test("no serious accessibility violation on the changed pages at phone width", a
       `page ${query || "/"}`,
     );
   }
-  await s.goto();
-  await s.ready();
-  await s.page.getByTestId("sources-button").click();
-  await expect(s.page.getByRole("dialog")).toBeVisible();
-  const dialog = await new AxeBuilder({ page: s.page })
+  s.verify();
+  // The dialog, on the build whose owner's switch is on.
+  const withDialog = await site(t, { size: PHONE, dist: SOURCES_DIST });
+  await withDialog.goto();
+  await withDialog.ready();
+  await withDialog.page.getByTestId("sources-button").click();
+  await expect(withDialog.page.getByRole("dialog")).toBeVisible();
+  const dialog = await new AxeBuilder({ page: withDialog.page })
     .withTags(tags)
     .analyze();
   assert.deepEqual(
@@ -486,7 +514,7 @@ test("no serious accessibility violation on the changed pages at phone width", a
     [],
     "Data & sources",
   );
-  s.verify();
+  withDialog.verify();
 });
 
 /* ── The edition's stylesheet rules apply to the edition, and only to it ── */

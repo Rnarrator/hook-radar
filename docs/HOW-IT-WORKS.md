@@ -36,7 +36,7 @@ A snapshot is published only if it passes. The collector refuses, exits with an 
 - fewer than 60% as many pools carry a current 24-hour volume as behind the previous snapshot's point, when that point is less than a day old (a sample that shrank to a fraction is not recorded as a fall in volume), or
 - the data does not pass the same checks the page uses to read it.
 
-When a run is refused the site simply keeps the previous snapshot. A green run can still have had one provider stop: a provider stopping fails a run only when it leaves too few pools behind (fewer than 80% of the planned pools requested, or fewer than 80% of the requested pools answered, as above), so a run can pass with a few GeckoTerminal pages missing. The Data & sources dialog and `data/status.json` say which providers answered and which did not.
+When a run is refused the site simply keeps the previous snapshot. A green run can still have had one provider stop: a provider stopping fails a run only when it leaves too few pools behind (fewer than 80% of the planned pools requested, or fewer than 80% of the requested pools answered, as above), so a run can pass with a few GeckoTerminal pages missing. `data/status.json` says which providers answered and which did not (the page's Data & sources dialog, which listed them too, is switched off at the owner's choice; see [PROVIDER-TERMS.md](PROVIDER-TERMS.md)).
 
 ## Being polite to data services
 

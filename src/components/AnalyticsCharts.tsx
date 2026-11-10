@@ -895,7 +895,8 @@ interface EvidenceProps {
     unlistedPools?: number;
   } | null;
   sourceCount: number;
-  openSources: () => void;
+  /** Opens the Data & sources dialog; omitted where the build has none. */
+  openSources?: () => void;
   scopeLabel: string;
   kicker?: string;
   /** Network-level coverage table plate(s). */
@@ -1002,15 +1003,17 @@ export function AnalyticsEvidence({
               : { label: "no current measurements", tone: "unknown" }
           }
           actions={
-            <button
-              type="button"
-              className="control"
-              onClick={openSources}
-              aria-label={`Open sources and coverage details (${formatCount(sourceCount)} ${plural(sourceCount, "source", "sources")})`}
-            >
-              <Info size={14} /> Sources &amp; coverage details
-              <ArrowRight size={14} />
-            </button>
+            openSources ? (
+              <button
+                type="button"
+                className="control"
+                onClick={openSources}
+                aria-label={`Open sources and coverage details (${formatCount(sourceCount)} ${plural(sourceCount, "source", "sources")})`}
+              >
+                <Info size={14} /> Sources &amp; coverage details
+                <ArrowRight size={14} />
+              </button>
+            ) : undefined
           }
         >
           <div className="evidence-col">

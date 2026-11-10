@@ -23,8 +23,15 @@ import {
 import { money } from "../src/model.ts";
 import { fullTimeLabel, timeLabel } from "../src/edition.ts";
 import { GENERATED_AT } from "../tests/fixtures/static-data/generate.mjs";
+import {
+  ownerShowsSources,
+  sourcesDialogDist,
+} from "./edition-sources-build.mjs";
 
 const DIST = resolve(process.env.RADAR_TEST_DIST || "dist");
+// The edition hides the Data & sources dialog (its owner's choice); the tests
+// of what the dialog says run on a build of the same source with the switch on.
+const SOURCES_DIST = await sourcesDialogDist();
 const DATA = resolve("tests/fixtures/static-data/data");
 const generated = Date.parse(GENERATED_AT);
 const MINUTE = 60_000;
@@ -75,10 +82,11 @@ async function site(
     mount = MOUNT,
     data = {},
     storage = null,
+    dist = DIST,
   } = {},
 ) {
   const server = await startStaticEditionServer({
-    distDir: DIST,
+    distDir: dist,
     dataDir: DATA,
     mount,
   });
@@ -442,8 +450,19 @@ test("no age is shown relative to now: every one is a UTC time", async (t) => {
     await noRelativeAges(s.page, name);
     await readsAtSnapshotTime(s.page, name);
   }
-  // The sources dialog too, from Discover and from a network (which opens its
-  // own pricing checks).
+  // And what is shown instead is an absolute time.
+  await s.goto("?project=alpha");
+  await expect(s.page.locator(".project-detail")).toContainText("14:02 UTC");
+  s.verify();
+});
+
+test("with the dialog switched on, Data & sources shows no age relative to now either", async (t) => {
+  // The sources dialog from Discover and from a network (which opens its own
+  // pricing checks), on the build whose owner's switch is on.
+  const s = await site(t, {
+    visitorNow: generated + 5 * HOUR,
+    dist: SOURCES_DIST,
+  });
   for (const [name, query] of [
     ["Data & sources", ""],
     ["Data & sources on a network", "?view=chains&chain_network=base"],
@@ -457,9 +476,6 @@ test("no age is shown relative to now: every one is a UTC time", async (t) => {
     await noRelativeAges(s.page, name);
     await readsAtSnapshotTime(s.page, name);
   }
-  // And what is shown instead is an absolute time.
-  await s.goto("?project=alpha");
-  await expect(s.page.locator(".project-detail")).toContainText("14:02 UTC");
   s.verify();
 });
 
@@ -474,12 +490,12 @@ test("Activity, Refresh and every other control of the live service are gone", a
     ),
     [
       "Discover",
-      "Learn",
       "Analytics",
       "Networks",
       "By use case",
       "Compare",
       "Watchlist",
+      "Learn",
     ],
   );
   await expect(s.page.getByTestId("view-activity")).toHaveCount(0);
@@ -726,7 +742,7 @@ test("with no recorded points the history panel is simply absent", async (t) => 
   }
 });
 
-test("Data & sources names every source with what it did and when, and the footer credits the providers", async (t) => {
+test("with the dialog switched on, Data & sources names every source with what it did and when, and the footer credits the providers", async (t) => {
   // The footer credits the services the snapshot's own source list names
   // (reaudit5:F4). A real run lists the deployment configuration as
   // "frontier-chains" (the fixture's shorter list does not), so the served
@@ -743,7 +759,10 @@ test("Data & sources names every source with what it did and when, and the foote
     ...snapshotFixture,
     sources: [...snapshotFixture.sources, frontierSource],
   };
-  const s = await site(t, { data: { "snapshot.json": served } });
+  const s = await site(t, {
+    data: { "snapshot.json": served },
+    dist: SOURCES_DIST,
+  });
   await s.goto();
   await ready(s.page);
   await s.page.getByTestId("sources-button").click();
@@ -812,7 +831,7 @@ test("Data & sources names every source with what it did and when, and the foote
 });
 
 test("hook and pool counts read as a dated census", async (t) => {
-  const s = await site(t);
+  const s = await site(t, { dist: SOURCES_DIST });
   await s.goto();
   await ready(s.page);
   await expect(s.page.getByTestId("masthead-census")).toHaveText(
@@ -924,15 +943,6 @@ test("every hook or pool count that comes from the census is dated where it is s
     page.locator(".analytics-footprint-panel").getByTestId("census-note"),
   ).toHaveText(when);
 
-  // The Data & sources dialog: the census block, with its own export time.
-  await open("");
-  await page.getByTestId("sources-button").click();
-  await expect(page.getByRole("dialog")).toContainText(when);
-  // G7: "As of", the census block's own time.
-  await expect(page.getByRole("dialog")).toContainText(
-    "As of 27 Oct 2026, 20:11 UTC",
-  );
-
   // On a phone the ledger's column heads are hidden, so the counts keep their
   // date in the summary card and in the ledger's own introduction.
   const phone = await site(t, {
@@ -960,6 +970,23 @@ test("every hook or pool count that comes from the census is dated where it is s
   await expect(
     page.locator(".project-detail .readout", { hasText: "Pools measured" }),
   ).toContainText("Measured in this snapshot");
+  s.verify();
+});
+
+test("with the dialog switched on, its census block is dated, five hours after the snapshot too", async (t) => {
+  const s = await site(t, {
+    visitorNow: generated + 5 * HOUR,
+    dist: SOURCES_DIST,
+  });
+  await s.goto();
+  await expect(s.page.getByTestId("snapshot-line")).toBeVisible({
+    timeout: 30000,
+  });
+  await s.page.getByTestId("sources-button").click();
+  const dialog = s.page.getByRole("dialog");
+  await expect(dialog).toContainText("Census as of 27 Oct 2026");
+  // G7: "As of", the census block's own time.
+  await expect(dialog).toContainText("As of 27 Oct 2026, 20:11 UTC");
   s.verify();
 });
 
@@ -1147,9 +1174,17 @@ test("keyboard: skip link, focus order, the palette and the drawer return focus 
       `${stop.tag} "${stop.label}" shows where focus is`,
     );
   }
-  assert.ok(
+  // The header has no Data & sources pill (the owner's choice, unless
+  // EDITION_SOURCES_DIALOG is switched on), so no stop of the page is one; the
+  // palette button that stays is.
+  assert.equal(
     stops.some((stop) => stop.testid === "sources-button"),
-    "the Data & sources button is in the tab order",
+    ownerShowsSources(),
+    "the Data & sources button is in the tab order only with the dialog",
+  );
+  assert.ok(
+    stops.some((stop) => stop.testid === "palette-button"),
+    "the Jump button is in the tab order",
   );
   // The palette opens, takes the typing, and leaves focus where it was.
   await s.page.getByTestId("palette-button").focus();
@@ -1172,12 +1207,32 @@ test("keyboard: skip link, focus order, the palette and the drawer return focus 
   await s.page.keyboard.press("Escape");
   await expect(s.page.locator(".project-detail")).toHaveCount(0);
   assert.equal((await active()).testid, "project-alpha");
-  // The sources dialog likewise.
+  s.verify();
+});
+
+test("keyboard, with the dialog switched on: the Data & sources button is in the tab order and focus returns to it", async (t) => {
+  const s = await site(t, { dist: SOURCES_DIST });
+  await s.goto();
+  await ready(s.page);
+  const active = () =>
+    s.page.evaluate(
+      () => document.activeElement?.getAttribute?.("data-testid") ?? "",
+    );
+  await s.page.evaluate(() => document.querySelector(".brand")?.focus());
+  const stops = [];
+  for (let i = 0; i < 24; i++) {
+    await s.page.keyboard.press("Tab");
+    stops.push(await active());
+  }
+  assert.ok(
+    stops.includes("sources-button"),
+    "the Data & sources button is in the tab order",
+  );
   await s.page.getByTestId("sources-button").focus();
   await s.page.keyboard.press("Enter");
   await expect(s.page.getByRole("dialog")).toBeVisible();
   await s.page.keyboard.press("Escape");
-  assert.equal((await active()).testid, "sources-button");
+  assert.equal(await active(), "sources-button");
   s.verify();
 });
 
@@ -1406,12 +1461,15 @@ test("no serious accessibility violation on the pages the edition adds to or cha
         `${name} at ${size.width}px`,
       );
     }
-    // The dialog that lists the sources and the census.
-    await s.goto();
-    await ready(s.page, { phone: size === PHONE });
-    await s.page.getByTestId("sources-button").click();
-    await expect(s.page.getByRole("dialog")).toBeVisible();
-    const dialog = await new AxeBuilder({ page: s.page })
+    s.verify();
+    // The dialog that lists the sources and the census, on the build whose
+    // owner's switch is on.
+    const withDialog = await site(t, { size, dist: SOURCES_DIST });
+    await withDialog.goto();
+    await ready(withDialog.page, { phone: size === PHONE });
+    await withDialog.page.getByTestId("sources-button").click();
+    await expect(withDialog.page.getByRole("dialog")).toBeVisible();
+    const dialog = await new AxeBuilder({ page: withDialog.page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
       .analyze();
     assert.deepEqual(
@@ -1423,6 +1481,6 @@ test("no serious accessibility violation on the pages the edition adds to or cha
       [],
       `Data & sources at ${size.width}px`,
     );
-    s.verify();
+    withDialog.verify();
   }
 });
