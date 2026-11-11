@@ -858,7 +858,7 @@ test("state is validated on read and written atomically", async () => {
   }
 });
 
-test("history keeps the newest 672 points, strictly increasing and five minutes apart", () => {
+test("history keeps the newest points up to the cap, strictly increasing and five minutes apart", () => {
   const start = Date.parse("2026-01-01T00:00:00.000Z");
   const point = (index) => ({
     timestamp: start + index * 3 * 3600000,
@@ -866,11 +866,12 @@ test("history keeps the newest 672 points, strictly increasing and five minutes 
     pools: 600,
   });
   let points = [];
-  for (let index = 0; index < 700; index++)
+  const total = HISTORY_MAX_POINTS + 28;
+  for (let index = 0; index < total; index++)
     points = appendHistoryPoint(points, point(index));
   assert.equal(points.length, HISTORY_MAX_POINTS);
-  assert.equal(points[0].value, 700 - HISTORY_MAX_POINTS);
-  assert.equal(points.at(-1).value, 699);
+  assert.equal(points[0].value, total - HISTORY_MAX_POINTS);
+  assert.equal(points.at(-1).value, total - 1);
   assert.ok(
     points.every(
       (entry, index) =>
@@ -880,14 +881,14 @@ test("history keeps the newest 672 points, strictly increasing and five minutes 
   // A second run inside five minutes, or an older one, adds nothing.
   assert.equal(
     appendHistoryPoint(points, {
-      ...point(699),
+      ...point(total - 1),
       timestamp: points.at(-1).timestamp + 299999,
     }),
     points,
   );
   assert.equal(
     appendHistoryPoint(points, {
-      ...point(699),
+      ...point(total - 1),
       timestamp: points.at(-1).timestamp - 1,
     }),
     points,
@@ -895,13 +896,15 @@ test("history keeps the newest 672 points, strictly increasing and five minutes 
   assert.equal(appendHistoryPoint(points, null), points);
   assert.equal(
     appendHistoryPoint(points, {
-      ...point(699),
+      ...point(total - 1),
       timestamp: points.at(-1).timestamp + 300000,
     }).length,
     HISTORY_MAX_POINTS,
   );
   // An over-long stored history is trimmed to the cap.
-  const long = Array.from({ length: 800 }, (_, index) => point(index));
+  const long = Array.from({ length: HISTORY_MAX_POINTS + 128 }, (_, index) =>
+    point(index),
+  );
   assert.equal(appendHistoryPoint(long, null).length, HISTORY_MAX_POINTS);
 });
 

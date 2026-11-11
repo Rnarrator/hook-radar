@@ -1,5 +1,21 @@
 # Hook Radar Auto Snapshot: collect a fresh sample, build the site and publish it
-# to GitHub Pages every three hours. No computer of yours needs to be on.
+# to GitHub Pages about every hour. No computer of yours needs to be on.
+#
+# How the rhythm is kept. GitHub starts scheduled workflows late, or not at all,
+# when it is busy (its documentation says so; in the first day of this repository
+# two of seven slots produced a run). So three triggers an hour are offered, and
+# the first job, "Is a new snapshot due", lets only one of them collect: it
+# reads when the last snapshot was saved and stops the run, successfully and
+# before any data provider is contacted, when that was under 45 minutes ago, or
+# when a run failed under 90 minutes ago (a refused run is not repeated at once).
+# A saved time that cannot be read, or is in the future, means collect.
+# Pressing "Run workflow" always collects (untick "force" to apply the rule).
+#
+# Looking for new pools reads the slow providers, so a scheduled run does it
+# only when the last snapshot was saved in an earlier three-hour block of the
+# UTC day than the present one (the blocks the collector rotates its discovery
+# pages by); every other run measures the pools already known. A run started
+# by hand looks for new pools only when "discover" is ticked.
 #
 # The safeguard that matters most: the deploy job needs the collect job. If the
 # collector refuses to publish (too few pools with a current volume, a provider
@@ -10,10 +26,22 @@ name: Snapshot
 
 on:
   schedule:
-    # Every three hours at minute 17 (UTC). GitHub can start a scheduled run a
-    # few minutes late when it is busy.
-    - cron: "17 */3 * * *"
+    # Three triggers an hour at off-peak minutes (UTC), so that when GitHub drops
+    # or delays one, another may still arrive. The first job decides whether a
+    # trigger collects; most of them end there after a few seconds.
+    - cron: "7 * * * *"
+    - cron: "27 * * * *"
+    - cron: "47 * * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Collect now even if the last snapshot is under 45 minutes old"
+        type: boolean
+        default: true
+      discover:
+        description: "Also look for new pools (about 60 extra requests to the v4.xyz indexer)"
+        type: boolean
+        default: false
 
 # One run at a time. A run that starts while another is going waits for it.
 concurrency:
@@ -24,8 +52,145 @@ permissions:
   contents: read
 
 jobs:
+  # Runs first, costs about fifteen seconds, contacts no data provider. When it says
+  # "not due" the collect and deploy jobs are skipped: the run is green, nothing
+  # is published and the site keeps its snapshot. A skipped collect skips deploy
+  # too (a job that needs a skipped job is skipped), so "deploy needs collect"
+  # still holds exactly as before.
+  gate:
+    name: Is a new snapshot due
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      due: ${{ steps.decide.outputs.due }}
+      max_discovery: ${{ steps.decide.outputs.max_discovery }}
+    steps:
+      # The tip of the branch as it is now, not the commit that started the run:
+      # a run that waited behind another one must see that run's saved state.
+      - name: Check out the saved state
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          sparse-checkout: state
+
+      # The saved time is read as JSON by Node (the same major version as the
+      # collection), not with grep: spaces, line ends and a pool whose name holds
+      # the word updatedAt cannot be mistaken for it. The image's own Node is not
+      # relied on.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Decide
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
+          DISCOVER: ${{ github.event_name == 'workflow_dispatch' && inputs.discover }}
+          MIN_AGE_MINUTES: "45"
+          RETRY_AFTER_FAILURE_MINUTES: "90"
+        run: |
+          set -u
+          now=$(date -u +%s)
+          say() { echo "$*"; echo "$*" >> "$GITHUB_STEP_SUMMARY"; }
+
+          # When the last good run saved its snapshot, in seconds since 1970; empty
+          # when the file or its time cannot be read (missing, null, not a date,
+          # a date that does not exist such as 30 February).
+          last=$(node -e '
+            const { readFileSync } = require("node:fs");
+            try {
+              const text = readFileSync("state/pools.json", "utf8").replace(/^\uFEFF/, "");
+              const stamp = JSON.parse(text).updatedAt;
+              if (typeof stamp !== "string") process.exit(0);
+              if (!/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z$/.test(stamp)) process.exit(0);
+              const ms = Date.parse(stamp);
+              if (!Number.isFinite(ms)) process.exit(0);
+              if (new Date(ms).toISOString().slice(0, 19) !== stamp.slice(0, 19)) process.exit(0);
+              console.log(Math.floor(ms / 1000));
+            } catch {}
+          ' 2>/dev/null) || last=""
+          case "${last}" in
+            ""|*[!0-9]*) last="" ;;
+          esac
+
+          # Looking for new pools reads the slow providers (GeckoTerminal pages and
+          # the v4.xyz indexer). A scheduled run does it when the last snapshot was
+          # saved in an earlier three-hour block than now, so at most once per block (a
+          # run that starts in one block and ends in the next leaves that next block
+          # without a search); the blocks are the ones the collector
+          # rotates its discovery pages by (RUN_SLOT_MS in collector/run.mjs). A
+          # run started by hand does it only when asked. Every other run measures
+          # the pools already known.
+          block=10800
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            if [ "${DISCOVER}" = "true" ]; then discover=true; else discover=false; fi
+          elif [ -n "${last}" ] && [ "${last}" -le "${now}" ] && [ $((last / block)) -eq $((now / block)) ]; then
+            discover=false
+          else
+            discover=true
+          fi
+          if [ "${discover}" = "true" ]; then
+            echo "max_discovery=" >> "$GITHUB_OUTPUT"
+          else
+            echo "max_discovery=0" >> "$GITHUB_OUTPUT"
+          fi
+
+          due() {
+            echo "due=true" >> "$GITHUB_OUTPUT"
+            say "Collecting: $*"
+            if [ "${discover}" = "true" ]; then
+              say "This run also looks for new pools."
+            else
+              say "This run measures the pools already known."
+            fi
+            exit 0
+          }
+          skip() { echo "due=false" >> "$GITHUB_OUTPUT"; say "Nothing to do: $*"; exit 0; }
+
+          [ "${FORCE}" = "true" ] && due "started by hand with force ticked"
+
+          # pools.json is committed before the site is deployed and never on a
+          # failed run, so its time is when the last good snapshot was saved.
+          if [ -z "${last}" ]; then
+            reason="the saved time of the last snapshot cannot be read"
+          elif [ "${last}" -gt "${now}" ]; then
+            reason="the saved time of the last snapshot is in the future"
+          else
+            age=$(( (now - last) / 60 ))
+            [ "${age}" -ge "${MIN_AGE_MINUTES}" ] || skip "the last snapshot is ${age} minutes old (a new one is collected from ${MIN_AGE_MINUTES} minutes)"
+            reason="the last snapshot is ${age} minutes old"
+          fi
+
+          # A refused run is not repeated at once. The runs that stopped here are
+          # successful ones, so only a run that failed or ran out of time counts. If
+          # GitHub cannot be asked, collect.
+          newest=""
+          for outcome in failure timed_out; do
+            when=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/snapshot.yml/runs?status=${outcome}&per_page=1" --jq '.workflow_runs[0].updated_at // empty' 2>/dev/null) || when=""
+            [ -n "${when}" ] || continue
+            seconds=$(date -u -d "${when}" +%s 2>/dev/null) || continue
+            case "${seconds}" in ""|*[!0-9]*) continue ;; esac
+            if [ -z "${newest}" ] || [ "${seconds}" -gt "${newest}" ]; then newest="${seconds}"; fi
+          done
+          # A failure that a later snapshot has followed no longer counts: the
+          # collection works again.
+          if [ -n "${newest}" ] && { [ -z "${last}" ] || [ "${newest}" -gt "${last}" ]; }; then
+            since=$(( (now - newest) / 60 ))
+            if [ "${since}" -ge 0 ] && [ "${since}" -lt "${RETRY_AFTER_FAILURE_MINUTES}" ]; then
+              skip "the last run failed ${since} minutes ago (collecting is tried again from ${RETRY_AFTER_FAILURE_MINUTES} minutes)"
+            fi
+          fi
+          due "${reason}"
+
   collect:
     name: Collect and build
+    needs: gate
+    if: ${{ needs.gate.outputs.due == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -34,6 +199,8 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -88,6 +255,10 @@ jobs:
 
       # Exits non-zero when it will not publish. Nothing below runs then.
       - name: Collect the snapshot
+        env:
+          # Empty: look for new pools too. 0: measure the known pools only. The
+          # collector reads it like --max-discovery and can only lower discovery.
+          COLLECTOR_MAX_DISCOVERY: ${{ needs.gate.outputs.max_discovery }}
         run: node collector/run.mjs
 
       - name: Build the site

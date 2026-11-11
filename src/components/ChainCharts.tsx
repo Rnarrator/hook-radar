@@ -207,7 +207,11 @@ export function ChainCharts({
             />
             <dl className="chain-chart-evidence">
               <div>
-                <dt>Distinct pool hooks</dt>
+                <dt>
+                  {STATIC_EDITION
+                    ? "Hook contracts found (at least)"
+                    : "Distinct pool hooks"}
+                </dt>
                 <dd>
                   {result.inventory.hookCount === null
                     ? "—"

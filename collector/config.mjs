@@ -72,7 +72,12 @@ export const PREVIOUS_POINT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 // Uniswap v4 marks a dynamic-fee pool by setting this bit in the fee it is
 // initialised with (the same value server/census-hook-directory.mjs tests).
 export const DYNAMIC_FEE_FLAG = 0x800000;
-export const HISTORY_MAX_POINTS = 672;
+// One point per successful run, newest last: 2,016 points are 84 days of hourly
+// runs. The page reads the same number (EDITION_HISTORY_MAX_POINTS in
+// src/edition.ts) and the overview check is given it by the collector and the
+// page (shared/analytics-overview.ts keeps 672 for everyone else);
+// tests/edition-history-cap.test.mjs holds the three equal.
+export const HISTORY_MAX_POINTS = 2016;
 export const HISTORY_MIN_SPACING_MS = 300000;
 // A pool's lastSeen moves at most once a day so the committed state stays quiet.
 export const LAST_SEEN_GRANULARITY_MS = 24 * 60 * 60 * 1000;
@@ -183,6 +188,20 @@ export function resolveGaps(env = process.env) {
     frontier: REGISTRY_GAP_MS,
     goldsky: REGISTRY_GAP_MS,
   });
+}
+
+/** How many networks discovery looks at: COLLECTOR_MAX_DISCOVERY is the same
+ * number as the command line's --max-discovery (0 turns discovery off), and like
+ * every environment setting it can only make a run smaller: with no limit given
+ * discovery already looks at every network, so a large number changes nothing.
+ * An empty or invalid value (anything but a whole number from 0 to 999999)
+ * changes nothing, and the answer is then undefined. */
+export function resolveMaxDiscovery(env = process.env) {
+  const text =
+    typeof env.COLLECTOR_MAX_DISCOVERY === "string"
+      ? env.COLLECTOR_MAX_DISCOVERY.trim()
+      : "";
+  return /^[0-9]{1,6}$/.test(text) ? Number(text) : undefined;
 }
 
 /** The longest rate-limit wait: COLLECTOR_RETRY_AFTER_CAP_MS can lower it and

@@ -43,7 +43,31 @@ export const windows: Record<WindowKey, string> = {
   h24: "24H",
 };
 
-export function filterProjects(projects: RadarProject[], filters: Filters) {
+/** A search names a network when it is at least three characters and starts the
+ * network's name or short name: "base", "uni" (Unichain), "x layer", "bnb". Two
+ * letters would match half the list. */
+function namesNetwork(
+  query: string,
+  chains: readonly string[],
+  chainNames: ReadonlyMap<string, string>,
+) {
+  return (
+    query.length >= 3 &&
+    chains.some((chain) =>
+      [chain, chainNames.get(chain)].some((label) =>
+        label?.toLowerCase().startsWith(query),
+      ),
+    )
+  );
+}
+
+/** `chainNames` (short name to display name) lets the search also find the
+ * projects that run on a network; without it only the text of a project matches. */
+export function filterProjects(
+  projects: RadarProject[],
+  filters: Filters,
+  chainNames?: ReadonlyMap<string, string>,
+) {
   const query = filters.search.trim().toLowerCase();
   return projects.filter((project) => {
     if (filters.category !== "all" && project.category !== filters.category)
@@ -88,7 +112,13 @@ export function filterProjects(projects: RadarProject[], filters: Filters) {
         project.description,
         project.category,
         ...deployments.flatMap((d) => [d.address, d.name, d.description]),
-      ].some((value) => value.toLowerCase().includes(query))
+      ].some((value) => value.toLowerCase().includes(query)) ||
+      (chainNames !== undefined &&
+        namesNetwork(
+          query,
+          filters.chain === "all" ? project.chains : [filters.chain],
+          chainNames,
+        ))
     );
   });
 }

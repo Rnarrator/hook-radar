@@ -112,6 +112,15 @@ main .titlebar-copy .masthead-census {
   }
 }
 
+/* "at least" in front of the hook total of the masthead: the census count is a
+   lower bound, so the figure says so in the type of a note, not of a figure. */
+.masthead-figures .masthead-bound {
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: 0;
+  color: var(--ink-muted);
+}
+
 /* "census as of <date>" beside a figure that comes from the census. */
 .census-note {
   display: block;

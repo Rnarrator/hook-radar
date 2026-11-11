@@ -16,6 +16,7 @@ import {
   MAX_RESOLVES_PER_RUN,
   MIN_CURRENT_POOLS,
   resolveGaps,
+  resolveMaxDiscovery,
   resolveRateLimitCap,
   STATE_MAX_POOLS,
   userAgent,
@@ -564,6 +565,9 @@ export async function main(argv = process.argv.slice(2)) {
     console.log(USAGE);
     return 0;
   }
+  // The Snapshot workflow sets COLLECTOR_MAX_DISCOVERY for the runs that only
+  // measure the pools already known. --max-discovery on the command line wins.
+  options.maxDiscovery ??= resolveMaxDiscovery(process.env);
   const outDir = options.out ?? join(ROOT, "public", "data");
   const stateDir =
     options.state ??

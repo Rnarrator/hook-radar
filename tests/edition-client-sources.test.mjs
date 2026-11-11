@@ -168,11 +168,11 @@ test("the footer credit names each provider for what the collector says it did",
 // measured at the snapshot's time. Each page that prints one passes the date on.
 test("each page that prints a census count dates it", () => {
   const dated = [
-    ["components/ChainExplorer.tsx", /censusLabel\(snapshot\.inventory\)/, /<CensusNote label=\{census\}/],
+    ["components/ChainExplorer.tsx", /censusLabel\(snapshot\.inventory, snapshot\.generatedAt\)/, /<CensusNote label=\{census\}/],
     ["components/ChainCharts.tsx", /census = null/, /<CensusNote label=\{census\}/],
     ["components/ChainNetworkDirectory.tsx", /census = null/, /<CensusNote label=\{census\}/],
-    ["components/AnalyticsOverview.tsx", /censusLabel\(envelope\.inventory\)/, /<CensusNote label=\{census\}/],
-    ["components/AnalyticsWorkspace.tsx", /censusLabel\(snapshot\.inventory\)/, /<CensusNote label=\{census\}/],
+    ["components/AnalyticsOverview.tsx", /censusLabel\(\s*envelope\.inventory,\s*envelope\.publication\.generatedAt/, /<CensusNote label=\{census\}/],
+    ["components/AnalyticsWorkspace.tsx", /censusLabel\(snapshot\.inventory, snapshot\.generatedAt\)/, /<CensusNote label=\{census\}/],
   ];
   for (const [file, derived, shown] of dated) {
     const text = source(file);

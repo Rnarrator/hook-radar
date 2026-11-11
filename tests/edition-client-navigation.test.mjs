@@ -103,7 +103,8 @@ test("the Jump list and the header tabs read their order from the same function"
   assert.equal(app.match(/aria-label="Main navigation"/g)?.length, 1);
 });
 
-test("a long-open page asks again only after half an hour away", () => {
+test("a long-open page asks again only after a quarter of an hour away", () => {
+  assert.equal(EDITION_RECHECK_MS, 15 * 60_000);
   const start = Date.parse("2026-10-28T14:10:00.000Z");
   assert.equal(editionCatchUpDue(null, start), false);
   assert.equal(editionCatchUpDue(start, start + EDITION_RECHECK_MS), false);

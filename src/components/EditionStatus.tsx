@@ -133,7 +133,7 @@ export function CensusNote({
 export function EditionCensus({ snapshot }: { snapshot: RadarSnapshot }) {
   const inventory: PoolIndexCoverage | undefined = snapshot.inventory;
   if (!inventory) return null;
-  const label = censusHeading(inventory);
+  const label = censusHeading(inventory, snapshot.generatedAt);
   // Every pool the snapshot holds was measured (a provider answered for it,
   // even with no value): the same number as the Pools card and the coverage
   // figures, not a count of pools with a value.
@@ -160,7 +160,8 @@ export function EditionCensus({ snapshot }: { snapshot: RadarSnapshot }) {
           <strong>{count(inventory.hookPoolCount)}</strong> hook pools found
         </span>
         <span>
-          <strong>{count(inventory.hookCount)}</strong> hook addresses
+          <strong>{count(inventory.hookCount)}</strong> hook addresses (at
+          least; an address used on two networks counts twice)
         </span>
         <span>
           <strong>{count(measuredPools)}</strong>{" "}

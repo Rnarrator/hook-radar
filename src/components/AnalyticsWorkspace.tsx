@@ -121,7 +121,9 @@ export function AnalyticsWorkspace({
     [snapshot, chain, windowKey, now],
   );
   // Indexed pool counts are a dated export, not measured at the snapshot.
-  const census = STATIC_EDITION ? censusLabel(snapshot.inventory) : null;
+  const census = STATIC_EDITION
+    ? censusLabel(snapshot.inventory, snapshot.generatedAt)
+    : null;
   const [metric, setMetricState] = useState<AnalyticsMetric>("volume");
   const [focus, setFocus] = useState<AnalyticsFocus | null>(null);
   const [allProjects, setAllProjects] = useState(false);
@@ -716,6 +718,7 @@ export function AnalyticsWorkspace({
           pools
         </span>
         <span>
+          {STATIC_EDITION && result.inventory.hookCount !== null && "at least "}
           <strong>{formatCount(result.inventory.hookCount)}</strong> hook
           contracts
         </span>
@@ -741,7 +744,9 @@ export function AnalyticsWorkspace({
                 <th scope="col">Network</th>
                 <th scope="col">Hook pools</th>
                 <th scope="col">All v4 pools</th>
-                <th scope="col">Hook contracts</th>
+                <th scope="col">
+                  {STATIC_EDITION ? "Hook contracts (at least)" : "Hook contracts"}
+                </th>
                 <th scope="col">History scanned</th>
                 <th scope="col">Target checked</th>
                 <th scope="col">
@@ -846,6 +851,7 @@ export function AnalyticsWorkspace({
         A reached target verifies the captured block range. It does not mean a
         new chain head has just been checked. Hook contracts are counted per
         network; they are not unique teams or active users.
+        {STATIC_EDITION && " Newer hooks are not included."}
       </p>
     </section>
   );

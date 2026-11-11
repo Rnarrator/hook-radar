@@ -103,7 +103,8 @@ const snapshot = JSON.parse(
 const GENERATED_AT = snapshot.generatedAt;
 const generated = Date.parse(GENERATED_AT);
 // Five hours after the snapshot: an age that reads "5 h ago" on the snapshot
-// line, inside the twelve hours the edition treats as on schedule.
+// line, which is past the four hours after which the edition calls a snapshot
+// old, so the line is in its old-snapshot form.
 const VISITOR_NOW = generated + 5 * HOUR;
 const REAL = Boolean(process.env.RADAR_TEST_DATA);
 

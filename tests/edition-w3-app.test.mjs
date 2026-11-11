@@ -117,8 +117,8 @@ function renderLine(t, visitorNow, props = {}) {
 
 /* ── 1. The early request and the status check ─────────────────────────── */
 
-test("the status check asks every half hour, and a tab that was away that long is due", () => {
-  assert.equal(EDITION_PROBE_MS, 30 * MINUTE);
+test("the status check asks every quarter of an hour, and a tab that was away that long is due", () => {
+  assert.equal(EDITION_PROBE_MS, 15 * MINUTE);
   assert.equal(EDITION_PROBE_MS, EDITION_RECHECK_MS);
   assert.equal(probeDue(null, generated), true, "never checked");
   assert.equal(probeDue(generated, generated + EDITION_PROBE_MS), false);

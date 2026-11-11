@@ -8,6 +8,7 @@ import {
 } from "../shared/analytics-overview";
 import { loadRecordedHistory } from "./edition-data";
 import {
+  EDITION_HISTORY_MAX_POINTS,
   STATIC_EDITION,
   isOlderPublication,
   overviewAnswer,
@@ -179,7 +180,15 @@ export function useAnalyticsOverview(
           await reader.cancel().catch(() => {});
           reader.releaseLock();
         }
-        if (!isAnalyticsOverviewEnvelope(value, query))
+        if (
+          !isAnalyticsOverviewEnvelope(
+            value,
+            query,
+            STATIC_EDITION
+              ? { maxHistoryPoints: EDITION_HISTORY_MAX_POINTS }
+              : undefined,
+          )
+        )
           throw new Error("Analytics returned an unsupported response.");
         const shown = STATIC_EDITION
           ? withRecordedHistory(

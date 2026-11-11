@@ -2,7 +2,7 @@
 
 The collector is what makes the Auto Snapshot edition refresh by itself. It is a
 Node 24 program (`collector/`, ES modules, no new dependencies) that a scheduled
-job runs every few hours. It reads public data services, builds the data files
+job runs about every hour when GitHub starts it. It reads public data services, builds the data files
 the page loads (`public/data/*.json`), and updates a small amount of committed
 state (`state/`). It never runs on a visitor's machine and the site never calls
 a data service.
@@ -21,12 +21,12 @@ which is not part of this repository; the numbers are in
    If a fetch fails the last good copy in `state/registry.json` is used and the
    source is reported as cached with its own time. The directory (projects,
    deployments, chains) is then built by the project's own `createDirectory`.
-2. **Discovery (slow and polite).** For each of the 20 networks with a verified
+2. **Discovery (slow and polite).** The Snapshot workflow starts a run that looks for new pools at most once in each three-hour block of the UTC day (the first collecting run that finds the last snapshot saved in an earlier block); the runs between only measure the pools already known (`COLLECTOR_MAX_DISCOVERY=0`, below). A snapshot made without looking says so: its GeckoTerminal source reads "pages read: 0; this run did not look for new pools" and it has no v4.xyz source. In a run that looks, for each of the 20 networks with a verified
    v4 PoolManager and a GeckoTerminal v4 DEX:
    - one GeckoTerminal top-pools page (`sort=h24_volume_usd_desc`), at least
-     12 s after the previous GeckoTerminal request. The page number rotates each
-     run (1 to 5, from the three-hour slot of the run) so repeated runs walk down
-     the ranking;
+     12 s after the previous GeckoTerminal request. The page number follows the
+     three-hour block of the UTC day the run starts in (1 to 5), so successive
+     discovery runs walk down the ranking;
    - one v4.xyz indexer pool list (`/api/pools?chainId=`), at least 5 s apart,
      for hook identities in bulk;
    - pool ids from the GeckoTerminal page that are in neither `state/pools.json`
@@ -217,6 +217,12 @@ local run says so instead). `COLLECTOR_DS_GAP_MS`, `COLLECTOR_GT_GAP_MS` and
 `COLLECTOR_V4_GAP_MS` can raise a gap; a value below the contract gap is ignored.
 `COLLECTOR_RETRY_AFTER_CAP_MS` can shorten the longest rate-limit wait (below);
 a value above 90,000 is ignored and `0` turns the cooldown off.
+`COLLECTOR_MAX_DISCOVERY` is the same number as `--max-discovery` (`0` turns
+discovery off; the Snapshot workflow sets it to `0` for the runs that only
+measure the pools already known). Like every environment setting it can only
+make a run smaller: an empty or invalid value (anything but a whole number from
+0 to 999,999) changes nothing, a large number is the same as no limit, and
+`--max-discovery` on the command line wins.
 
 ## Limits and gaps (all in `collector/config.mjs`)
 
@@ -234,7 +240,7 @@ a value above 90,000 is ignored and `0` turns the cooldown off.
 | `MIN_CURRENT_POOLS` / `MIN_REQUESTED_SHARE` / `MIN_CURRENT_SHARE` | 500 / 0.8 / 0.9 (500 pools with a current 24h volume; 80% of the planned pools requested and 80% of those answered; 90% of the measured pools current) |
 | `MIN_VOLUME_POOLS_OF_PREVIOUS` / `PREVIOUS_POINT_MAX_AGE_MS` | 0.6 / 24 hours: the pools with a current 24h volume against the previous history point's, compared only while that point is less than a day old |
 | `DISCOVERY_BUDGET_MS` | 900,000: no discovery request starts later than 15 minutes after the run began |
-| `HISTORY_MAX_POINTS` | 672 |
+| `HISTORY_MAX_POINTS` | 2,016: 84 days of hourly runs. `EDITION_HISTORY_MAX_POINTS` in `src/edition.ts` and the overview check carry the same number (`tests/edition-history-cap.test.mjs`) |
 | `STATE_MAX_POOLS` | 12,000 |
 | `REQUEST_TIMEOUT_MS`, `MAX_CONSECUTIVE_FAILURES` | 20 s; five failures in a row stop a provider for the run |
 | `RATE_LIMIT_WAIT_CAP_MS` / `RATE_LIMIT_DEFAULT_WAIT_MS` | 90,000 / 30,000 ms: the longest the one rate-limit cooldown of a run waits, and the wait when a 429 names none (Cloudflare's error 1015 page without a `Retry-After`) |
@@ -400,7 +406,7 @@ only be raised.
 | `hookless.json` | `chain:id` keys of pools the indexer resolved to the zero hook. |
 | `priority.json` | `{ schemaVersion, exportedAt, selection: { snapshotGeneratedAt, rule, counts }, pools: [...] }`, one pool per line: the pools that are always in the plan. A record holds seven fields and no others: `id`, `chain`, `hookAddress`, `tokens`, `name`, `createdAt` and `projectId` (the platform or project it was chosen for, a label: ownership is decided from the exact hook at every snapshot). The state refuses a file with any other field (a provider's address, a key, a figure), a web address in a name or a malformed identity. Written once by `collector/export-priority.mjs`; the collector only reads it. |
 | `census.json` | `{ exportedAt, seed: {...}, inventory }`. `inventory` is the live app's pool census as published, with its original `generatedAt`, per-network `updatedAt` and `headCheckedAt`, plus the time of the export. The one thing removed is each network's `sourceUrl`, the address of the data service the app read that network from (some embed an access key; see "Choices to know about"). The page shows it as "Census as of <date>", never as current. |
-| `history.json` | `{ schemaVersion, points: [{ timestamp, value, pools }] }`, newest last, at most 672 points. |
+| `history.json` | `{ schemaVersion, points: [{ timestamp, value, pools }] }`, newest last, at most 2,016 points. |
 | `registry.json` | Last fetched hooklist (without the decoded flags, which are recomputed from each address), chain registry and Frontier configuration, each with its fetch time. Rewritten only when the data changed. |
 
 `lastSeen` moves at most once a day per pool, so the committed file stays quiet.
@@ -443,13 +449,15 @@ Ethereum) until a pool of either is known.
 One history point is appended per successful run: the tracked 24h volume summed
 over the pools that were current at the snapshot, stamped with the oldest
 measurement behind it. Only the timestamp convention and the constants (points at
-least five minutes apart, the newest 672 kept, newest last) are the live app's.
+least five minutes apart, newest last) are the live app's; the number kept is not (2,016 here, 672 there).
 The rule for which pools count is not. The live app records a point only when
 every pool contributing to the total is current; this edition sums the pools that
 are current at its snapshot and leaves the others out, and the quality gate
 refuses a run in which fewer than 90% of the measured pools are current. A run
 less than five minutes after the previous point adds none. There is no
 per-project history in this edition: every project's `history` is empty.
+
+Before the hourly schedule the cap was 672 (84 days of runs three hours apart). Going back to a collector older than that change needs `state/history.json` cut to its last 672 points first: the older collector refuses a longer file ("history.json has an unexpected shape") and publishes nothing.
 
 ## The seed
 
@@ -596,9 +604,39 @@ test that reaches for a provider fails instead of calling it):
 - `collector-fullsize`: one run at the size the job really has (above), asserting the
   request count, the minimum gap per provider, the equal share of lookups, that no
   seeded pool is dropped, and the dynamic-fee tag of every deployment.
+- `collector-discovery-env`: `COLLECTOR_MAX_DISCOVERY` (a whole number from 0 to
+  999,999; anything else changes nothing; it can only lower discovery; the
+  command line wins), a run with discovery off passing the quality gate on the small
+  recording at its offline minimum of 10 pools (at the default offline minimum of 20 it is
+  refused, with 18 pools that carry a current volume, so switching discovery off lowers no
+  threshold), and a snapshot made without discovery saying so in its sources ("pages read: 0;
+  this run did not look for new pools", no v4.xyz entry) instead of reading as "no new
+  pools exist". On the real run of 11 Nov 2026 (1,378 pools with a current 24h volume, and 2
+  pools newly found by its discovery) a run that only measures the known pools would have
+  had about 1,376 against the minimum of 500. That is an estimate from the published status
+  of that run; the first real run that only measures will confirm it.
 
-`node --test tests/edition-collector-truth.test.mjs` (a few seconds, no
-network) pins what the published data may claim: the strict family rule against the
+`node --test tests/edition-gate.test.mjs` takes the script of the Snapshot
+workflow's first job ("Is a new snapshot due") out of `.github/workflows/snapshot.yml`
+and runs it under bash the way the runner does, with a stand-in clock, a
+stand-in for `gh` (the list of earlier runs) and state files written for each
+case: 44 and 45 minutes, an unreadable, null, empty, impossible or future saved
+time, a state file with Windows line ends, pretty-printed, with the time last or
+with a pool named updatedAt, a run started by hand with and without force and
+discover, a failed run 30 and 100 minutes ago, GitHub not answering, and the
+three-hour block rule for new pools. It needs bash and GNU date (skipped
+without them). It also pins the workflow's shape: three triggers an hour, a
+gate that contacts no data provider, `collect` waiting for it and `deploy`
+needing only `collect`. This is the only proof the gate has had: it has not
+yet run on GitHub. Prove it there with one **Run workflow** with "force" unticked
+right after a publication (the run should end green with "Nothing to do" and no
+Pages deployment) and one with "discover" ticked.
+
+A run that takes more than about 15 minutes from its start to saving its state (one that
+looks for new pools can) makes the next collection wait for the trigger 20 minutes later:
+the rhythm is then 80 minutes, not 60.
+
+`node --test tests/edition-collector-truth.test.mjs` (a few seconds, no network) pins what the published data may claim: the strict family rule against the
 recorded hooklist (and that the live default is unchanged), the pricing rows and
 their statuses, the directory's network names in the snapshot and every overview,
 and no credential-looking URL in the committed seeds, in any file an offline run
@@ -767,7 +805,10 @@ the real runs and the gate.
 
 ## For the workflow and packaging
 
-- The scheduled job runs `node collector/run.mjs` with `GITHUB_REPOSITORY` set,
+- The Snapshot workflow is started three times an hour; its first job ("Is a new
+  snapshot due") lets one start an hour collect and ends the others with a green
+  tick (see `tests/edition-gate.test.mjs`).
+- The job that collects runs `node collector/run.mjs` with `GITHUB_REPOSITORY` set,
   treats exit code 1 as "keep the last good snapshot" (skip the build and deploy
   of new data), and commits `state/` only after a passing run.
 - The edition's `package.json` has these scripts for the collector: `collect`

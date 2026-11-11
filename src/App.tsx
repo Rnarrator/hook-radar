@@ -2063,15 +2063,27 @@ export default function App() {
     });
   }, [watchlist]);
 
+  // A pasted hook address opens "All hooks" (a hook with no project is only
+  // there). That switch is the page's, not the visitor's: when the search goes
+  // back to words, the list goes back to the projects they were browsing.
+  const marketAutoSwitched = useRef(false);
   function updateFilter(key: keyof Filters, value: string) {
+    if (key === "market") marketAutoSwitched.current = false;
+    let market: Filters["market"] | undefined;
+    if (key === "search") {
+      const isAddress = /^0x[a-fA-F0-9]{40}$/.test(value.trim());
+      if (isAddress && filters.market === "projects") {
+        market = "all";
+        marketAutoSwitched.current = true;
+      } else if (!isAddress && marketAutoSwitched.current) {
+        market = filters.market === "all" ? "projects" : undefined;
+        marketAutoSwitched.current = false;
+      }
+    }
     setFilters((previous) => ({
       ...previous,
       [key]: value,
-      ...(key === "search" &&
-      /^0x[a-fA-F0-9]{40}$/.test(value.trim()) &&
-      previous.market === "projects"
-        ? { market: "all" as const }
-        : {}),
+      ...(market ? { market } : {}),
     }));
   }
   function clearSearch() {
@@ -2206,6 +2218,11 @@ export default function App() {
   }
 
   const projects = snapshot?.projects || [];
+  // "base" or "uni" finds the projects that run on that network.
+  const chainNames = useMemo(
+    () => new Map((snapshot?.chains || []).map((c) => [c.slug, c.name])),
+    [snapshot?.chains],
+  );
   const localFiltered = useMemo(
     () =>
       !discoveryView
@@ -2220,6 +2237,7 @@ export default function App() {
             undefined,
             now,
             windowKey,
+            chainNames,
           ).filter(
             (project) => view !== "watchlist" || watchlist.includes(project.id),
           ),
@@ -2232,6 +2250,7 @@ export default function App() {
       now,
       windowKey,
       discoveryView,
+      chainNames,
     ],
   );
   const filtered = useDirectory ? remote?.projects || [] : localFiltered;
@@ -2741,7 +2760,11 @@ export default function App() {
                   onChange={(event) =>
                     updateFilter("search", event.target.value)
                   }
-                  placeholder="Search hooks or addresses"
+                  placeholder={
+                    phoneHeader
+                      ? "Search projects, networks"
+                      : "Search projects, networks or hook addresses"
+                  }
                   aria-label="Search projects"
                   maxLength={300}
                 />
@@ -3797,7 +3820,11 @@ export default function App() {
               {view === "overview" && (
                 <MastheadFigures
                   {...mastheadTotals}
-                  census={STATIC_EDITION ? censusLabel(inventoryFigures) : null}
+                  census={
+                    STATIC_EDITION
+                      ? censusLabel(inventoryFigures, snapshot?.generatedAt)
+                      : null
+                  }
                 />
               )}
             </div>

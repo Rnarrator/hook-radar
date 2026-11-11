@@ -1,6 +1,7 @@
 // The recorded-history chart of the Auto Snapshot edition in a real browser:
-// a point is saved once per collection run (every 3 hours), so runs three hours
-// apart must be drawn as one line, two or more missing runs as a gap, and an exported file
+// a point is saved once per collection run (about every hour), so runs an hour
+// apart (and up to three hours apart) must be drawn as one line, more than three
+// hours without a run as a gap, and an exported file
 // must carry the real export time next to the snapshot's own time. It builds
 // nothing: point it at an edition build (VITE_STATIC_EDITION=1) with
 // RADAR_TEST_DIST and it serves that build next to deterministic TEST data
@@ -48,11 +49,13 @@ const series = (hoursBefore) => ({
     }))
     .sort((a, b) => a.timestamp - b.timestamp),
 });
-// Twelve runs, 3 hours apart: the edition's own cadence.
+// Twelve runs, an hour apart: the edition's own cadence. The same twelve runs
+// three hours apart are the longest spacing still drawn as one line.
+const EVERY_HOUR = series(Array.from({ length: 12 }, (_, index) => index));
 const EVERY_3H = series(Array.from({ length: 12 }, (_, index) => index * 3));
-// Four runs, then nothing for 9 hours (two consecutive runs missing, which is
-// what it takes to draw a gap), then six runs.
-const WITH_HOLE = series([33, 30, 27, 24, 15, 12, 9, 6, 3, 0]);
+// Four runs, then nothing for 6 hours (more than the three hours after which a
+// stretch is drawn as a gap), then seven runs.
+const WITH_HOLE = series([15, 14, 13, 12, 6, 5, 4, 3, 2, 1, 0]);
 
 let browser;
 before(async () => {
@@ -137,42 +140,45 @@ for (const [name, size] of [
   ["1440 px", DESKTOP],
   ["390 px", PHONE],
 ]) {
-  test(`Analytics draws runs three hours apart as one line with no gap, at ${name}`, async (t) => {
-    const s = await site(t, { size, history: EVERY_3H });
-    await s.goto("?view=analytics");
-    const panel = s.page.locator("#analytics-history");
-    await expect(panel).toContainText("12 of 12 observations", {
-      timeout: 30000,
-    });
-    await expect(panel.locator("svg path.chart-line")).toHaveCount(1);
-    await expect(panel.locator("svg path.chart-area")).toHaveCount(1);
-    await expect(panel.locator(".chart-gap-band")).toHaveCount(0);
-    await expect(panel.locator(".history-legend-gap")).toHaveCount(0);
-    assert.doesNotMatch(await panel.innerText(), /\bgaps? over\b/);
-    await noSideways(s.page, name);
-    s.verify();
+  test(`Analytics draws runs an hour apart, and three hours apart, as one line with no gap, at ${name}`, async (t) => {
+    for (const history of [EVERY_HOUR, EVERY_3H]) {
+      const s = await site(t, { size, history });
+      await s.goto("?view=analytics");
+      const panel = s.page.locator("#analytics-history");
+      await expect(panel).toContainText("12 of 12 observations", {
+        timeout: 30000,
+      });
+      await expect(panel.locator("svg path.chart-line")).toHaveCount(1);
+      await expect(panel.locator("svg path.chart-area")).toHaveCount(1);
+      await expect(panel.locator(".chart-gap-band")).toHaveCount(0);
+      await expect(panel.locator(".history-legend-gap")).toHaveCount(0);
+      assert.doesNotMatch(await panel.innerText(), /\bgaps? over\b/);
+      await noSideways(s.page, name);
+      s.verify();
+    }
   });
 
-  test(`Analytics marks one missing stretch as a single gap over 7h, at ${name}`, async (t) => {
+  test(`Analytics marks one missing stretch as a single gap over 3h, at ${name}`, async (t) => {
     const s = await site(t, { size, history: WITH_HOLE });
     await s.goto("?view=analytics");
     const panel = s.page.locator("#analytics-history");
-    await expect(panel).toContainText("10 of 10 observations", {
+    await expect(panel).toContainText("11 of 11 observations", {
       timeout: 30000,
     });
     // Two stretches of runs, each a line, with the hole between them.
     await expect(panel.locator("svg path.chart-line")).toHaveCount(2);
     await expect(panel.locator(".chart-gap-band")).toHaveCount(1);
     await expect(panel.locator(".history-legend")).toContainText(
-      "1 gap over 7h",
+      "1 gap over 3h",
     );
     assert.doesNotMatch(await panel.innerText(), /over 1h/);
     await noSideways(s.page, name);
     s.verify();
   });
 
-  test(`Discover's History tab draws the same runs as one line, and a hole as a gap over 7 hours, at ${name}`, async (t) => {
+  test(`Discover's History tab draws the same runs as one line, and a hole as a gap over 3 hours, at ${name}`, async (t) => {
     for (const [history, gaps] of [
+      [EVERY_HOUR, 0],
       [EVERY_3H, 0],
       [WITH_HOLE, 1],
     ]) {
@@ -187,7 +193,7 @@ for (const [name, size] of [
       );
       if (gaps) {
         await expect(chart.locator(".observation-gap-note")).toHaveText(
-          "Shaded spans have no recorded observations for over 7 hours.",
+          "Shaded spans have no recorded observations for over 3 hours.",
         );
       } else {
         await expect(chart.locator(".observation-gap-note")).toHaveCount(0);
@@ -211,6 +217,39 @@ for (const [name, size] of [
     }
   });
 }
+
+test("a full-length history, 2,016 points (84 days of hourly runs), is read and drawn as one line, and 2,017 points are not a history file", async (t) => {
+  const full = series(Array.from({ length: 2016 }, (_, index) => index));
+  for (const [name, size] of [
+    ["1440 px", DESKTOP],
+    ["390 px", PHONE],
+  ]) {
+    const s = await site(t, { size, history: full });
+    await s.goto("?view=analytics");
+    const panel = s.page.locator("#analytics-history");
+    // All 2,016 points are read; the chart opens on the last 7 days (168 runs).
+    await expect(panel).toContainText("168 of 2,016 observations", {
+      timeout: 30000,
+    });
+    await panel.getByRole("button", { name: "All history" }).click();
+    await expect(panel).toContainText("2,016 of 2,016 observations");
+    await expect(panel.locator("svg path.chart-line")).toHaveCount(1);
+    await expect(panel.locator(".chart-gap-band")).toHaveCount(0);
+    await expect(panel.locator(".history-legend-gap")).toHaveCount(0);
+    await noSideways(s.page, name);
+    s.verify();
+  }
+  // One point more than the cap is not a history file: the chart is not drawn,
+  // and nothing else on the page breaks.
+  const over = series(Array.from({ length: 2017 }, (_, index) => index));
+  const s = await site(t, { history: over });
+  await s.goto("?view=analytics");
+  await expect(s.page.getByTestId("snapshot-line")).toBeVisible({
+    timeout: 30000,
+  });
+  await expect(s.page.locator("#analytics-history .chart-line")).toHaveCount(0);
+  s.verify();
+});
 
 test("Discover's History tab says what is recorded without waiting for live data", async (t) => {
   const cases = [

@@ -120,6 +120,7 @@ export function selectProjects(
   prepared?: ProjectPoolScope,
   now = evaluationNow(),
   window: WindowKey = "h24",
+  chainNames?: ReadonlyMap<string, string>,
 ) {
   const needsPoolScope =
     filters.chain !== "all" ||
@@ -149,7 +150,7 @@ export function selectProjects(
         : filters.market === "observed"
           ? projects.filter((project) => scope?.withMarketData.has(project.id))
           : projects;
-  return filterProjects(candidates, filters).map((project) => {
+  return filterProjects(candidates, filters, chainNames).map((project) => {
     if (filters.chain === "all") return project;
     if (project.entityType === "platform")
       return { ...project, chains: [filters.chain] };

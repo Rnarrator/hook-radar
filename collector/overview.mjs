@@ -4,6 +4,7 @@ import {
 } from "../server/analytics-overview.mjs";
 import { isAnalyticsOverviewEnvelope } from "../shared/analytics-overview.ts";
 import { publishedInventory } from "./assemble.mjs";
+import { HISTORY_MAX_POINTS } from "./config.mjs";
 
 export const overviewFileName = ({ chain, window }) =>
   `overview-${chain}-${window}.json`;
@@ -30,9 +31,16 @@ export async function buildOverviewFiles(snapshot, nowMs) {
     const envelope = await analyticsOverviewAsync(named, query, {
       now: nowMs,
       contributions: true,
+      maxHistoryPoints: HISTORY_MAX_POINTS,
     });
-    const text = analyticsOverviewJson(envelope);
-    if (!isAnalyticsOverviewEnvelope(JSON.parse(text), query))
+    const text = analyticsOverviewJson(envelope, {
+      maxHistoryPoints: HISTORY_MAX_POINTS,
+    });
+    if (
+      !isAnalyticsOverviewEnvelope(JSON.parse(text), query, {
+        maxHistoryPoints: HISTORY_MAX_POINTS,
+      })
+    )
       throw new TypeError(
         `The ${overviewFileName(query)} overview did not survive validation.`,
       );

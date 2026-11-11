@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import {
+  EDITION_HISTORY_MAX_POINTS,
   historyUpTo,
   parseHistory,
   parseRunTimes,
@@ -88,7 +89,7 @@ test("a history file that is not one is refused rather than guessed at", () => {
     },
     {
       schemaVersion: 1,
-      points: Array.from({ length: 673 }, (_, index) => ({
+      points: Array.from({ length: EDITION_HISTORY_MAX_POINTS + 1 }, (_, index) => ({
         timestamp: 1_700_000_000_000 + index,
         value: 1,
       })),

@@ -34,7 +34,7 @@ The reply should contain `Content-Encoding: gzip` (or `br`). If it does not, loo
 
 ## Limits to check
 
-- Cloudflare's free plan limits the number of builds per month. At eight refreshes a day the workflow causes about 240 a month. Check the current limit on Cloudflare's pricing page.
+- Cloudflare's free plan limits the number of builds per month. The workflow refreshes the `site` branch about every hour, up to 24 times a day and about 720 times a month. Check the current limit on Cloudflare's pricing page.
 - Cloudflare Pages allows 25 MiB per file; `snapshot.json` is about 10 MB today and could reach about 21 MB if far more pools get priced, so watch its size.
 - Cloudflare may treat commits by `github-actions[bot]` like any other. The project has not tested it.
 

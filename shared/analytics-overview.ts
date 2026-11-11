@@ -14,6 +14,10 @@ import type { AnalyticsContributions } from "./analytics-contributions.ts";
 export { analyticsOverviewAt } from "./analytics-contributions.ts";
 
 export const ANALYTICS_OVERVIEW_MAX_BYTES = 2 * 1024 * 1024;
+/** The most recorded points an overview carries: what the live service keeps.
+ * A caller that keeps a longer history (the static edition) says so with
+ * `maxHistoryPoints`; nobody else is affected. */
+export const ANALYTICS_OVERVIEW_HISTORY_POINTS = 672;
 export const ANALYTICS_OVERVIEW_PROFILE = Object.freeze({
   profile: "analytics-overview" as const,
   version: 1 as const,
@@ -254,7 +258,15 @@ function totals(v: unknown, window: WindowKey): v is OverviewTotals {
 export function isAnalyticsOverviewEnvelope(
   value: unknown,
   expected?: AnalyticsOverviewQuery,
+  options: { maxHistoryPoints?: number } = {},
 ): value is AnalyticsOverviewEnvelope {
+  // Anything but a whole number of at least one is the default, never a way to
+  // switch the check off.
+  const maxHistoryPoints =
+    Number.isSafeInteger(options.maxHistoryPoints) &&
+    (options.maxHistoryPoints as number) >= 1
+      ? (options.maxHistoryPoints as number)
+      : ANALYTICS_OVERVIEW_HISTORY_POINTS;
   try {
     if (
       !safeTree(value) ||
@@ -345,7 +357,7 @@ export function isAnalyticsOverviewEnvelope(
       !keys(value.history, ["available", "points"]) ||
       value.history.available !== (value.request.chain === "all") ||
       !Array.isArray(value.history.points) ||
-      value.history.points.length > 672 ||
+      value.history.points.length > maxHistoryPoints ||
       (!value.history.available && value.history.points.length > 0) ||
       !value.history.points.every(
         (p) =>

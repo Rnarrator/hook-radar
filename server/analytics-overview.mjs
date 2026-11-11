@@ -193,13 +193,19 @@ export async function analyticsOverviewAsync(snapshot, params, runtime = {}) {
     runtime,
   );
   runtime.signal?.throwIfAborted();
-  if (!isAnalyticsOverviewEnvelope(result, request))
+  // runtime.maxHistoryPoints is for a caller that keeps a longer history than the
+  // live service (the static edition's collector); left out, the default stands.
+  if (
+    !isAnalyticsOverviewEnvelope(result, request, {
+      maxHistoryPoints: runtime.maxHistoryPoints,
+    })
+  )
     throw new TypeError("The published analytics overview is invalid.");
   return result;
 }
 
-export function analyticsOverviewJson(envelope) {
-  if (!isAnalyticsOverviewEnvelope(envelope))
+export function analyticsOverviewJson(envelope, options = {}) {
+  if (!isAnalyticsOverviewEnvelope(envelope, undefined, options))
     throw new TypeError("A validated analytics overview is required.");
   const text = JSON.stringify(envelope);
   if (Buffer.byteLength(text) > ANALYTICS_OVERVIEW_MAX_BYTES)

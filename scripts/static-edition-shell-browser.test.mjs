@@ -556,7 +556,7 @@ test("a status file that names an older run, the same run or nothing readable of
   s.verify();
 });
 
-test("a newer run is offered with a Reload button after half an hour, and nothing on screen changes until it is pressed", async (t) => {
+test("a newer run is offered with a Reload button after a quarter of an hour, and nothing on screen changes until it is pressed", async (t) => {
   const s = await site(t, { clock: "install" });
   await s.goto("");
   await s.ready();
@@ -565,11 +565,11 @@ test("a newer run is offered with a Reload button after half an hour, and nothin
   const newer = shiftTimes(snapshotText, 3 * HOUR);
   s.server.setData("snapshot.json", newer);
   s.server.setData("status.json", shiftTimes(read("status.json"), 3 * HOUR));
-  // Under half an hour nothing is asked.
-  await s.page.clock.fastForward(20 * MINUTE);
+  // Under a quarter of an hour nothing is asked.
+  await s.page.clock.fastForward(10 * MINUTE);
   await s.page.waitForTimeout(300);
   assert.equal(s.asks("status.json").length, 0);
-  await s.page.clock.fastForward(11 * MINUTE);
+  await s.page.clock.fastForward(6 * MINUTE);
   const reload = s.page.getByTestId("snapshot-reload");
   await expect(reload).toBeVisible({ timeout: 30000 });
   await expect(s.page.getByTestId("snapshot-line")).toContainText(
@@ -590,7 +590,7 @@ test("a newer run is offered with a Reload button after half an hour, and nothin
   s.verify();
 });
 
-test("a visitor who comes back after half an hour is checked at once, by the small status file only", async (t) => {
+test("a visitor who comes back after a quarter of an hour or more is checked at once, by the small status file only", async (t) => {
   const s = await site(t, { clock: "install" });
   await s.goto("");
   await s.ready();

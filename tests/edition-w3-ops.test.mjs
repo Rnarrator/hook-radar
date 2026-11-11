@@ -458,7 +458,10 @@ test("the Vercel guide sets the production branch where Vercel has it, after the
   );
   assert.match(steps, /takes `main` as its production branch/);
   assert.match(steps, /Create Deployment/);
-  assert.match(steps, /up to three hours/);
+  assert.match(
+    steps,
+    /up to about an hour later \(longer if GitHub starts it late\)/,
+  );
   assert.match(text, /written from Vercel's documentation/);
 });
 

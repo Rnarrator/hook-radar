@@ -98,7 +98,9 @@ export function MarketCoverage({
   // "Checked" means a source responded, so a pool without a check result was
   // either outside the sample (not asked) or asked and never answered: the
   // label has to be true of both.
-  const census = STATIC_EDITION ? censusLabel(snapshot.inventory) : null;
+  const census = STATIC_EDITION
+    ? censusLabel(snapshot.inventory, snapshot.generatedAt)
+    : null;
   // "Checked" means a source responded, so a network counts only when one did.
   const checkedNetworks = coverage.networks.filter(
     (network) => network.checkedPools > 0,

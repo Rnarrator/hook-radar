@@ -196,6 +196,7 @@ test("the names the guide gives are the names the workflow has", () => {
   const workflow = snapshotYml();
   for (const name of [
     "Snapshot",
+    "Is a new snapshot due",
     "Collect and build",
     "Publish to GitHub Pages",
     "Check that GitHub Pages is switched on",
@@ -208,13 +209,18 @@ test("the names the guide gives are the names the workflow has", () => {
     );
   assert.match(text, /"Collect and build", then "Publish to GitHub Pages"/);
   assert.match(text, /"Check that GitHub Pages is switched on"/);
-  assert.match(text, /both jobs/);
-  assert.doesNotMatch(text, /both steps/);
+  assert.match(
+    text,
+    /all three jobs \("Is a new snapshot due", "Collect and build", then "Publish to GitHub Pages"\)/,
+  );
+  assert.doesNotMatch(text, /both jobs|both steps/);
   // The numbers the guide quotes.
   assert.match(workflow, /timeout-minutes: 45/);
   assert.match(text, /exceeds 45 minutes/);
-  assert.match(workflow, /cron: "17 \*\/3 \* \* \*"/);
-  assert.match(text, /17 minutes past 00:00, 03:00, 06:00/);
+  for (const minute of [7, 27, 47])
+    assert.match(workflow, new RegExp(`cron: "${minute} \\* \\* \\* \\*"`));
+  assert.match(text, /\(at 7, 27 and 47 minutes past, UTC\)/);
+  assert.doesNotMatch(text, /17 minutes past 00:00, 03:00, 06:00/);
 });
 
 test("the guide says what the first run needs and how often the job really runs", () => {
@@ -223,8 +229,15 @@ test("the guide says what the first run needs and how often the job really runs"
     text,
     /The first run takes about 15 minutes, because the collector pauses between requests/,
   );
-  assert.match(text, /set to run about every three hours/);
-  assert.match(text, /GitHub may delay or skip a run when it is busy\./);
+  assert.match(
+    text,
+    /GitHub is asked to start the Snapshot job three times an hour/,
+  );
+  assert.match(text, /So the site is refreshed about every hour/);
+  assert.match(
+    text,
+    /GitHub may start a scheduled run late, or not at all, when it is busy, so the site can be older than an hour/,
+  );
   assert.doesNotMatch(text, /a few minutes late/);
   // A red cross on the first run is explained, not left as a surprise.
   assert.match(
@@ -240,7 +253,7 @@ test("the v4.xyz note comes before Pages is switched on, because from then on th
   const run = list.find((item) => /Run the Snapshot job/.test(item.title));
   assert.match(
     pages.text,
-    /^5\. \*\*Switch on GitHub Pages\.\*\* One note first: once Pages is on, the job also starts by itself within three hours, not only when you press Run workflow, and it asks the v4\.xyz indexer, whose two paths are not a documented public API\. See \[docs\/PROVIDER-TERMS\.md\]\(docs\/PROVIDER-TERMS\.md\) item 1\. If you want to wait for the v4\.xyz maintainers' answer, make the one-line edit there before you switch Pages on\. Then, in the repository on github\.com, open Settings, then Pages\./,
+    /^5\. \*\*Switch on GitHub Pages\.\*\* One note first: once Pages is on, the job also starts by itself within the hour, not only when you press Run workflow, and it asks the v4\.xyz indexer, whose two paths are not a documented public API\. See \[docs\/PROVIDER-TERMS\.md\]\(docs\/PROVIDER-TERMS\.md\) item 1\. If you want to wait for the v4\.xyz maintainers' answer, make the one-line edit there before you switch Pages on\. Then, in the repository on github\.com, open Settings, then Pages\./,
   );
   // The note is not left for the step after Pages: by then a scheduled run may
   // already have asked v4.xyz.
@@ -268,7 +281,7 @@ test("the v4.xyz note comes before Pages is switched on, because from then on th
   // The provider terms say the same thing at the same time: before Pages.
   assert.match(
     item,
-    /Make it before you switch on GitHub Pages, because once Pages is on the job also starts by itself within three hours, not only when you press Run workflow\./,
+    /Make it before you switch on GitHub Pages, because once Pages is on the job also starts by itself within the hour, not only when you press Run workflow\./,
   );
   assert.ok(
     item.indexOf("Make it before you switch on GitHub Pages") <
@@ -303,7 +316,7 @@ test("the v4.xyz note comes before Pages is switched on, because from then on th
     ["deploy-ftp.yml", ftpYml()],
   ]) {
     const collect = text.match(
-      /- name: Collect the snapshot\n(?:\s+#.*\n)*\s+run: (.+)\n/,
+      /- name: Collect the snapshot\n(?:\s+#.*\n|\s+env:\n|\s+COLLECTOR_MAX_DISCOVERY: .*\n)*\s+run: (.+)\n/,
     );
     assert.ok(collect, `${name} has the Collect step`);
     assert.match(
@@ -391,7 +404,9 @@ test("the one-line v4.xyz edit can be made on both workflows and undone, and no 
     );
     assert.ok(
       head !== -1 &&
-        after.slice(head + 1, changed[0]).every((l) => /^\s+#/.test(l)),
+        after
+          .slice(head + 1, changed[0])
+          .every((l) => /^\s+(?:#|env:|COLLECTOR_MAX_DISCOVERY:)/.test(l)),
       `${name}: the changed line belongs to the Collect step`,
     );
     // The way back restores the file, byte for byte.
@@ -590,7 +605,7 @@ test("the guide tells a first-time GitHub Desktop user to pull before pushing", 
   const after = section(start(), "What happens after that");
   assert.match(
     after,
-    /Because the job saves its memory to the repository every few hours, GitHub Desktop will often show Fetch origin or Pull origin\. If you change a file on your computer, press Pull origin first, then Push origin\./,
+    /Because the job saves its memory to the repository about every hour, GitHub Desktop will often show Fetch origin or Pull origin\. If you change a file on your computer, press Pull origin first, then Push origin\./,
   );
   // It sits beside the bullet that says the job commits state/.
   assert.ok(
@@ -723,23 +738,66 @@ test("the design contract does not promise a byte-identical live build", (t) => 
   assert.doesNotMatch(design, /every code path is exactly today's/);
 });
 
-test("the documents promise the schedule in the same words: about every three hours", () => {
-  // The start guide says "about ... GitHub may delay or skip a run when it is
-  // busy"; the GitHub Pages guide used to promise "every three hours" flat.
+test("the documents promise the schedule in the same words: about every hour, when GitHub starts the run", () => {
+  // The start guide says the site is refreshed about every hour and that GitHub
+  // may start a run late or not at all; the GitHub Pages guide says the same
+  // in short. No guide promises the old three-hour rhythm, and none promises an
+  // hour flat.
   const guide = need("HOSTING-GITHUB-PAGES.md");
-  for (const [name, body] of [
+  assert.match(
+    guide,
+    /After that GitHub starts it by itself three times an hour and it collects about once an hour\. GitHub may start a run late, or not at all, when it is busy\./,
+  );
+  const documents = [
     ["the start guide", start()],
     ["the GitHub Pages guide", guide],
     ["the provider terms", need("PROVIDER-TERMS.md")],
-  ])
-    for (const match of body.matchAll(/every three hours/gi))
+    ["how it works", need("HOW-IT-WORKS.md")],
+    ["the collector notes", need("COLLECTOR-NOTES.md")],
+    ["the Vercel guide", need("HOSTING-VERCEL.md")],
+  ];
+  for (const [name, body] of documents) {
+    assert.doesNotMatch(
+      body,
+      /every (?:three|3) hours|within three hours|up to three hours/i,
+      `${name} still promises the old rhythm`,
+    );
+    for (const match of body.matchAll(/every hour/gi))
       assert.equal(
         body.slice(match.index - 6, match.index),
         "about ",
-        `${name}: "${body.slice(match.index - 20, match.index + 20)}"`,
+        `${name}: "${body.slice(match.index - 24, match.index + 24)}" promises an hour without "about"`,
       );
-  assert.match(guide, /it runs by itself about every three hours\./);
-  assert.match(snapshotYml(), /cron: "17 \*\/3 \* \* \*"/);
+  }
+  const workflow = snapshotYml();
+  for (const minute of [7, 27, 47])
+    assert.match(workflow, new RegExp(`cron: "${minute} \\* \\* \\* \\*"`));
+  assert.doesNotMatch(workflow, /cron: "17 \*\/3/);
+});
+
+test("the start guide says state/ is the job's, and what to upload by hand", () => {
+  const after = section(start(), "What happens after that");
+  assert.match(
+    after,
+    /\*\*Updating the repository by hand\.\*\* The `state` folder is written by the job, not by you\. When you upload a newer version of this folder, upload only `state\/priority\.json` from it\. Never replace `state\/pools\.json`, `state\/history\.json`, `state\/hookless\.json` or `state\/registry\.json`/,
+  );
+  // The four files the sentence forbids are the ones the collector rewrites after
+  // every run, and the one it allows is never written by the collector.
+  const collector = read("collector/state.mjs");
+  const writer = collector.slice(
+    collector.indexOf("export async function writeState"),
+  );
+  for (const file of [
+    "pools.json",
+    "history.json",
+    "hookless.json",
+    "registry.json",
+  ])
+    assert.ok(writer.includes(file), `the collector writes ${file}`);
+  assert.ok(
+    !writer.includes("priority.json"),
+    "the collector never writes priority.json",
+  );
 });
 
 test("the design contract says Vercel and Cloudflare Pages serve the site branch, not a build of main", (t) => {

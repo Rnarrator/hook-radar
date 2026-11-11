@@ -835,11 +835,11 @@ test("hook and pool counts read as a dated census", async (t) => {
   await s.goto();
   await ready(s.page);
   await expect(s.page.getByTestId("masthead-census")).toHaveText(
-    "Hooks, pools and networks: census as of 27 Oct 2026",
+    `Hooks, pools and networks: census as of 27 Oct 2026, the day before this snapshot. A hook used on two networks is counted on both; newer hooks are not included.`,
   );
   const figures = s.page.locator(".masthead-figures");
   await expect(figures).toContainText(
-    String(snapshotFixture.inventory.hookCount),
+    `at least ${snapshotFixture.inventory.hookCount}`,
   );
   await expect(figures).toContainText(
     String(snapshotFixture.inventory.hookPoolCount),
@@ -857,7 +857,7 @@ test("every hook or pool count that comes from the census is dated where it is s
   // snapshot (let alone at the visitor's clock) would be visibly wrong.
   const s = await site(t, { visitorNow: generated + 5 * HOUR });
   const { page } = s;
-  const when = "Census as of 27 Oct 2026";
+  const when = "Census as of 27 Oct 2026, the day before this snapshot";
   const notes = page.getByTestId("census-note");
   const open = async (query) => {
     await s.goto(query);
@@ -884,13 +884,13 @@ test("every hook or pool count that comes from the census is dated where it is s
     page.locator("#chains-networks").getByTestId("census-note"),
   ).toHaveText(when);
   await expect(page.locator("#chains-networks")).toContainText(
-    "Hook pool counts are from the census as of 27 Oct 2026.",
+    "Hook pool counts are from the census as of 27 Oct 2026, the day before this snapshot.",
   );
   await expect(notes).toHaveCount(4);
   // The comparison by hook pools says whose date its shares are.
   await page.getByRole("button", { name: "Hook pools", exact: true }).click();
   await expect(page.locator(".chain-atlas .chain-chart-note")).toContainText(
-    "Share of indexed hook pools, census as of 27 Oct 2026.",
+    "Share of indexed hook pools, census as of 27 Oct 2026, the day before this snapshot.",
   );
 
   // One network: the same, and the coverage disclosure names when it was counted.
@@ -902,11 +902,11 @@ test("every hook or pool count that comes from the census is dated where it is s
     page.locator(".chain-composition-panel").getByTestId("census-note"),
   ).toHaveText(when);
   await expect(page.locator(".chains-market-scope")).toContainText(
-    "Indexed hook and pool counts are from the census as of 27 Oct 2026",
+    "Indexed hook and pool counts are from the census as of 27 Oct 2026, the day before this snapshot; they also include pools without current prices. A hook used on two networks is counted on both; newer hooks are not included.",
   );
   await page.locator(".chains-index-details summary").click();
   await expect(page.locator(".chains-index-body")).toContainText(
-    "Census as of 27 Oct 2026 · counted 27 Oct 2026, 20:11 UTC",
+    "Census as of 27 Oct 2026, the day before this snapshot · counted 27 Oct 2026, 20:11 UTC",
   );
   await expect(page.locator(".chains-index-head")).toHaveText(
     /^Chain head checked 27 Oct, 20:10 UTC$/,
@@ -925,7 +925,7 @@ test("every hook or pool count that comes from the census is dated where it is s
     await open(query);
     const line = page.locator(".evidence-inventory");
     await expect(line).toContainText(
-      /hook pools indexed onchain across \d+ networks? \(\d+ scanned to their recorded target\), census as of 27 Oct 2026\./,
+      /hook pools indexed onchain across \d+ networks? \(\d+ scanned to their recorded target\), census as of 27 Oct 2026, the day before this snapshot\./,
     );
     await expect(line).not.toContainText("caught up");
   }
@@ -936,7 +936,7 @@ test("every hook or pool count that comes from the census is dated where it is s
       .getByTestId("census-note"),
   ).toHaveText(when);
   await expect(page.locator("#analytics-overview-coverage-note")).toContainText(
-    `${hookPools} indexed hook pools in this scope (census as of 27 Oct 2026).`,
+    `${hookPools} indexed hook pools in this scope (census as of 27 Oct 2026, the day before this snapshot).`,
   );
   await open("?view=analytics&analytics_chain=base&window=h1");
   await expect(
@@ -958,7 +958,7 @@ test("every hook or pool count that comes from the census is dated where it is s
   ).toBeVisible();
   await expect(
     phone.page.getByText(
-      "Hook pool counts are from the census as of 27 Oct 2026.",
+      "Hook pool counts are from the census as of 27 Oct 2026, the day before this snapshot.",
     ),
   ).toBeVisible();
   phone.verify();
@@ -1277,6 +1277,45 @@ for (const mount of subpathCases)
     assert.ok(new URL(s.page.url()).pathname.startsWith(mount));
     s.verify();
   });
+
+test("Discover's search finds projects by network, and the All hooks switch a pasted address makes ends with the address", async (t) => {
+  const s = await site(t);
+  const { page } = s;
+  await s.goto();
+  await ready(page);
+  const search = page.getByTestId("search-input");
+  const scope = page.getByRole("group", { name: "Directory coverage" });
+  const scopeButton = (name) => scope.getByRole("button", { name, exact: true });
+  await expect(search).toHaveAttribute(
+    "placeholder",
+    "Search projects, networks or hook addresses",
+  );
+
+  // A network's name lists the projects that run on it, not only the one whose
+  // text mentions it.
+  await search.fill("base");
+  for (const id of ["alpha", "beta", "gamma"])
+    await expect(page.getByTestId(`project-${id}`)).toBeVisible();
+  await expect(page.locator("tbody tr")).toHaveCount(3);
+  await search.fill("robin");
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.getByTestId("project-frontier")).toBeVisible();
+
+  // A pasted address opens All hooks; going back to words returns to Projects.
+  const address = "0x33333333333333333333333333333333333310c0";
+  await search.fill(address);
+  await expect(scopeButton("All hooks")).toHaveAttribute("aria-pressed", "true");
+  await search.fill("frontier");
+  await expect(scopeButton("Projects")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("project-frontier")).toBeVisible();
+
+  // A scope the visitor chose themselves stays where they put it.
+  await search.fill(address);
+  await scopeButton("All hooks").click();
+  await search.fill("frontier");
+  await expect(scopeButton("All hooks")).toHaveAttribute("aria-pressed", "true");
+  s.verify();
+});
 
 test("the controls of every view work without ever asking a service", async (t) => {
   const s = await site(t, {

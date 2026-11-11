@@ -256,7 +256,9 @@ export function AnalyticsOverview({
     ? inventory.reduce((sum, n) => sum + n.hookPoolCount, 0)
     : null;
   // Indexed pool counts are a dated export, not measured at the snapshot.
-  const census = STATIC_EDITION ? censusLabel(envelope.inventory) : null;
+  const census = STATIC_EDITION
+    ? censusLabel(envelope.inventory, envelope.publication.generatedAt)
+    : null;
   const historyPanel = (
     <AnalyticsHistory
       points={history}

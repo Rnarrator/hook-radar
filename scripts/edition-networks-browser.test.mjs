@@ -79,8 +79,12 @@ if (notHeadNetwork) {
       Math.floor((notHeadNetwork.targetBlock - notHeadNetwork.startBlock) / 10),
     );
 }
-const census = censusLabel(served.inventory);
+// The label the page prints: the census date and how many days before the
+// snapshot it was taken (the fixture's census is the day before its snapshot).
+const census = censusLabel(served.inventory, served.generatedAt);
 const censusDay = census.replace(/^census as of /, "");
+const HOOKS_SCOPE =
+  "A hook used on two networks is counted on both; newer hooks are not included.";
 
 let browser;
 before(async () => {
@@ -395,7 +399,7 @@ test("the masthead dates its Networks figure and agrees with the Networks page",
   const { page } = s;
   await s.goto("");
   await expect(page.getByTestId("masthead-census")).toHaveText(
-    `Hooks, pools and networks: ${census}`,
+    `Hooks, pools and networks: ${census}. ${HOOKS_SCOPE}`,
   );
   const figure = page
     .locator(".masthead-figures > div")
@@ -411,6 +415,149 @@ test("the masthead dates its Networks figure and agrees with the Networks page",
     `${indexed} with indexed pools`,
   );
   s.verify();
+});
+
+test("the masthead and the Networks page say how old the census was, in days", async (t) => {
+  // The census 14.7 days before the snapshot: the dates differ by 15.
+  const old = structuredClone(served);
+  old.inventory.generatedAt = new Date(
+    Date.parse(old.generatedAt) - 14.7 * 86400000,
+  ).toISOString();
+  const label = censusLabel(old.inventory, old.generatedAt);
+  assert.match(label, /, 15 days before this snapshot$/);
+  for (const size of [DESKTOP, PHONE]) {
+    const s = await site(t, { size, data: old });
+    const { page } = s;
+    await s.goto("");
+    // The hook total is a lower bound and says so.
+    const hooks = page
+      .locator(".masthead-figures > div")
+      .filter({ has: page.getByText("Hooks", { exact: true }) });
+    await expect(hooks.locator("dd").first()).toHaveText(
+      `at least ${old.inventory.hookCount}`,
+    );
+    if (size === DESKTOP)
+      await expect(page.getByTestId("masthead-census")).toHaveText(
+        `Hooks, pools and networks: ${label}. ${HOOKS_SCOPE}`,
+      );
+    await s.goto("?view=chains");
+    await expect(page.locator("#chains-networks")).toContainText(
+      `Hook pool counts are from the ${label}.`,
+    );
+    await expect(
+      page.locator("#chains-overview").getByTestId("census-note"),
+    ).toHaveText(label.charAt(0).toUpperCase() + label.slice(1));
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+      `horizontal overflow at ${size.width}px`,
+    );
+    s.verify();
+  }
+  // A census that is newer than its snapshot (a mix-up of files) gets no age.
+  const future = structuredClone(served);
+  future.inventory.generatedAt = new Date(
+    Date.parse(future.generatedAt) + 2 * 86400000,
+  ).toISOString();
+  const s = await site(t, { data: future });
+  await s.goto("");
+  await expect(s.page.getByTestId("masthead-census")).toHaveText(
+    `Hooks, pools and networks: ${censusLabel(future.inventory)}. ${HOOKS_SCOPE}`,
+  );
+  await expect(s.page.getByTestId("masthead-census")).not.toContainText(
+    "days before",
+  );
+  s.verify();
+});
+
+test("Networks: the hook count is 'at least' and the blocks are those scanned at the census", async (t) => {
+  for (const size of [DESKTOP, PHONE]) {
+    const s = await site(t, { size });
+    const { page } = s;
+    await s.goto("?view=chains");
+    const card = page.locator("#chains-overview");
+    await expect(card).toContainText("Hook contracts found (at least)");
+    await expect(card).not.toContainText("Indexed hook contracts");
+    await expect(page.locator(".chains-market-scope")).toContainText(
+      HOOKS_SCOPE,
+    );
+    const counted = served.inventory.networks.find((n) => !failed(n));
+    await s.goto(`?view=chains&chain_network=${counted.chain}`);
+    await page.locator(".chains-index-details summary").click();
+    const body = page.locator(".chains-index-body");
+    await expect(body).toContainText("Hook contracts found (at least)");
+    await expect(body).toContainText("Blocks scanned at the census");
+    await expect(body).not.toContainText("Hook contracts indexed");
+    await expect(body).toContainText(String(counted.hookCount));
+    // The evidence beside the composition chart names the same figure the same way.
+    const evidence = page.locator(".chain-chart-evidence");
+    await expect(evidence).toContainText("Hook contracts found (at least)");
+    await expect(evidence).not.toContainText("Distinct pool hooks");
+    s.verify();
+  }
+  // Analytics: the pill and the hook-contract column of the footprint table.
+  const s = await site(t);
+  await s.goto("?view=analytics&analytics_chain=base&window=h1");
+  const footprint = s.page.locator(".analytics-footprint-panel");
+  await expect(
+    footprint.getByRole("columnheader", { name: "Hook contracts (at least)" }),
+  ).toBeVisible();
+  await expect(footprint).toContainText("Newer hooks are not included.");
+  await expect(footprint.locator(".analytics-footprint-summary")).toContainText(
+    /at least [\d,]+ hook contracts/,
+  );
+  s.verify();
+});
+
+// Every figure a census gives for hook contracts is a lower bound, so wherever
+// the page prints one it must say "at least": the masthead tile, the Networks
+// card and evidence, and the Analytics pill. The sweep reads the rendered text
+// instead of a list of components, so a hook figure added later is held to it.
+// Not census figures, and so not lower bounds: the hook contracts a reviewed
+// project lists (registry rows) and the words of a sort menu.
+const REGISTRY_OR_MENU =
+  /^(?:listed hook contracts|known hooks|most hook contracts|fewest hook contracts)\b/i;
+const HOOK_FIGURE =
+  /\b(?:hook contracts?|hook addresses|distinct pool hooks)\b/i;
+
+test("every hook-contract figure the census gives says 'at least', wherever it is printed", async (t) => {
+  const counted = served.inventory.networks.find((n) => !failed(n));
+  const pages = [
+    "?view=chains",
+    `?view=chains&chain_network=${counted.chain}`,
+    "?view=analytics&analytics_chain=base&window=h1",
+  ];
+  for (const size of [DESKTOP, PHONE]) {
+    const s = await site(t, { size });
+    for (const query of pages) {
+      await s.goto(query);
+      const seen = await s.page.evaluate(
+        ({ figure, exempt }) => {
+          const figureRe = new RegExp(figure, "i");
+          const exemptRe = new RegExp(exempt, "i");
+          const rows = [];
+          for (const el of document.querySelectorAll("body *")) {
+            if (el.children.length > 3) continue;
+            const words = (el.innerText || "").trim().replace(/\s+/g, " ");
+            if (!words || words.length > 120) continue;
+            if (!figureRe.test(words) || !/\d/.test(words)) continue;
+            if (exemptRe.test(words)) continue;
+            rows.push(words);
+          }
+          return [...new Set(rows)];
+        },
+        { figure: HOOK_FIGURE.source, exempt: REGISTRY_OR_MENU.source },
+      );
+      assert.ok(seen.length > 0, `${query}: the sweep found no hook figure`);
+      assert.deepEqual(
+        seen.filter((words) => !/at least/i.test(words)),
+        [],
+        `${query} at ${size.width}px: a hook figure without "at least"`,
+      );
+    }
+    s.verify();
+  }
 });
 
 test("an unknown network is not said to have been removed, and its heading is in order", async (t) => {

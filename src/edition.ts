@@ -62,9 +62,11 @@ export const FOOTER_CREDITS: boolean = footerCreditsShown(
 /** How the page describes its own update rhythm. */
 export const REFRESH_NOTE = "refreshed every few hours";
 
-/** Past this age the rhythm above is no longer something to claim: four of the
- * three-hour schedule's intervals have gone by without a newer snapshot. */
-export const SNAPSHOT_STALE_AFTER_MS = 12 * 60 * 60_000;
+/** Past this age the rhythm above is no longer something to claim. The
+ * workflow collects about once an hour (a run is held back for 45 minutes after
+ * a snapshot, and for 90 after a failed run), so four hours is several runs
+ * missed in a row: GitHub starting none, or the collector refusing to publish. */
+export const SNAPSHOT_STALE_AFTER_MS = 4 * 60 * 60_000;
 
 /** A visitor clock this far behind a snapshot is a wrong clock, not a snapshot
  * from the future; closer than this it is ordinary drift ("just now"). */
@@ -366,23 +368,67 @@ export function snapshotStatusLine(
  * the sentence as it is, since the site itself is late. */
 export const RELOAD_HINT = "Reload this page to check for a newer one.";
 
+const DAY_MS = 86_400_000;
+
+/** How many whole UTC days the census lies before the snapshot: the difference
+ * of the two dates the page shows ("27 Oct 2026" and the snapshot's), so a
+ * reader who subtracts them gets the same number. Both times come from the
+ * published data, never from the visitor's clock. Null when either time is
+ * missing or unreadable, and when the census is newer than the snapshot: an
+ * age that cannot be right is not shown. */
+export function censusAgeDays(
+  censusAt: string | number | null | undefined,
+  snapshotAt: string | number | null | undefined,
+): number | null {
+  const census = toMs(censusAt);
+  const snapshot = toMs(snapshotAt);
+  if (census === null || snapshot === null) return null;
+  const days = Math.floor(snapshot / DAY_MS) - Math.floor(census / DAY_MS);
+  return days >= 0 ? days : null;
+}
+
+/** "15 days before this snapshot"; the same date is "the same day as this
+ * snapshot" and the day before it "the day before this snapshot". */
+export function censusAgeText(days: number | null): string | null {
+  if (days === null || !Number.isInteger(days) || days < 0) return null;
+  if (days === 0) return "the same day as this snapshot";
+  return days === 1
+    ? "the day before this snapshot"
+    : `${days} days before this snapshot`;
+}
+
 /** Census figures (hooks found, pools using a hook) come from an indexer export
- * whose own time travels with them. */
+ * whose own time travels with them: "census as of 27 Oct 2026". Given the
+ * snapshot's time as well, the label says how old the census was when the
+ * snapshot was taken: "census as of 27 Oct 2026, 15 days before this snapshot". */
 export function censusLabel(
   inventory: { generatedAt: string } | null | undefined,
+  snapshotAt?: string | number | null,
 ): string | null {
   const taken = inventory ? fullTimeLabel(inventory.generatedAt) : null;
   const day = inventory ? toMs(inventory.generatedAt) : null;
-  return taken === null || day === null ? null : `census as of ${utcDate(day)}`;
+  if (taken === null || day === null) return null;
+  const age = censusAgeText(
+    censusAgeDays(inventory?.generatedAt, snapshotAt ?? null),
+  );
+  return `census as of ${utcDate(day)}${age ? `, ${age}` : ""}`;
 }
 
 /** "Census as of 27 Oct 2026": the capitalised form, for a caption of its own. */
 export function censusHeading(
   inventory: { generatedAt: string } | null | undefined,
+  snapshotAt?: string | number | null,
 ): string | null {
-  const label = censusLabel(inventory);
+  const label = censusLabel(inventory, snapshotAt);
   return label === null ? null : label.charAt(0).toUpperCase() + label.slice(1);
 }
+
+/** What the census cannot say about hooks, beside every hook figure: the count
+ * is the sum of each network's own, so an address used on two networks counts
+ * twice, and it holds nothing the census did not see. ("Counted once per
+ * network" was tried and dropped: it reads as "each hook is counted once".) */
+export const CENSUS_HOOKS_SCOPE =
+  "A hook used on two networks is counted on both; newer hooks are not included.";
 
 /* ── Navigation ────────────────────────────────────────────────────────── */
 
@@ -408,7 +454,7 @@ export function editionNavigation<
  * visible, and when the visitor returns to the tab after this long. What is
  * asked is the small status file (edition-status-probe.ts); the snapshot on
  * screen is never swapped silently. */
-export const EDITION_RECHECK_MS = 30 * 60_000;
+export const EDITION_RECHECK_MS = 15 * 60_000;
 
 export function editionCatchUpDue(
   lastLoadedAt: number | null,
@@ -436,7 +482,10 @@ export function editionViews<T extends string>(
 
 /* ── Recorded history ──────────────────────────────────────────────────── */
 
-const HISTORY_MAX_POINTS = 672;
+/** The most points history.json may hold (84 days of hourly runs). It is the
+ * collector's own cap (HISTORY_MAX_POINTS in collector/config.mjs, which this
+ * file cannot import); tests/edition-history-cap.test.mjs holds the two equal. */
+export const EDITION_HISTORY_MAX_POINTS = 2016;
 
 /** The points of /data/history.json ({ schemaVersion: 1, points }), or null when
  * the file is not that. Each point keeps its own timestamp and value. */
@@ -449,7 +498,8 @@ export function parseHistory(value: unknown): Point[] | null {
   )
     return null;
   const points = (value as { points?: unknown }).points;
-  if (!Array.isArray(points) || points.length > HISTORY_MAX_POINTS) return null;
+  if (!Array.isArray(points) || points.length > EDITION_HISTORY_MAX_POINTS)
+    return null;
   const out: Point[] = [];
   let last = -Infinity;
   for (const point of points) {

@@ -333,7 +333,7 @@ export function providerSources({
       updatedAt:
         latest("geckoterminal") ??
         (gt.lastRequestAt ? new Date(gt.lastRequestAt).toISOString() : null),
-      note: `Top-pool pages for discovery (pages read: ${discovery.geckoPages}) and a small exact-pool fallback (pools measured: ${count}): ${span(gt)}. Data provided by GeckoTerminal.${waitNote(gt)}${stopNote(gt)}`,
+      note: `Top-pool pages for discovery (pages read: ${discovery.geckoPages}${discovery.page === null ? "; this run did not look for new pools" : ""}) and a small exact-pool fallback (pools measured: ${count}): ${span(gt)}. Data provided by GeckoTerminal.${waitNote(gt)}${stopNote(gt)}`,
     });
   }
   const v4 = stats.v4xyz;

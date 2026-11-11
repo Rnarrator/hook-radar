@@ -60,6 +60,8 @@ The page is built with a relative base, so it works at the root of your domain o
        - cron: "47 */3 * * *"
    ```
 
+   This workflow keeps the three-hour schedule above and has no "Is a new snapshot due" check. The history chart on the page draws a break between two points more than three hours apart, so on this schedule a run that starts a little late leaves a break in the line. The page also says its snapshot is old once it is more than four hours old, so a run that GitHub starts more than about an hour late makes the page say so. The GitHub Pages route, which collects about once an hour, does not.
+
    If GitHub Desktop says there are newer commits to pull, press Pull origin first, then Push origin: the "Deploy to Namecheap by FTPS" workflow saves its memory (the `state` folder) to the repository every few hours.
 
 What it does on the server: it uploads only what changed since its last run, and keeps a small record file on the server of what it uploaded. It removes only files it uploaded earlier. Other files in the folder, ones it never uploaded, are left alone. One exception matters, see the next section: the site ships its own `.htaccess`, so an `.htaccess` that already sits in that same folder is replaced by the first upload.

@@ -92,12 +92,12 @@ function renderLine(t, visitorNow, props = {}) {
 
 /* ── The status line: fresh, stale, and a clock that is behind ─────────── */
 
-test("a fresh snapshot keeps the line it always had, up to twelve hours", () => {
-  assert.equal(SNAPSHOT_STALE_AFTER_MS, 12 * HOUR);
+test("a fresh snapshot keeps the line it always had, up to four hours", () => {
+  assert.equal(SNAPSHOT_STALE_AFTER_MS, 4 * HOUR);
   for (const [after, age] of [
     [30 * MINUTE, "30 min ago"],
     [HOUR, "1 h ago"],
-    [12 * HOUR, "12 h ago"],
+    [4 * HOUR, "4 h ago"],
   ]) {
     const line = snapshotStatusLine(GENERATED_AT, generated + after);
     assert.equal(line.taken, `Snapshot taken ${TAKEN}`, age);
@@ -109,9 +109,10 @@ test("a fresh snapshot keeps the line it always had, up to twelve hours", () => 
   }
 });
 
-test("past twelve hours the rhythm is dropped and the line says the snapshot is old", () => {
+test("past four hours the rhythm is dropped and the line says the snapshot is old", () => {
   for (const [after, span] of [
-    [12 * HOUR + MINUTE, "12 h 1 min"],
+    [4 * HOUR + MINUTE, "4 h 1 min"],
+    [5 * HOUR, "5 h"],
     [13 * HOUR, "13 h"],
     [26 * HOUR, "1 d 2 h"],
     [3 * DAY, "3 d"],
@@ -256,13 +257,13 @@ test("the stale warning rests on this device's clock, and says so", (t) => {
   t.mock.restoreAll();
   assert.match(ahead, /^By this device’s clock, this snapshot is 13 h old; /);
   assert.doesNotMatch(ahead, /^This snapshot/);
-  for (const after of [12 * HOUR + MINUTE, 3 * DAY, 40 * DAY]) {
+  for (const after of [4 * HOUR + MINUTE, 3 * DAY, 40 * DAY]) {
     const line = snapshotStatusLine(GENERATED_AT, generated + after);
     assert.match(line.staleText, /^By this device’s clock, this snapshot is /);
     assert.match(line.staleText, /; newer data should have been published\.$/);
   }
   // Lines that make no claim about being old do not carry the qualifier.
-  for (const offset of [MINUTE, 12 * HOUR, -3 * HOUR]) {
+  for (const offset of [MINUTE, 4 * HOUR, -3 * HOUR]) {
     const line = snapshotStatusLine(GENERATED_AT, generated + offset);
     assert.equal(line.staleText, null);
   }

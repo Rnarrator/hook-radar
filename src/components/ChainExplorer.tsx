@@ -25,6 +25,7 @@ import {
   windows,
 } from "../model";
 import {
+  CENSUS_HOOKS_SCOPE,
   STATIC_EDITION,
   censusHeading,
   censusLabel,
@@ -198,7 +199,9 @@ export function ChainExplorer({
   );
   const network = result.selectedNetwork;
   // Hook and pool counts are a dated export, not measured at the snapshot.
-  const census = STATIC_EDITION ? censusLabel(snapshot.inventory) : null;
+  const census = STATIC_EDITION
+    ? censusLabel(snapshot.inventory, snapshot.generatedAt)
+    : null;
   const launchpadMode = role === "launchpads";
   const unsupportedEmpty =
     !!network?.deploymentSupport && result.totalProtocols === 0;
@@ -394,7 +397,7 @@ export function ChainExplorer({
                     <div>
                       <dt>Census</dt>
                       <dd>
-                        {censusHeading(snapshot.inventory)}
+                        {censusHeading(snapshot.inventory, snapshot.generatedAt)}
                         {network.inventory.updatedAt && (
                           <>
                             {" "}
@@ -405,7 +408,11 @@ export function ChainExplorer({
                     </div>
                   )}
                   <div>
-                    <dt>Hook contracts indexed</dt>
+                    <dt>
+                      {STATIC_EDITION
+                        ? "Hook contracts found (at least)"
+                        : "Hook contracts indexed"}
+                    </dt>
                     <dd>{count(network.inventory.hookCount)}</dd>
                   </div>
                   <div>
@@ -417,7 +424,11 @@ export function ChainExplorer({
                     <dd>{count(network.inventory.poolCount)}</dd>
                   </div>
                   <div>
-                    <dt>Blocks scanned</dt>
+                    <dt>
+                      {STATIC_EDITION
+                        ? "Blocks scanned at the census"
+                        : "Blocks scanned"}
+                    </dt>
                     <dd>
                       {count(network.inventory.startBlock)}–
                       {count(network.inventory.scannedToBlock)}
@@ -487,7 +498,11 @@ export function ChainExplorer({
           <small>Projects and reviewed platforms with public sources</small>
         </div>
         <div>
-          <span>Indexed hook contracts</span>
+          <span>
+            {STATIC_EDITION
+              ? "Hook contracts found (at least)"
+              : "Indexed hook contracts"}
+          </span>
           <strong>{count(result.inventory.hookCount)}</strong>
           <small>
             {result.inventory.hookPoolCount === null
@@ -539,7 +554,7 @@ export function ChainExplorer({
           {network?.deploymentSupport
             ? "No v4 pool inventory or current USD measurements are available for this network."
             : STATIC_EDITION && census
-              ? `USD figures cover measured pools. Indexed hook and pool counts are from the ${census} and also include pools without current prices.`
+              ? `USD figures cover measured pools. Indexed hook and pool counts are from the ${census}; they also include pools without current prices. ${CENSUS_HOOKS_SCOPE}`
               : "USD figures cover measured pools. Indexed hook and pool counts also include pools without current prices."}
         </span>
       </p>

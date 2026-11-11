@@ -32,13 +32,14 @@ const HOUR_MS = 3600000;
 const LIVE_HISTORY_GAP_MS = HOUR_MS;
 
 /** The Auto Snapshot edition saves one point per collection run, and the
- * scheduled job (the cron in .github/workflows/snapshot.yml) runs every 3
- * hours. A stretch is drawn as a gap only when two or more consecutive runs are
- * missing: the threshold is more than two cadences, plus a margin for a late
- * start. A single missed run (an interval of about 6 hours) is still joined by
- * the line. At 1 hour every interval would be a gap and no line could ever be
- * drawn. */
-export const EDITION_HISTORY_GAP_MS = 7 * HOUR_MS;
+ * workflow (.github/workflows/snapshot.yml) collects about once an hour: a
+ * trigger collects only when the last snapshot is at least 45 minutes old. The
+ * line joins two points up to three hours apart: a single missed run (an
+ * interval of about 2 hours) is still joined, and a stretch is drawn as a gap
+ * once more than three hours pass between two points, which two missed runs
+ * in a row usually do. At the live service's 1 hour every interval would be a
+ * gap and no line could ever be drawn. */
+export const EDITION_HISTORY_GAP_MS = 3 * HOUR_MS;
 
 /** The longest interval between two stored observations that is still drawn as
  * one line. */
@@ -48,12 +49,12 @@ export function historyGapMs(edition: boolean = STATIC_EDITION): number {
 
 const gapHours = (edition: boolean) => historyGapMs(edition) / HOUR_MS;
 
-/** The threshold as the legend states it: "over 1h" live, "over 7h" here. */
+/** The threshold as the legend states it: "over 1h" live, "over 3h" here. */
 export function historyGapLabel(edition: boolean = STATIC_EDITION): string {
   return `over ${gapHours(edition)}h`;
 }
 
-/** The same threshold in a sentence: "one hour" live, "7 hours" here. */
+/** The same threshold in a sentence: "one hour" live, "3 hours" here. */
 export function historyGapWords(edition: boolean = STATIC_EDITION): string {
   const hours = gapHours(edition);
   return hours === 1 ? "one hour" : `${hours} hours`;

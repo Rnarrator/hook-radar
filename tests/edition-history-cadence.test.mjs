@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
+import { parseYaml } from "./edition-yaml-subset.mjs";
 import {
   EDITION_HISTORY_GAP_MS,
   historyChartSegments,
@@ -15,42 +16,57 @@ import {
 
 const HOUR = 3600000;
 const start = Date.parse("2026-10-27T00:14:00Z");
-const run = (index, hours = 3, value = 100 + index) => ({
+const run = (index, hours = 1, value = 100 + index) => ({
   timestamp: start + index * hours * HOUR,
   value,
 });
-const every3h = (count) =>
-  Array.from({ length: count }, (_, index) => run(index));
+/** `count` runs, `hours` apart: the workflow's own rhythm is one an hour. */
+const spaced = (count, hours = 1) =>
+  Array.from({ length: count }, (_, index) => run(index, hours));
 
 // The cadence of the scheduled collection job. The path is built, not written
 // as an import, so the edition folder's import check keeps its own boundary.
 const read = (path) =>
   readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
-const workflow = read(".github/workflows/snapshot.yml");
-const cadenceHours = Number(
-  workflow.match(/cron:\s*["']\d+ \*\/(\d+) \* \* \*["']/)?.[1],
+const workflow = parseYaml(read(".github/workflows/snapshot.yml"));
+// The workflow is triggered at three minutes of every hour and its first job
+// lets a trigger collect only when the last snapshot is at least
+// MIN_AGE_MINUTES old, so collections are at least that far apart and, with the
+// triggers hourly, come about once an hour: the cadence is that many whole
+// hours, rounded up. It is derived from the gate, not from a cron expression.
+const MIN_AGE_MINUTES = Number(
+  workflow.jobs.gate.steps.find((step) => step.id === "decide").env
+    .MIN_AGE_MINUTES,
 );
+const cadenceHours = Math.ceil(MIN_AGE_MINUTES / 60);
 
 test("the edition's gap threshold follows the collection cadence of the workflow", () => {
-  assert.equal(cadenceHours, 3);
-  assert.equal(EDITION_HISTORY_GAP_MS, 7 * HOUR);
-  // A normal interval is never a gap, even when a run starts late; a gap needs
-  // two or more consecutive runs missing (a single missed run, about 6 hours,
-  // is still joined).
+  for (const entry of workflow.on.schedule)
+    assert.match(entry.cron, /^\d+ \* \* \* \*$/, "a trigger in every hour");
+  assert.ok(MIN_AGE_MINUTES >= 20 && MIN_AGE_MINUTES < 60);
+  assert.equal(cadenceHours, 1);
+  // The longest interval still joined is three cadences. A normal interval is
+  // never a gap, even when a run starts late, and a single missed run (an
+  // interval of two cadences) is still joined; more than three cadences without
+  // a point is a gap.
+  assert.equal(EDITION_HISTORY_GAP_MS, 3 * cadenceHours * HOUR);
+  assert.equal(EDITION_HISTORY_GAP_MS, 3 * HOUR);
   assert.ok(EDITION_HISTORY_GAP_MS > cadenceHours * HOUR * 2);
-  assert.ok(EDITION_HISTORY_GAP_MS < cadenceHours * HOUR * 3);
+  assert.ok(EDITION_HISTORY_GAP_MS < cadenceHours * HOUR * 4);
 });
 
-test("in the edition 12 runs three hours apart are one line with no gap", () => {
-  const points = every3h(12);
-  const result = historyChartSegments(points, historyGapMs(true));
-  assert.deepEqual(result.gaps, []);
-  assert.deepEqual(result.segments, [points.map((_, index) => index)]);
+test("in the edition 12 runs an hour apart are one line with no gap, and so are runs three hours apart", () => {
+  for (const hours of [1, 2, 3]) {
+    const points = spaced(12, hours);
+    const result = historyChartSegments(points, historyGapMs(true));
+    assert.deepEqual(result.gaps, [], `${hours} h apart`);
+    assert.deepEqual(result.segments, [points.map((_, index) => index)]);
+  }
 });
 
-test("in the edition a nine hour hole is exactly one gap and nothing is bridged", () => {
-  // Runs at 0, 3, 6 and 9 hours, then nothing until 18 and runs from there on.
-  const hours = [0, 3, 6, 9, 18, 21, 24];
+test("in the edition a six hour hole is exactly one gap and nothing is bridged", () => {
+  // Runs at 0, 1, 2 and 3 hours, then nothing until 9 and runs from there on.
+  const hours = [0, 1, 2, 3, 9, 10, 11];
   const points = hours.map((h) => ({ timestamp: start + h * HOUR, value: 5 }));
   assert.deepEqual(historyChartSegments(points, historyGapMs(true)), {
     segments: [
@@ -61,10 +77,10 @@ test("in the edition a nine hour hole is exactly one gap and nothing is bridged"
   });
 });
 
-test("in the edition one missed run (a 6 hour interval) is joined and two missed runs (9 hours) are a gap", () => {
+test("in the edition one missed run (a 2 hour interval) is joined, and three missed runs (4 hours) are a gap", () => {
   const edition = historyGapMs(true);
-  // Runs at 0, 3 and 6 hours, the 9 hour run missing, the next at 12 hours.
-  const oneMissed = [0, 3, 6, 12].map((h) => ({
+  // Runs at 0, 1 and 2 hours, the 3 hour run missing, the next at 4 hours.
+  const oneMissed = [0, 1, 2, 4].map((h) => ({
     timestamp: start + h * HOUR,
     value: 5,
   }));
@@ -72,21 +88,38 @@ test("in the edition one missed run (a 6 hour interval) is joined and two missed
     segments: [[0, 1, 2, 3]],
     gaps: [],
   });
-  // The 9 and 12 hour runs missing, the next at 15 hours: a 9 hour interval.
-  const twoMissed = [0, 3, 6, 15].map((h) => ({
+  // The 3, 4 and 5 hour runs missing, the next at 6 hours: a 4 hour interval.
+  const threeMissed = [0, 1, 2, 6].map((h) => ({
     timestamp: start + h * HOUR,
     value: 5,
   }));
-  assert.deepEqual(historyChartSegments(twoMissed, edition), {
+  assert.deepEqual(historyChartSegments(threeMissed, edition), {
     segments: [[0, 1, 2], [3]],
     gaps: [{ from: 2, to: 3 }],
   });
+  // Two missed runs make an interval of three hours: joined when the run was
+  // on time, a gap when the next started a minute late.
+  const twoMissed = [0, 1, 2, 5].map((h) => ({
+    timestamp: start + h * HOUR,
+    value: 5,
+  }));
+  assert.deepEqual(historyChartSegments(twoMissed, edition).gaps, []);
+  assert.equal(
+    historyChartSegments(
+      [
+        { timestamp: start, value: 5 },
+        { timestamp: start + 3 * HOUR + 60000, value: 5 },
+      ],
+      edition,
+    ).gaps.length,
+    1,
+  );
 });
 
-test("the edition threshold is exact: seven hours is one line, one millisecond more is a gap", () => {
+test("the edition threshold is exact: three hours is one line, one millisecond more is a gap", () => {
   const exactly = [
     { timestamp: start, value: 1 },
-    { timestamp: start + 7 * HOUR, value: 2 },
+    { timestamp: start + 3 * HOUR, value: 2 },
   ];
   assert.deepEqual(historyChartSegments(exactly, EDITION_HISTORY_GAP_MS), {
     segments: [[0, 1]],
@@ -106,7 +139,7 @@ test("without the edition the default stays one hour: 3 h spacing still gives a 
   // These tests run in plain Node, where the edition flag is off.
   assert.equal(historyGapMs(), 3600000);
   assert.equal(historyGapMs(false), 3600000);
-  const points = every3h(12);
+  const points = spaced(12, 3);
   const result = historyChartSegments(points);
   assert.equal(result.gaps.length, 11);
   assert.equal(result.segments.length, 12);
@@ -121,8 +154,12 @@ test("the legend and help wording state the threshold that is applied", () => {
   assert.equal(historyGapLabel(false), "over 1h");
   assert.equal(historyGapWords(), "one hour");
   assert.equal(historyGapWords(false), "one hour");
-  assert.equal(historyGapLabel(true), "over 7h");
-  assert.equal(historyGapWords(true), "7 hours");
+  // The legend is worked out from the gate's minimum age, as the threshold is:
+  // three cadences of one hour.
+  assert.equal(historyGapLabel(true), `over ${3 * cadenceHours}h`);
+  assert.equal(historyGapLabel(true), "over 3h");
+  assert.equal(historyGapWords(true), `${3 * cadenceHours} hours`);
+  assert.equal(historyGapWords(true), "3 hours");
   assert.equal(historyGapMs(true), EDITION_HISTORY_GAP_MS);
 });
 
@@ -214,14 +251,14 @@ async function bundled(flag) {
 }
 
 test("built with the edition flag the defaults are the edition's; built without it they are today's", async () => {
-  const points = every3h(12);
+  const points = spaced(12, 1);
   const snapshot = Date.parse("2026-10-28T00:14:11.461Z");
 
   const edition = await bundled("1");
   assert.deepEqual(edition.historyChartSegments(points).gaps, []);
   assert.equal(edition.historyChartSegments(points).segments.length, 1);
-  assert.equal(edition.historyGapLabel(), "over 7h");
-  assert.equal(edition.historyGapWords(), "7 hours");
+  assert.equal(edition.historyGapLabel(), "over 3h");
+  assert.equal(edition.historyGapWords(), "3 hours");
   assert.equal(edition.historyGapMs(), EDITION_HISTORY_GAP_MS);
   // An unusable threshold falls back to the edition's own default.
   assert.equal(edition.historyChartSegments(points, Number.NaN).gaps.length, 0);
@@ -230,7 +267,9 @@ test("built with the edition flag the defaults are the edition's; built without 
   assert.ok(Math.abs(Date.parse(times.exportedAt) - Date.now()) < 5000);
 
   const live = await bundled("0");
-  assert.equal(live.historyChartSegments(points).gaps.length, 11);
+  // Live, runs three hours apart are a gap each time; an hour apart is not.
+  assert.equal(live.historyChartSegments(spaced(12, 3)).gaps.length, 11);
+  assert.equal(live.historyChartSegments(points).gaps.length, 0);
   assert.equal(live.historyGapLabel(), "over 1h");
   assert.equal(live.historyGapWords(), "one hour");
   assert.deepEqual(live.historyExportTimes(snapshot), {
