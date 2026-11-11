@@ -71,7 +71,7 @@ jobs:
       # The tip of the branch as it is now, not the commit that started the run:
       # a run that waited behind another one must see that run's saved state.
       - name: Check out the saved state
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.ref_name }}
           sparse-checkout: state
@@ -198,7 +198,7 @@ jobs:
       pages: write
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.ref_name }}
 
