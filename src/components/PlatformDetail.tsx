@@ -6,6 +6,7 @@ import { count, inlineTime, money } from "../model";
 import { STATIC_EDITION, evaluationNow, fullTimeLabel } from "../edition";
 import {
   isPlainLeftClick,
+  lowerBoundMark,
   navigateInPage,
   pricedPoolsNote,
   reviewNotesHeading,
@@ -325,7 +326,9 @@ export function PlatformDetail({
                 market && market.volumeUsd !== null ? undefined : "true"
               }
             >
-              {market ? money(market.volumeUsd) : "—"}
+              {market
+                ? `${lowerBoundMark(market.pools > 0 ? market.pools : null, false, market.volumeUsd)}${money(market.volumeUsd)}`
+                : "—"}
             </strong>
             <span className="readout-note">
               {market

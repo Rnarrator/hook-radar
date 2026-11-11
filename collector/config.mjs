@@ -14,7 +14,12 @@ export const REGISTRY_GAP_MS = 1000;
 
 export const DS_BATCH_SIZE = 30;
 export const GT_FALLBACK_BATCH_SIZE = 30;
-export const GT_FALLBACK_MAX_REQUESTS = 3;
+// The pools of the launchpad platforms and named projects (the priority list)
+// that DEX Screener returns nothing for come first, and DEX Screener does not
+// index Zora or X Layer at all, so the fallback is six requests (180 pools)
+// where it was three. Each takes 12 s, so the six end 72 s after the DEX
+// Screener batches do, inside the burst's own deadline.
+export const GT_FALLBACK_MAX_REQUESTS = 6;
 export const GT_DISCOVERY_PAGE_CYCLE = 5;
 // Pools with identity verified by the live app's census (the seed) are measured
 // first, up to MAX_MEASURED_POOLS. Pools found by discovery are measured on top
@@ -22,6 +27,12 @@ export const GT_DISCOVERY_PAGE_CYCLE = 5;
 // pool out of the burst. The whole plan stays inside the 399-request budget.
 export const MAX_MEASURED_POOLS = 8000;
 export const MAX_DISCOVERED_MEASURED = 500;
+// The priority list (state/priority.json): pools of the exact published hooks of
+// launchpad platforms and of named projects, chosen once from the live app's
+// data. They are always in the measurement plan, ahead of the other seeded
+// pools, and they take their places inside MAX_MEASURED_POOLS: the plan is no
+// larger and the requests are no more. The list may not hold more than this.
+export const MAX_PRIORITY_POOLS = 1500;
 export const MAX_RESOLVES_PER_RUN = 40;
 export const STATE_MAX_POOLS = 12000;
 export const MAX_REQUESTS_PER_RUN = 399;
@@ -86,14 +97,33 @@ export const COOLDOWN_PROVIDERS = Object.freeze([
   "v4xyz",
 ]);
 
+// Frontier's own market figures for the pools it launches (the live app reads
+// them the same way): one coin listing, one statistics answer for the ETH/USD
+// rate and one query to the public AMM index Frontier's configuration names.
+// That is three requests, and the plan's request reserve keeps room for them.
+export const FRONTIER_MAX_REQUESTS = 3;
+// The step runs after the DEX Screener burst and its fallback, and the snapshot
+// time is taken after it, so the pools measured first must still be inside the
+// five-minute window when it ends. It reads the listing and the statistics one
+// after the other (10 s each at most, one second apart) and then the index
+// (15 s at most): 36 s in the worst case. It does not start later than this
+// after the burst began, which keeps even that case under 300 s.
+export const FRONTIER_LATEST_START_MS = 240000;
+
 export const MAX_BYTES = Object.freeze({
   registry: 24 * 1024 * 1024,
   frontier: 2 * 1024 * 1024,
+  // coinsPage?limit=100 is about 100 KB; the index answer holds at most 1,000
+  // swaps and the day rows of the listed pools, about 0.3 MB.
+  frontierMarkets: 2 * 1024 * 1024,
+  frontierIndex: 1024 * 1024,
   dexscreener: 4 * 1024 * 1024,
   geckoterminal: 4 * 1024 * 1024,
   v4xyzList: 2 * 1024 * 1024,
   v4xyzDetail: 256 * 1024,
 });
+// A POST body (the one index query) is small; the client refuses a larger one.
+export const MAX_REQUEST_BODY_BYTES = 64 * 1024;
 
 export const PROVIDERS = Object.freeze({
   dexscreener: {
@@ -122,9 +152,17 @@ export const PROVIDERS = Object.freeze({
   },
   frontier: {
     id: "frontier",
-    name: "Frontier deployment configuration",
+    name: "Frontier",
     host: "api.frontier.fun",
     url: "https://api.frontier.fun/chains",
+  },
+  // The public AMM index that Frontier's own configuration (api.frontier.fun
+  // /chains, subgraphs.ammV4) names. One POST per run; no key is involved.
+  goldsky: {
+    id: "goldsky",
+    name: "Goldsky (Frontier AMM index)",
+    host: "api.goldsky.com",
+    url: "https://goldsky.com",
   },
 });
 
@@ -143,6 +181,7 @@ export function resolveGaps(env = process.env) {
     v4xyz: raise(V4_GAP_MS, env.COLLECTOR_V4_GAP_MS),
     registry: REGISTRY_GAP_MS,
     frontier: REGISTRY_GAP_MS,
+    goldsky: REGISTRY_GAP_MS,
   });
 }
 

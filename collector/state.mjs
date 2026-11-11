@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { isAddress, isPoolId, ZERO_ADDRESS } from "../server/model.mjs";
-import { HISTORY_MAX_POINTS } from "./config.mjs";
+import { HISTORY_MAX_POINTS, MAX_PRIORITY_POOLS } from "./config.mjs";
 
 // The persistent state committed in state/. Every reader validates what it
 // reads and every writer is atomic, so a crashed run leaves the old files.
@@ -42,6 +42,89 @@ export function isStatePool(row) {
     row.source.length <= 100 &&
     isIso(row.firstSeen) &&
     isIso(row.lastSeen)
+  );
+}
+
+// The priority list holds plain pool identities and nothing else: the exact
+// fields below, each of a fixed shape. A provider's URL, a key, a figure or any
+// other field makes the file invalid, so it can be committed to a public
+// repository without a look at its contents.
+export const PRIORITY_POOL_KEYS = Object.freeze([
+  "id",
+  "chain",
+  "hookAddress",
+  "tokens",
+  "name",
+  "createdAt",
+  "projectId",
+]);
+const PROJECT_ID = /^[a-z0-9][a-z0-9-]{0,99}$/;
+// A pool name is two symbols; anything that looks like an address of a web
+// service, a credential or markup is not one. No control character, bracket,
+// quote or backslash, and at most 100 characters.
+const PLAIN_NAME = /^[^\p{C}<>"'`\\]{1,100}$/u;
+const WEB_ADDRESS = /:\/\/|www\./i;
+
+/** Whether a pool name may be written to the priority list. */
+export const isPlainPoolName = (name) =>
+  typeof name === "string" && PLAIN_NAME.test(name) && !WEB_ADDRESS.test(name);
+
+export function isPriorityPool(row) {
+  return (
+    !!row &&
+    typeof row === "object" &&
+    !Array.isArray(row) &&
+    Object.keys(row).every((key) => PRIORITY_POOL_KEYS.includes(key)) &&
+    PRIORITY_POOL_KEYS.every((key) => key in row) &&
+    isPoolId(row.id) &&
+    lower(row.id) &&
+    typeof row.chain === "string" &&
+    CHAIN_SLUG.test(row.chain) &&
+    isAddress(row.hookAddress) &&
+    lower(row.hookAddress) &&
+    row.hookAddress !== ZERO_ADDRESS &&
+    Array.isArray(row.tokens) &&
+    row.tokens.length === 2 &&
+    row.tokens.every((token) => isAddress(token) && lower(token)) &&
+    row.tokens[0] !== row.tokens[1] &&
+    isPlainPoolName(row.name) &&
+    (row.createdAt === null || isIso(row.createdAt)) &&
+    typeof row.projectId === "string" &&
+    PROJECT_ID.test(row.projectId)
+  );
+}
+
+const PRIORITY_SELECTION_KEYS = ["snapshotGeneratedAt", "rule", "counts"];
+
+/** The priority file as written: its pools, and how they were chosen. */
+export function isPriorityFile(value) {
+  const selection = value?.selection;
+  return (
+    !!value &&
+    typeof value === "object" &&
+    Object.keys(value).every((key) =>
+      ["schemaVersion", "exportedAt", "selection", "pools"].includes(key),
+    ) &&
+    value.schemaVersion === 1 &&
+    isIso(value.exportedAt) &&
+    !!selection &&
+    typeof selection === "object" &&
+    Object.keys(selection).every((key) =>
+      PRIORITY_SELECTION_KEYS.includes(key),
+    ) &&
+    isIso(selection.snapshotGeneratedAt) &&
+    typeof selection.rule === "string" &&
+    selection.rule.length <= 2000 &&
+    !!selection.counts &&
+    typeof selection.counts === "object" &&
+    Object.values(selection.counts).every(
+      (count) => Number.isSafeInteger(count) && count >= 0,
+    ) &&
+    Array.isArray(value.pools) &&
+    value.pools.length <= MAX_PRIORITY_POOLS &&
+    value.pools.every(isPriorityPool) &&
+    new Set(value.pools.map((row) => poolKey(row.chain, row.id))).size ===
+      value.pools.length
   );
 }
 
@@ -150,6 +233,9 @@ export async function readState(dir) {
   const historyFile = await readJson(dir, "history.json");
   if (historyFile && !isHistory(historyFile))
     throw new Error("history.json has an unexpected shape.");
+  const priorityFile = await readJson(dir, "priority.json");
+  if (priorityFile && !isPriorityFile(priorityFile))
+    throw new Error("priority.json has an unexpected shape.");
   const registryFile = await readJson(dir, "registry.json");
   if (
     registryFile &&
@@ -164,6 +250,10 @@ export async function readState(dir) {
     hookless: new Set(hooklessFile?.pools ?? []),
     census: censusFile,
     history: historyFile?.points ?? [],
+    // The pools that are always measured (see config.mjs), or null.
+    priority: priorityFile
+      ? { exportedAt: priorityFile.exportedAt, pools: priorityFile.pools }
+      : null,
     registry: registryFile,
   };
 }
@@ -185,6 +275,8 @@ export const hooklessJson = (updatedAt, keys) =>
   rowsJson({ schemaVersion: 1, updatedAt }, "pools", [...keys].sort());
 export const historyJson = (points) =>
   rowsJson({ schemaVersion: 1 }, "points", points);
+export const priorityJson = (header, pools) =>
+  rowsJson({ schemaVersion: 1, ...header }, "pools", [...pools].sort(byKey));
 
 /** Write the run's state. Registry is rewritten only when its data changed. */
 export async function writeState(

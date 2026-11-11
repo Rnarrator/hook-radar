@@ -327,6 +327,14 @@ export function SourceCredit({
         <External href="https://www.geckoterminal.com">GeckoTerminal</External>.
       </>,
     );
+  if (credited.frontierMarkets)
+    sentences.push(
+      <>
+        Figures for Frontier&rsquo;s own pools from{" "}
+        <External href="https://api.frontier.fun/chains">Frontier</External> and
+        its public AMM index.
+      </>,
+    );
   if (credited.registry)
     sentences.push(
       <>

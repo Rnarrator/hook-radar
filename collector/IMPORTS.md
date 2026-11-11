@@ -2,7 +2,7 @@
 
 Packaging copies exactly these (plus `collector/`, `state/` and `public/data/`).
 The list is the transitive closure of the imports of `collector/run.mjs`,
-`collector/export-seed.mjs` and `collector/tools/*.mjs`. It is computed, not
+`collector/export-seed.mjs`, `collector/export-priority.mjs` and `collector/tools/*.mjs`. It is computed, not
 guessed: `node collector/tools/imports.mjs` prints it, `node collector/tools/imports.mjs --check`
 compares it with this file, and `tests/collector-imports.test.mjs` fails when the
 two differ. When another change adds or removes an import, regenerate with the
@@ -18,6 +18,7 @@ them directly (type stripping), so no build step is involved.
 - `server/market-chains.mjs`: the verified Uniswap v4 networks (manager, GeckoTerminal slug and DEX id).
 - `server/market-discovery.mjs`: the GeckoTerminal top-pools URL and page validator.
 - `server/market-envio.mjs`: `validateEnvioPools`, the v4.xyz pool-list validator.
+- `server/providers.mjs`: `collectFrontierMetrics` and `getFrontierMarketObservation`, the live app's own code for Frontier's pool figures, run unchanged by `collector/providers/frontier.mjs`. The module is stateless and imports only `model.mjs` and `reserve-value.mjs`; its GeckoTerminal and Uniswap helpers are imported with it and never called by the collector.
 - `server/reserve-value.mjs`: `assessMarketLiquidity`, the reserve valuation rules.
 - `server/source-json.mjs`: JSON parsing that refuses a nonzero number rounded to zero.
 - `shared/market-freshness.ts`: the five-minute qualification, `aggregateCurrentMarkets`, `marketMeasurementState`.
@@ -37,6 +38,11 @@ them directly (type stripping), so no build step is involved.
 - `shared/analytics-contributions.ts`: via `shared/analytics-overview.ts`.
 - `shared/directory.ts`: via `src/model.ts`.
 - `shared/indexing.ts`: via `shared/analytics-contributions.ts` and `src/analytics.ts`.
+- `shared/launchpad-records-additional.ts`: via `shared/launchpad-registry.ts`.
+- `shared/launchpad-records-core.ts`: via `shared/launchpad-registry.ts`.
+- `shared/launchpad-records-wave2.ts`: via `shared/launchpad-registry.ts`.
+- `shared/launchpad-registry.ts`: via `collector/export-priority.mjs`, the one-time export of the priority list (the exact hooks the reviewed launchpad platforms publish). A collection run does not use it.
+- `shared/launchpad-types.ts`: via `shared/launchpad-registry.ts`.
 - `shared/market-coverage.ts`: via `src/model.ts`.
 - `shared/official-hooks.ts`: via `model.mjs`.
 - `shared/pool-key.ts`: via `src/model.ts`.

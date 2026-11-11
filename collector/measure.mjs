@@ -11,6 +11,7 @@ import {
   MAX_CONSECUTIVE_FAILURES,
   MAX_DISCOVERED_MEASURED,
   MAX_MEASURED_POOLS,
+  MAX_PRIORITY_POOLS,
 } from "./config.mjs";
 import {
   acceptDexScreenerPairs,
@@ -55,27 +56,45 @@ export const isDiscovered = (pool) => pool.source !== "census";
 
 /** Which pools the burst asks about, grouped per network (largest first).
  *
- * `maxPools` is the whole plan. Seeded pools come first; pools found by
- * discovery use what is left of it, at most `maxDiscovered`, so a new pool can
- * never push a seeded one out of the burst. Within a group the most recently
- * seen come first, then the id, so the same pool set always yields the same
- * requests. */
+ * `maxPools` is the whole plan. Seeded pools come first, at most `maxSeeded`
+ * of them; pools found by discovery use what is left of the plan, at most
+ * `maxDiscovered`, so a new pool can never push a seeded one out of the burst.
+ * Within a group the most recently seen come first, then the id, so the same
+ * pool set always yields the same requests.
+ *
+ * `protectedKeys` (chain:id keys of the priority list) are the pools of the
+ * exact published hooks of launchpad platforms and named projects. They are
+ * planned before every other pool, whatever their age, up to
+ * MAX_PRIORITY_POOLS, and count against `maxSeeded`: they take the places of the
+ * seeded pools that have gone longest without an answer, so the plan is no
+ * larger than it was and costs no more requests. */
 export function planBurst(
   pools,
   {
     maxPools = MAX_MEASURED_POOLS + MAX_DISCOVERED_MEASURED,
     maxDiscovered = MAX_DISCOVERED_MEASURED,
+    maxSeeded = maxPools,
+    protectedKeys = new Set(),
     chains = measurementChains(),
   } = {},
 ) {
   const bySlug = new Map(chains.map((chain) => [chain.chain, chain]));
   const eligible = pools.filter((pool) => bySlug.has(pool.chain));
-  const seeded = eligible
-    .filter((pool) => !isDiscovered(pool))
+  const keyOf = (pool) => poolKey(pool.chain, pool.id);
+  const guarded = eligible
+    .filter((pool) => protectedKeys.has(keyOf(pool)))
     .sort(byPriority)
-    .slice(0, maxPools);
+    .slice(0, Math.min(MAX_PRIORITY_POOLS, maxSeeded, maxPools));
+  const guardedKeys = new Set(guarded.map(keyOf));
+  const seeded = [
+    ...guarded,
+    ...eligible
+      .filter((pool) => !isDiscovered(pool) && !guardedKeys.has(keyOf(pool)))
+      .sort(byPriority)
+      .slice(0, Math.max(0, Math.min(maxSeeded, maxPools) - guarded.length)),
+  ];
   const discovered = eligible
-    .filter(isDiscovered)
+    .filter((pool) => isDiscovered(pool) && !guardedKeys.has(keyOf(pool)))
     .sort(byPriority)
     .slice(0, Math.max(0, Math.min(maxDiscovered, maxPools - seeded.length)));
   const selected = [...seeded, ...discovered];
@@ -100,6 +119,9 @@ export function planBurst(
     networks,
     planned: selected.length,
     plannedDiscovered: discovered.length,
+    // The priority-list pools in the plan, as chain:id keys.
+    protectedKeys: guardedKeys,
+    plannedProtected: guarded.length,
     unsupported: pools.length - eligible.length,
     batches: networks.reduce(
       (sum, { pools: rows }) => sum + Math.ceil(rows.length / DS_BATCH_SIZE),
@@ -252,7 +274,9 @@ export async function runBurst({
           .map((pool) => ({ chain, pool }))
       : [],
   );
-  for (const batch of fallbackBatches(unresolved, fallbackRequests)) {
+  for (const batch of fallbackBatches(unresolved, fallbackRequests, {
+    protectedKeys: plan.protectedKeys,
+  })) {
     if (client.isStopped("geckoterminal") || now() - startedAt >= deadlineMs)
       break;
     const { chain } = batch;
@@ -315,35 +339,44 @@ export async function runBurst({
     // for. Never larger than requestedPools: what the quality gate judges.
     answeredPools: [...answered].filter((key) => requestedKeys.has(key)).length,
     dexRequests,
+    // The pools DEX Screener was asked about, as chain:id keys.
+    requestedKeys,
     unsupportedNetworks,
     fallback,
   };
 }
 
-/** Up to `limit` batches of at most 30 unresolved ids, one network per batch. */
-export function fallbackBatches(unresolved, limit = GT_FALLBACK_MAX_REQUESTS) {
-  // Pools GeckoTerminal measured last time come first: they are the ones DEX
-  // Screener is known not to cover. The sort is stable, so the rest keep the
-  // plan's order.
-  const ordered = [...unresolved].sort(
-    (a, b) =>
-      Number(b.pool.via === "geckoterminal") -
-      Number(a.pool.via === "geckoterminal"),
-  );
+/** Up to `limit` batches of at most 30 unresolved ids, one network per batch.
+ *
+ * The order of preference: pools of the priority list that GeckoTerminal
+ * measured last time, the rest of the priority list, other pools GeckoTerminal
+ * measured last time (the ones DEX Screener is known not to cover), then the
+ * plan's order (the sort is stable). A pool is only taken when it fits one of
+ * the `limit` requests: a network that has no open batch when the limit is
+ * reached gets none, so no request is spent on a few low-ranked pools while
+ * higher-ranked ones wait. */
+export function fallbackBatches(
+  unresolved,
+  limit = GT_FALLBACK_MAX_REQUESTS,
+  { protectedKeys = new Set() } = {},
+) {
+  const rank = ({ chain, pool }) =>
+    (protectedKeys.has(poolKey(chain.chain, pool.id)) ? 0 : 2) +
+    (pool.via === "geckoterminal" ? 0 : 1);
+  const ordered = [...unresolved].sort((a, b) => rank(a) - rank(b));
   const buffers = new Map();
   const batches = [];
   for (const { chain, pool } of ordered) {
-    if (batches.length >= limit) break;
-    if (!buffers.has(chain.chain))
+    if (!buffers.has(chain.chain)) {
+      if (batches.length + buffers.size >= limit) continue;
       buffers.set(chain.chain, { chain, pools: [] });
+    }
     const buffer = buffers.get(chain.chain);
     buffer.pools.push(pool);
     if (buffer.pools.length === GT_FALLBACK_BATCH_SIZE) {
       batches.push(buffer);
-      buffers.set(chain.chain, { chain, pools: [] });
+      buffers.delete(chain.chain);
     }
   }
-  for (const buffer of buffers.values())
-    if (batches.length < limit && buffer.pools.length) batches.push(buffer);
-  return batches;
+  return [...batches, ...buffers.values()];
 }

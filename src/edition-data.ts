@@ -1,6 +1,11 @@
 /** Reads for the Auto Snapshot edition's published files. */
 import type { Point, RadarProject } from "../shared/types";
-import { historyUrl, parseHistory } from "./edition.ts";
+import {
+  historyUrl,
+  parseHistory,
+  parseHistoryPools,
+  recordedPools,
+} from "./edition.ts";
 
 /** The snapshot request the page's head script starts before the application
  * loads (editionPreload in vite.config.ts). */
@@ -44,7 +49,11 @@ export async function loadRecordedHistory(
   try {
     const response = await fetch(historyUrl(), { signal, cache: "no-cache" });
     if (!response.ok) return null;
-    return parseHistory(await response.json());
+    const json = await response.json();
+    const points = parseHistory(json);
+    // The pools behind each point belong to the file that was just read.
+    recordedPools.replace(points ? parseHistoryPools(json) : new Map());
+    return points;
   } catch {
     return null;
   }

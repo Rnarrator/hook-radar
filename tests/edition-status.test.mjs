@@ -524,6 +524,32 @@ test("the credit credits only the services the snapshot's sources say supplied s
   assert.equal(renderToStaticMarkup(createElement(SourceCredit)), "");
 });
 
+test("Frontier is credited for its own pools' figures only when the run read its coin listing", () => {
+  const withMarkets = [
+    ...everySource,
+    { id: "frontier-coins", status: "live" },
+    { id: "frontier-stats", status: "live" },
+    { id: "frontier-amm-index", status: "live" },
+  ];
+  const text = credit(withMarkets);
+  assert.equal(
+    text,
+    "Prices from DEX Screener, with GeckoTerminal for pool discovery and as a fallback. Figures for Frontier’s own pools from Frontier and its public AMM index. Hooks from the Uniswap hooklist. Hook and pool identities from the v4.xyz indexer. Deployment configuration from Frontier. The pool census is Hook Radar’s own index of PoolManager events.",
+  );
+  // Unavailable or absent: no such sentence, and the rest is what it was.
+  for (const sources of [
+    withMarkets.map((source) =>
+      source.id === "frontier-coins"
+        ? { ...source, status: "unavailable" }
+        : source,
+    ),
+    everySource,
+  ])
+    assert.doesNotMatch(credit(sources), /Figures for Frontier/);
+  // Its configuration alone is the deployment credit, as before.
+  assert.match(credit(everySource), /Deployment configuration from Frontier\./);
+});
+
 test("the credit links are the ones on the Data & sources cards", () => {
   const html = renderToStaticMarkup(
     createElement(SourceCredit, { sources: everySource }),

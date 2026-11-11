@@ -205,13 +205,64 @@ export function marketCoverageFor({
   return { networks: [...networks, ...idle], cacheWarning: null };
 }
 
+// The live app's own words for the pools Frontier measures (server/store.mjs,
+// marketCoverageNote). A test keeps the two in step.
+export const FRONTIER_PROVIDER_NAME = "Frontier’s public AMM index";
+export const FRONTIER_COVERAGE_SENTENCE =
+  " Frontier estimates use native ETH AMM swaps and core reserves at the observed ETH/USD price; bonding-curve trades and separately held hook assets are excluded.";
+
 function coverageNote(pools) {
   const names = [];
   if (pools.some((pool) => /DEX Screener/i.test(pool.source)))
     names.push("DEX Screener");
   if (pools.some((pool) => /GeckoTerminal/i.test(pool.source)))
     names.push("GeckoTerminal");
-  return `Observed market data covers ${pools.length.toLocaleString("en-US")} pools across ${new Set(pools.map((pool) => pool.chain)).size} networks${names.length ? ` from ${names.join(", ")}` : ""}. Dollar totals use available observations, not ecosystem totals. Unpriced pools remain browsable; missing values are unavailable, never zero.`;
+  if (pools.some((pool) => /Frontier/i.test(pool.source)))
+    names.push(FRONTIER_PROVIDER_NAME);
+  return (
+    `Observed market data covers ${pools.length.toLocaleString("en-US")} pools across ${new Set(pools.map((pool) => pool.chain)).size} networks${names.length ? ` from ${names.join(", ")}` : ""}. Dollar totals use available observations, not ecosystem totals. Unpriced pools remain browsable; missing values are unavailable, never zero.` +
+    (names.includes(FRONTIER_PROVIDER_NAME) ? FRONTIER_COVERAGE_SENTENCE : "")
+  );
+}
+
+const FRONTIER_DOCS = "https://docs.frontier.fun";
+
+/** The source rows of Frontier's step: the live app's own (the pooled coin
+ * markets, the ETH/USD conversion, the AMM index and, when the index lacks a
+ * coin, the attribution), each with what this snapshot took from Frontier. A
+ * step that failed outright is one unavailable row, so the snapshot still says
+ * Frontier was asked. Nothing is named when the step had nothing to ask. */
+export function frontierSources(frontier, measured) {
+  if (!frontier) return [];
+  const supplied = [...measured.values()].filter(
+    (pool) => pool.metricProvider === "frontier",
+  ).length;
+  const plural = (n, word) =>
+    `${n.toLocaleString("en-US")} ${word}${n === 1 ? "" : "s"}`;
+  if (frontier.failure)
+    return [
+      {
+        id: "frontier-coins",
+        name: "Frontier · pooled coin markets",
+        url: FRONTIER_DOCS,
+        status: "unavailable",
+        updatedAt: null,
+        note: `Frontier's own market figures could not be read in this run (${frontier.failure}). The pools of its hooks keep the figures other providers returned; none is estimated.`,
+      },
+    ];
+  return (frontier.sources ?? []).map((source) => {
+    if (source.id === "frontier-coins")
+      return {
+        ...source,
+        note: `${source.note} ${plural(frontier.listed ?? 0, "pooled coin market")} listed; Frontier's figures are used for ${plural(supplied, "pool")} of this snapshot (a pool that another provider measured more recently keeps that measurement).`,
+      };
+    if (source.id === "frontier-market-attribution")
+      return {
+        ...source,
+        note: `${source.note} The edition does not request Frontier's per-coin configuration, so a coin the AMM index does not list is not priced from Frontier.`,
+      };
+    return source;
+  });
 }
 
 /** The sources the snapshot names: every provider actually used, with its real
@@ -227,6 +278,7 @@ export function providerSources({
   registrySources,
   unsupportedNetworks = [],
   chains = [],
+  frontier = null,
 }) {
   const latest = (provider) => {
     const times = [...measured.values()]
@@ -296,6 +348,7 @@ export function providerSources({
         : null,
       note: `Pool identity only (which hook, which two currencies) for newly discovered pools: ${span(v4)}. Network lists read: ${discovery.indexerLists}, hooked pools listed: ${discovery.indexerListed}, exact lookups: ${discovery.resolvesTried}. It supplies no amounts. The LP fee printed at the end of a pool name is read only to recognise hooks that set fees dynamically.${waitNote(v4)}${stopNote(v4)}`,
     });
+  sources.push(...frontierSources(frontier, measured));
   if (census)
     sources.push({
       id: "census",

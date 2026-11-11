@@ -261,7 +261,7 @@ test("a run at full size stays inside the request budget, the gaps and the burst
   assert.ok(
     byHost("api.geckoterminal.com").filter((c) =>
       c.url.includes("/pools/multi/"),
-    ).length <= 3,
+    ).length <= 6,
   );
 
   // The gaps between request starts, per provider, in the contract's numbers.

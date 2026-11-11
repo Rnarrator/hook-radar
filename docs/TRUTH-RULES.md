@@ -14,7 +14,7 @@ If a provider does not know a pool, the pool is **unresolved**, not "0 volume". 
 
 ## 3. Every figure keeps its own time and its source
 
-Each measurement keeps the time it was taken and the provider it came from. Nothing is re-stamped with the current time. One pool's figures are never added to or averaged with another provider's figures for the same pool.
+Each measurement keeps the time it was taken and the provider it came from. Nothing is re-stamped with the current time. One pool's figures are never added to or averaged with another provider's figures for the same pool: when two providers measured a pool, the newer measurement stands, whole.
 
 ## 4. The five-minute rule is applied honestly
 
@@ -22,7 +22,7 @@ A measurement counts as current only if it was taken less than five minutes befo
 
 ## 5. Tracked is not total
 
-The figures describe **tracked hook pools**. They are not total Uniswap volume and not a market share. The scope label stays on every figure it belongs to ("Partial coverage · Not total Uniswap volume"). Method notes belong in the collapsed Data notes and in these documents, not in banners.
+The figures describe **tracked hook pools**. They are not total Uniswap volume and not a market share. The scope label stays on every figure it belongs to ("Partial coverage · Not total Uniswap volume"). A project's sums are the sums of the pools measured in the snapshot, so where its pool count is marked as a lower bound ("≥") the dollar figures beside it are marked too. Frontier's figures count trades in its Uniswap v4 pools only; trades on a coin's bonding curve are not v4 volume and are never counted, so Frontier's own site, which adds them, shows more. Method notes belong in the collapsed Data notes and in these documents, not in banners.
 
 ## 6. Ownership needs evidence
 

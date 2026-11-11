@@ -13,6 +13,7 @@ const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export const ENTRY_POINTS = [
   "collector/run.mjs",
   "collector/export-seed.mjs",
+  "collector/export-priority.mjs",
   "collector/tools/record-fixtures.mjs",
   "collector/tools/imports.mjs",
 ];

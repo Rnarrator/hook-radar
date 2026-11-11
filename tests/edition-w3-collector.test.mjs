@@ -510,6 +510,7 @@ test("a fallback answer for a pool DEX Screener was never asked about does not c
   const { burst } = await burstOver(pools, {
     dex: dexAnswers(pools, { unindexed: ["ethereum"] }),
     gecko: geckoAnswers(ethereum, pools),
+    fallbackRequests: 3,
   });
   assert.deepEqual(burst.unsupportedNetworks, ["ethereum"]);
   assert.equal(burst.requestedPools, 430);
@@ -541,11 +542,13 @@ test("a run judges and prints the answered count among the requested pools, and 
   const { counts } = result.status;
   assert.equal(counts.requestedPools, 430);
   assert.equal(counts.answeredPools, 430);
-  assert.equal(counts.checkedPools, 490, "every pool a provider answered for");
+  // The fallback is six requests of 30: it answers all 100 Ethereum pools, 70
+  // of them never requested from DEX Screener.
+  assert.equal(counts.checkedPools, 500, "every pool a provider answered for");
   const coverage = result.snapshot.marketCoverage.networks.find(
     (n) => n.chain === "ethereum",
   );
-  assert.equal(coverage.checkedPools, 90, "the coverage row keeps its count");
+  assert.equal(coverage.checkedPools, 100, "the coverage row keeps its count");
   // The flag and a live row go together when GeckoTerminal answered: a page
   // reads the flag only for a row nothing answered for.
   assert.equal(coverage.status, "live");
@@ -564,6 +567,7 @@ test("pools that were planned and not requested cannot make up for pools that we
     },
     gecko: geckoAnswers(base, pools),
     budgetMs: 6000,
+    fallbackRequests: 3,
   });
   assert.equal(burst.requestedPools, 30);
   assert.equal(burst.checkedPools, 90);
@@ -596,6 +600,7 @@ test("a requested pool a provider failed on and the other answered counts as ans
   const { burst } = await burstOver(pools, {
     dex: failEveryThird(dexAnswers(pools)),
     gecko: geckoAnswers(base, pools),
+    fallbackRequests: 3,
   });
   assert.equal(burst.requestedPools, 600);
   assert.equal(burst.answeredPools, 510, "420 from DEX Screener, 90 rescued");

@@ -1,6 +1,7 @@
 import type { Pool, RadarProject, WindowKey } from "../shared/types";
 import { currentMetricValue } from "../shared/market-freshness.ts";
 import { STATIC_EDITION } from "./edition.ts";
+import { FRONTIER_SCOPE_NOTE } from "./edition-platform-copy.ts";
 import { count, shortAddress } from "./model.ts";
 
 /** Match the directory's count semantics without turning an unknown chain into zero. */
@@ -316,19 +317,23 @@ export function projectCoverageNote(options: {
   pools: readonly { chain: string; source: string }[];
   /** Every pool the snapshot measured. */
   snapshotPools: readonly { chain: string }[];
+  /** The project's id: Frontier's figures say what they leave out. */
+  projectId?: string;
   edition?: boolean;
 }): string | null {
   if (!(options.edition ?? STATIC_EDITION)) return null;
   const { pools, snapshotPools } = options;
+  const scope =
+    options.projectId === "frontier" ? ` ${FRONTIER_SCOPE_NOTE}` : "";
   const wholeSnapshot = snapshotPools.length
     ? ` The snapshot as a whole measured ${plural(snapshotPools.length, "pool", "pools")} on ${plural(new Set(snapshotPools.map((pool) => pool.chain)).size, "network", "networks")}.`
     : "";
   if (!pools.length)
-    return `None of this project’s pools were measured in this snapshot, so it has no market totals.${wholeSnapshot} Missing values are unavailable, never zero.`;
+    return `None of this project’s pools were measured in this snapshot, so it has no market totals.${wholeSnapshot} Missing values are unavailable, never zero.${scope}`;
   const sources = [
     ...new Set(pools.map((pool) => pool.source.trim()).filter(Boolean)),
   ].sort((a, b) => a.localeCompare(b, "en"));
-  return `This project’s totals use its ${plural(pools.length, "measured pool", "measured pools")} on ${plural(new Set(pools.map((pool) => pool.chain)).size, "network", "networks")}${sources.length ? ` from ${sources.join(", ")}` : ""}.${wholeSnapshot} Dollar totals use available observations, not ecosystem totals. Unpriced pools remain browsable; missing values are unavailable, never zero.`;
+  return `This project’s totals use its ${plural(pools.length, "measured pool", "measured pools")} on ${plural(new Set(pools.map((pool) => pool.chain)).size, "network", "networks")}${sources.length ? ` from ${sources.join(", ")}` : ""}.${wholeSnapshot} Dollar totals use available observations, not ecosystem totals. Unpriced pools remain browsable; missing values are unavailable, never zero.${scope}`;
 }
 
 /** "Arbitrum · Ethereum +2": the first two names and how many more. */

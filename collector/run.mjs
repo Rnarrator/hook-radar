@@ -7,6 +7,8 @@ import {
   COLLECTOR_VERSION,
   DISCOVERY_BUDGET_MS,
   DS_BATCH_SIZE,
+  FRONTIER_LATEST_START_MS,
+  FRONTIER_MAX_REQUESTS,
   GT_FALLBACK_MAX_REQUESTS,
   LAST_SEEN_GRANULARITY_MS,
   MAX_DISCOVERED_MEASURED,
@@ -35,6 +37,12 @@ import {
 } from "./measure.mjs";
 import { createFixtureTransport } from "./offline.mjs";
 import { buildOverviewFiles } from "./overview.mjs";
+import {
+  collectFrontier,
+  overlayFrontier,
+  skippedFrontier,
+  withFrontierNetworks,
+} from "./providers/frontier.mjs";
 import { discoveryPage } from "./providers/geckoterminal.mjs";
 import { assessQuality } from "./quality.mjs";
 import { loadRegistry } from "./registry.mjs";
@@ -51,14 +59,16 @@ export const FIXTURES = join(ROOT, "collector", "fixtures");
 const RUN_SLOT_MS = 3 * 60 * 60 * 1000;
 const iso = (ms) => new Date(ms).toISOString();
 
-/** The requests the burst and its fallback can need for a plan of `maxPools`
- * pools. Batches are rounded up per network, so the plan can need one more
- * request for each network the providers price than maxPools / 30 alone. */
+/** The requests the burst, its fallback and the Frontier step can need for a
+ * plan of `maxPools` pools. Batches are rounded up per network, so the plan can
+ * need one more request for each network the providers price than maxPools / 30
+ * alone. */
 export function requestReserve(maxPools) {
   return (
     Math.ceil(maxPools / DS_BATCH_SIZE) +
     measurementChains().length +
-    GT_FALLBACK_MAX_REQUESTS
+    GT_FALLBACK_MAX_REQUESTS +
+    FRONTIER_MAX_REQUESTS
   );
 }
 
@@ -74,6 +84,33 @@ export function fitDiscovery({ lists, resolves, allowance }) {
   return { lists: Math.max(0, n), resolves: Math.max(0, r) };
 }
 
+/** The priority list as the run uses it: every key on it, and a state record
+ * for each pool the state does not hold yet. Such a record is a seeded pool like
+ * any other (its identity comes from the live app's census, which the list was
+ * made from), first and last seen when the list was exported; the state keeps it
+ * from the first run that follows. */
+export function priorityPlan(priority, known) {
+  const keys = new Set();
+  const fresh = [];
+  for (const row of priority?.pools ?? []) {
+    const key = poolKey(row.chain, row.id);
+    keys.add(key);
+    if (known.has(key)) continue;
+    fresh.push({
+      id: row.id,
+      chain: row.chain,
+      hookAddress: row.hookAddress,
+      tokens: [...row.tokens],
+      name: row.name,
+      createdAt: row.createdAt,
+      source: "census",
+      firstSeen: priority.exportedAt,
+      lastSeen: priority.exportedAt,
+    });
+  }
+  return { keys, fresh };
+}
+
 /** The pool records after a successful run: seen pools keep a quiet lastSeen,
  * discovered ones are added, and the oldest are dropped above the state cap. */
 export function nextPools({ pools, found, measured, generatedAtMs }) {
@@ -86,7 +123,12 @@ export function nextPools({ pools, found, measured, generatedAtMs }) {
     const stale =
       generatedAtMs - Date.parse(pool.lastSeen) >= LAST_SEEN_GRANULARITY_MS;
     const { via: _via, ...rest } = pool;
-    const via = seen ? seen.metricProvider : pool.via;
+    // Only DEX Screener and GeckoTerminal tell which of the two prices a pool;
+    // a pool Frontier measured keeps what was known before.
+    const via =
+      seen && seen.metricProvider !== "frontier"
+        ? seen.metricProvider
+        : pool.via;
     merged.set(key, {
       ...rest,
       ...(via === "geckoterminal" ? { via } : {}),
@@ -108,10 +150,21 @@ function statusDocument({
   offline,
   plan,
   dropped,
+  frontier,
+  priority,
 }) {
+  // The Frontier lane carries the configuration read at the start and the
+  // market reads of the Frontier step; each source is credited its own.
+  const frontierReads = frontier.requests;
   const requestsBy = {
     registry: stats.registry.requests,
-    "frontier-chains": stats.frontier.requests,
+    "frontier-chains":
+      stats.frontier.requests -
+      (frontierReads["frontier-coins"] ?? 0) -
+      (frontierReads["frontier-stats"] ?? 0),
+    "frontier-coins": frontierReads["frontier-coins"] ?? 0,
+    "frontier-stats": frontierReads["frontier-stats"] ?? 0,
+    "frontier-amm-index": frontierReads["frontier-amm-index"] ?? 0,
     dexscreener: stats.dexscreener.requests,
     geckoterminal: stats.geckoterminal.requests,
     v4xyz: stats.v4xyz.requests,
@@ -129,6 +182,10 @@ function statusDocument({
       statePools: state.pools.length,
       plannedPools: plan.planned,
       plannedDiscoveredPools: plan.plannedDiscovered,
+      // The pools of launchpad platforms' and named projects' exact hooks
+      // (state/priority.json): how many are listed, how many the state did not
+      // hold before this run, how many the plan took and how many were measured.
+      priorityPools: priority,
       requestedPools: burst.requestedPools,
       answeredPools: burst.answeredPools,
       checkedPools: burst.checkedPools,
@@ -143,6 +200,15 @@ function statusDocument({
       discoveredHookless: discovery.hookless.length,
       fallbackRequests: burst.fallback.requests,
       fallbackMeasured: burst.fallback.measured,
+      frontier: {
+        coinMarketsListed: frontier.listed,
+        poolsSupplied: frontier.supplied,
+        poolsAdded: frontier.added,
+        poolsReplacingOlderRow: frontier.replaced,
+        poolsKeptFromOtherProvider: frontier.kept,
+        poolsLeftOutOnMismatch: frontier.skipped.length,
+        failure: frontier.failure,
+      },
       unsupportedNetworks: [...burst.unsupportedNetworks].sort(),
       rateLimitWaits: Object.fromEntries(
         Object.entries(stats)
@@ -235,6 +301,8 @@ export async function runCollector({
   const known = new Set(
     state.pools.map((pool) => poolKey(pool.chain, pool.id)),
   );
+  const priority = priorityPlan(state.priority, known);
+  for (const pool of priority.fresh) known.add(poolKey(pool.chain, pool.id));
   const discovery = fit.lists
     ? await discoverPools({
         client,
@@ -254,12 +322,60 @@ export async function runCollector({
         hookless: [],
         stats: discoveryStats(),
       };
-  const pools = [...state.pools, ...discovery.found];
+  const pools = [...state.pools, ...priority.fresh, ...discovery.found];
 
   log(`Measurement burst over ${pools.length} known pools`);
-  const plan = planBurst(pools, { maxPools });
-  const burst = await runBurst({ client, plan, now });
-  const generatedAtMs = burst.endedAt;
+  // Seeded pools, the priority list among them, fill the plan up to
+  // MAX_MEASURED_POOLS; discovery has the rest, as before.
+  const plan = planBurst(pools, {
+    maxPools,
+    maxSeeded: Math.min(MAX_MEASURED_POOLS, maxPools),
+    protectedKeys: priority.keys,
+  });
+  const dexBurst = await runBurst({ client, plan, now });
+
+  // Frontier's own figures for the pools of its hooks (three requests). The step
+  // never fails the run: a source that does not answer is reported unavailable
+  // and the DEX Screener rows of those pools stay. It runs after the burst, so
+  // its rows are the newest of the run, and the snapshot time is taken after it.
+  log("Frontier pool markets");
+  const frontier =
+    now() - dexBurst.startedAt > FRONTIER_LATEST_START_MS
+      ? skippedFrontier(
+          "the measurement burst ran too long to read Frontier inside the five-minute window",
+        )
+      : await collectFrontier({
+          client,
+          frontierChains: registry.data.frontier,
+          known: new Map(
+            pools.map((pool) => [poolKey(pool.chain, pool.id), pool]),
+          ),
+          now,
+        });
+  const overlay = overlayFrontier(dexBurst.measured, frontier.pools);
+  // The measurements end with Frontier's: that is the snapshot's time.
+  const generatedAtMs = Math.max(dexBurst.endedAt, now());
+  const burst = {
+    ...dexBurst,
+    measured: overlay.measured,
+    endedAt: generatedAtMs,
+    networks: withFrontierNetworks(
+      dexBurst.networks,
+      frontier.pools,
+      dexBurst.requestedKeys,
+      new Map(measurementChains().map((chain) => [chain.chain, chain.chainId])),
+    ),
+  };
+  const frontierCounts = {
+    listed: frontier.pricedCoins,
+    supplied: frontier.pools.length,
+    added: overlay.added,
+    replaced: overlay.replaced,
+    kept: overlay.kept,
+    skipped: frontier.skipped,
+    failure: frontier.failure,
+    requests: frontier.requests,
+  };
 
   const stats = client.stats();
   // The notes name a network as the page does, so they are made once the
@@ -272,6 +388,7 @@ export async function runCollector({
       census: state.census,
       registrySources: registry.sources,
       unsupportedNetworks: burst.unsupportedNetworks,
+      frontier: { sources: frontier.sources, ...frontierCounts },
       chains,
     });
   const { snapshot, historyPoints } = assembleSnapshot({
@@ -327,6 +444,14 @@ export async function runCollector({
     offline,
     plan,
     dropped: pools.length - plan.planned - plan.unsupported,
+    frontier: frontierCounts,
+    priority: {
+      listed: priority.keys.size,
+      addedToState: priority.fresh.length,
+      planned: plan.plannedProtected,
+      measured: [...plan.protectedKeys].filter((key) => burst.measured.has(key))
+        .length,
+    },
   });
   const result = {
     ok: quality.ok,
@@ -360,7 +485,7 @@ export async function runCollector({
       updatedAt: snapshot.generatedAt,
       pools: nextPools({
         pools: state.pools,
-        found: discovery.found,
+        found: [...priority.fresh, ...discovery.found],
         measured: burst.measured,
         generatedAtMs,
       }),

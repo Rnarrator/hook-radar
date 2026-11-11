@@ -279,6 +279,8 @@ test("the history CSV is stamped with the real export time and names the snapsho
     "observed_at_utc",
     "original_timestamp",
     "recorded_volume_usd_h24_rolling",
+    // The history file says how many pools stood behind each value.
+    "pools_measured",
     "metric",
     "scope",
     "range",
@@ -288,15 +290,16 @@ test("the history CSV is stamped with the real export time and names the snapsho
   assert.equal(lines.length - 1, EVERY_3H.points.length);
   for (const [index, line] of lines.slice(1).entries()) {
     const row = cells(line);
-    assert.equal(row.length, 8);
+    assert.equal(row.length, 9);
     const point = EVERY_3H.points[index];
     // Every stored observation is exactly as recorded.
     assert.equal(row[0], new Date(point.timestamp).toISOString());
     assert.equal(row[1], String(point.timestamp));
     assert.equal(row[2], String(point.value));
+    assert.equal(row[3], String(point.pools));
     // exported_at is when the file was made; snapshot_at is the snapshot's time.
-    assert.equal(row[6], new Date(visitorNow).toISOString());
-    assert.equal(row[7], new Date(generatedAt).toISOString());
+    assert.equal(row[7], new Date(visitorNow).toISOString());
+    assert.equal(row[8], new Date(generatedAt).toISOString());
   }
   s.verify();
 });

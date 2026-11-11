@@ -27,7 +27,7 @@ import {
   formatMoneyFull,
   formatUtc,
 } from "../charts/index";
-import { STATIC_EDITION } from "../edition";
+import { STATIC_EDITION, recordedPools } from "../edition";
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Download } from "./Icons";
 import "./analytics-history.css";
 
@@ -95,6 +95,13 @@ export function AnalyticsHistory({
   );
   const allZero = useMemo(
     () => points.length > 0 && points.every((point) => point.value === 0),
+    [points],
+  );
+  // Edition: how many pools were measured behind each value, when the file says.
+  const poolsAt = (point: Point) =>
+    STATIC_EDITION ? recordedPools.get(point.timestamp) : undefined;
+  const showPools = useMemo(
+    () => points.some((point) => poolsAt(point) !== undefined),
     [points],
   );
   const hasHistory = available && allPoints > 0;
@@ -234,7 +241,7 @@ export function AnalyticsHistory({
               value: roundExactUsd(point.value),
             }))
           : points,
-        { range, exportedAt, snapshotAt },
+        { range, exportedAt, snapshotAt, poolsAt: STATIC_EDITION ? poolsAt : undefined },
       );
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -298,6 +305,7 @@ export function AnalyticsHistory({
                   <tr>
                     <th scope="col">Observation time (UTC)</th>
                     <th scope="col">Recorded 24h volume</th>
+                    {showPools && <th scope="col">Pools measured</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -331,6 +339,13 @@ export function AnalyticsHistory({
                         >
                           {formatMoneyFull(point.value)}
                         </td>
+                        {showPools && (
+                          <td>
+                            {poolsAt(point) === undefined
+                              ? "—"
+                              : formatCount(poolsAt(point)!)}
+                          </td>
+                        )}
                       </tr>
                     ))}
                 </tbody>
@@ -482,6 +497,16 @@ export function AnalyticsHistory({
               <dt>Measures</dt>
               <dd>Rolling 24H volume ending at this time · All networks</dd>
             </div>
+            {showPools && (
+              <div>
+                <dt>Pools measured</dt>
+                <dd>
+                  {poolsAt(active) === undefined
+                    ? "Not recorded"
+                    : `${formatCount(poolsAt(active)!)} ${poolsAt(active) === 1 ? "pool" : "pools"} · a change in this count moves the value too`}
+                </dd>
+              </div>
+            )}
             <div>
               <dt>From previous observation</dt>
               <dd>

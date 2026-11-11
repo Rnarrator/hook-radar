@@ -1026,6 +1026,7 @@ function HookProjectDetail({
     projectCoverageNote({
       pools: allProjectPools,
       snapshotPools: snapshot.pools,
+      projectId: project.id,
     }) ??
     (project.metrics.note ||
       "Market totals include pools with available price data. Pools without a price are still listed, with a dash instead of a USD value.");

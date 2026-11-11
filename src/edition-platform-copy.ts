@@ -133,3 +133,45 @@ export function isPlainLeftClick(event: {
     !event.altKey
   );
 }
+
+/** The mark in front of a USD figure that is the sum of the pools measured in
+ * this snapshot while the pool count beside it is a lower bound: the project
+ * may have more pools than the sample holds, so the sum is "at least". Nothing
+ * is marked when no pool is measured (the figure is a dash) or when the count
+ * is exact. Outside the edition no figure is marked. */
+export function lowerBoundMark(
+  poolCount: number | null,
+  exact: boolean,
+  value: number | null,
+  enabled: boolean = STATIC_EDITION,
+): "≥" | "" {
+  return enabled && poolCount !== null && !exact && value !== null ? "≥" : "";
+}
+
+/** What Frontier's figures leave out, said beside them: the volume Frontier's
+ * own site shows adds trades on a coin's bonding curve, which happen before a
+ * pool exists and are never counted as Uniswap v4 volume here. */
+export const FRONTIER_SCOPE_NOTE =
+  "Counts trades in its Uniswap v4 pools only. Trades on a coin’s bonding curve, before it graduates to a pool, are not included, so Frontier’s own site shows more.";
+
+/** Edition: the scope notes of a Launchpads row: Frontier's, and the one hook
+ * that two rows publish. Empty outside the edition. */
+export function rowScopeNotes(
+  row: { project: { id: string }; sharedHookWith?: readonly string[] },
+  enabled: boolean = STATIC_EDITION,
+): string[] {
+  if (!enabled) return [];
+  const notes: string[] = [];
+  if (row.project.id === "frontier") notes.push(FRONTIER_SCOPE_NOTE);
+  const names = row.sharedHookWith ?? [];
+  if (names.length) {
+    const list =
+      names.length === 1
+        ? names[0]
+        : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+    notes.push(
+      `Shares a hook with ${list}: that hook’s pools count in each listed project’s row and are not added together.`,
+    );
+  }
+  return notes;
+}

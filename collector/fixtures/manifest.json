@@ -166,6 +166,36 @@
       "age": null,
       "file": "geckoterminal-2.json",
       "bytes": 46868
+    },
+    {
+      "provider": "api.frontier.fun",
+      "url": "https://api.frontier.fun/coinsPage?limit=100",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:11:12 GMT",
+      "age": null,
+      "file": "frontier-2.json",
+      "bytes": 5908,
+      "derived": "Derived, not recorded: the answers of api.frontier.fun saved on 2026-11-11 (12 of the 86 coin rows, the 10 pooled markets and 2 curve-stage coins, only the fields the collector reads) with every time field moved by the same number of seconds so that it lies inside this recording. The amounts are the ones the API gave."
+    },
+    {
+      "provider": "api.frontier.fun",
+      "url": "https://api.frontier.fun/coinsStats",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:11:13 GMT",
+      "age": null,
+      "file": "frontier-3.json",
+      "bytes": 366,
+      "derived": "Derived, not recorded: the answer of api.frontier.fun/coinsStats saved on 2026-11-11, with its two time fields moved by the same number of seconds as the coin listing so that they lie inside this recording. The amounts are the ones the API gave."
+    },
+    {
+      "provider": "api.goldsky.com",
+      "url": "https://api.goldsky.com/api/public/project_cmhfvhwp1000mqkp2g91h5ej1/subgraphs/frontier-ammv4-robinhood/prod/gn",
+      "status": 200,
+      "date": "Tue, 27 Oct 2026 21:11:13 GMT",
+      "age": null,
+      "file": "goldsky-1.json",
+      "bytes": 6235,
+      "synthetic": "Hand-built for the replay, never recorded: the public index was not asked. It has the shape of its answer for the same ten pools; every amount, hook choice and swap in it is an invented round number, not market data."
     }
   ]
 }

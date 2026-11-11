@@ -65,7 +65,8 @@ test("the contract numbers are the ones the design states", () => {
     REGISTRY_GAP_MS: 1000,
     DS_BATCH_SIZE: 30,
     GT_FALLBACK_BATCH_SIZE: 30,
-    GT_FALLBACK_MAX_REQUESTS: 3,
+    GT_FALLBACK_MAX_REQUESTS: 6,
+    MAX_PRIORITY_POOLS: 1500,
     GT_DISCOVERY_PAGE_CYCLE: 5,
     MAX_MEASURED_POOLS: 8000,
     MAX_DISCOVERED_MEASURED: 500,
@@ -87,6 +88,8 @@ test("the contract numbers are the ones the design states", () => {
     MAX_RETRY_AFTER_MS: 120000,
     MAX_CONSECUTIVE_FAILURES: 5,
     DYNAMIC_FEE_FLAG: 8388608,
+    FRONTIER_MAX_REQUESTS: 3,
+    FRONTIER_LATEST_START_MS: 240000,
   };
   for (const [name, value] of Object.entries(pinned))
     assert.equal(config[name], value, name);
@@ -98,13 +101,20 @@ test("the contract numbers are the ones the design states", () => {
       v4xyz: 5000,
       registry: 1000,
       frontier: 1000,
+      goldsky: 1000,
     },
   );
   // The seed plus the discovered allowance is what the request budget was
   // sized for: 8,500 pools are 284 batches, and 399 requests also pay for the
-  // registry (3), up to 20 lists + 40 lookups + 20 pages, and the fallback (3).
+  // registry (3), up to 20 lists + 40 lookups + 20 pages, the fallback (3) and
+  // the Frontier step (3).
   assert.ok(
-    Math.ceil(8500 / config.DS_BATCH_SIZE) + 22 + 3 + 3 + 80 <=
+    Math.ceil(8500 / config.DS_BATCH_SIZE) +
+      22 +
+      3 +
+      config.GT_FALLBACK_MAX_REQUESTS +
+      config.FRONTIER_MAX_REQUESTS +
+      80 <=
       config.MAX_REQUESTS_PER_RUN,
   );
   // The page counts a measurement as current for five minutes; a burst that
@@ -112,6 +122,11 @@ test("the contract numbers are the ones the design states", () => {
   // may take still ends inside that window.
   assert.equal(MARKET_MAX_AGE_MS, 300000);
   assert.ok(config.BURST_DEADLINE_MS + config.REQUEST_TIMEOUT_MS < 300000);
+  // The Frontier step follows the burst: it starts by its own limit and takes
+  // at most 10 s + 1 s + 10 s for its two reads and 15 s for the index query.
+  assert.ok(
+    config.FRONTIER_LATEST_START_MS + 10000 + 1000 + 10000 + 15000 < 300000,
+  );
   assert.ok(config.BURST_BUDGET_MS < config.BURST_DEADLINE_MS);
 });
 

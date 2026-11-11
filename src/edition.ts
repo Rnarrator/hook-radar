@@ -414,7 +414,9 @@ export function editionCatchUpDue(
   lastLoadedAt: number | null,
   visitorNow: number,
 ): boolean {
-  return lastLoadedAt !== null && visitorNow - lastLoadedAt > EDITION_RECHECK_MS;
+  return (
+    lastLoadedAt !== null && visitorNow - lastLoadedAt > EDITION_RECHECK_MS
+  );
 }
 
 /** The pages the edition offers, in navigation order. The guide ("learn") comes
@@ -451,7 +453,8 @@ export function parseHistory(value: unknown): Point[] | null {
   const out: Point[] = [];
   let last = -Infinity;
   for (const point of points) {
-    if (!point || typeof point !== "object" || Array.isArray(point)) return null;
+    if (!point || typeof point !== "object" || Array.isArray(point))
+      return null;
     const { timestamp, value: amount } = point as Record<string, unknown>;
     if (
       typeof timestamp !== "number" ||
@@ -468,6 +471,43 @@ export function parseHistory(value: unknown): Point[] | null {
   }
   return out;
 }
+
+/** How many pools stood behind each recorded value, by the point's timestamp,
+ * for the points of a history file that say. The collector writes the count; a
+ * count that is not a whole number of at least zero is left out, never guessed.
+ * A series made from a sample that grows or shrinks moves for that reason too,
+ * so the page shows the count beside the value. It is kept apart from the
+ * points: the overview envelope's own checks admit a timestamp and a value
+ * only. */
+export function parseHistoryPools(value: unknown): Map<number, number> {
+  const found = new Map<number, number>();
+  const points =
+    value && typeof value === "object"
+      ? (value as { points?: unknown }).points
+      : null;
+  if (!Array.isArray(points)) return found;
+  for (const point of points) {
+    if (!point || typeof point !== "object") continue;
+    const { timestamp, pools } = point as Record<string, unknown>;
+    if (
+      typeof timestamp === "number" &&
+      typeof pools === "number" &&
+      Number.isSafeInteger(pools) &&
+      pools >= 0
+    )
+      found.set(timestamp, pools);
+  }
+  return found;
+}
+
+let poolsBehind = new Map<number, number>();
+/** The pools behind the recorded points of the history file the page loaded. */
+export const recordedPools = {
+  replace(map: Map<number, number>) {
+    poolsBehind = map;
+  },
+  get: (timestamp: number): number | undefined => poolsBehind.get(timestamp),
+};
 
 const epoch = (timestamp: number) =>
   timestamp < 1e12 ? timestamp * 1000 : timestamp;
@@ -625,6 +665,45 @@ export function projectsFigureNote(market: string | undefined): string {
     : "Named projects in this view";
 }
 
+/** The note under the Pools figure of the Discover strip. The strip's scope can
+ * be narrower than the snapshot (named projects leave the unnamed hooks out),
+ * so the figure says how many pools the whole snapshot measured. In the live
+ * build, or when the figure is the whole snapshot, it is the note it always had. */
+export function poolsFigureNote(
+  scoped: number | null,
+  snapshotPools: number,
+  enabled: boolean = STATIC_EDITION,
+): string {
+  if (!enabled || scoped === null || scoped === snapshotPools)
+    return "Pools measured in this snapshot";
+  return `Pools measured in this view · ${snapshotPools.toLocaleString("en-US")} in the whole snapshot`;
+}
+
+/** The note under the Networks figure of the Discover strip: in a scope that is
+ * not limited to measured pools the figure counts networks where the listed
+ * projects have hooks, which is more than the networks with a measured pool, so
+ * the edition adds how many networks the snapshot measured a pool on in this
+ * view. */
+export function networksFigureNote(
+  options: {
+    measuredScope: boolean;
+    measuredNetworks: number;
+  },
+  enabled: boolean = STATIC_EDITION,
+): string {
+  if (options.measuredScope) return "Networks with measured pools in this view";
+  if (!enabled) return "Networks in this view";
+  return `Networks in this view · pools measured on ${options.measuredNetworks.toLocaleString("en-US")}`;
+}
+
+/** What follows the pool count under a leading hook in Analytics. The count is
+ * the pools that carry a volume measurement in the window, a measured zero
+ * included, so the edition calls them measured rather than "with volume", which
+ * reads as pools that traded. */
+export function poolsWithVolumeWords(enabled: boolean = STATIC_EDITION) {
+  return enabled ? "measured" : "with volume";
+}
+
 /** Whether a network named in an address is one the page knows: a network the
  * snapshot lists, or one a project is deployed on. */
 export function knownNetwork(
@@ -711,6 +790,9 @@ export interface CreditedSources {
   registry: boolean;
   v4xyz: boolean;
   frontier: boolean;
+  /** Frontier's own market figures for the pools of its hooks (the coin
+   * listing it read); the index it names is credited with it. */
+  frontierMarkets: boolean;
   census: boolean;
 }
 
@@ -732,6 +814,7 @@ export function creditedSources(
     v4xyz: supplied("v4xyz"),
     // The deployment configuration is listed as "frontier-chains".
     frontier: supplied("frontier-chains", "frontier"),
+    frontierMarkets: supplied("frontier-coins"),
     census: supplied("census"),
   };
 }

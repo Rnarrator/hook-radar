@@ -29,7 +29,12 @@ import {
 } from "../charts/index";
 import { historyExportTimes } from "../history-chart";
 import { windows } from "../model";
-import { STATIC_EDITION, censusLabel, timeLabel } from "../edition";
+import {
+  STATIC_EDITION,
+  censusLabel,
+  poolsWithVolumeWords,
+  timeLabel,
+} from "../edition";
 import { CensusNote } from "./EditionStatus";
 import { ProtocolLogo } from "./ProtocolLogo";
 import { AnalyticsHistory } from "./AnalyticsHistory";
@@ -553,8 +558,8 @@ export function AnalyticsWorkspace({
                         ) : (
                           <>
                             {formatCount(row.volumePools)}{" "}
-                            {row.volumePools === 1 ? "pool" : "pools"} with
-                            volume
+                            {row.volumePools === 1 ? "pool" : "pools"}{" "}
+                            {poolsWithVolumeWords()}
                           </>
                         )}
                       </span>

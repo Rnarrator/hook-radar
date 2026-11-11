@@ -119,6 +119,7 @@ test("gap overrides can raise the contract gaps and never lower them", () => {
       v4xyz: V4_GAP_MS,
       registry: 1000,
       frontier: 1000,
+      goldsky: 1000,
     },
   );
   const raised = resolveGaps({

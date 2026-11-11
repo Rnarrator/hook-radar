@@ -783,11 +783,13 @@ test("the request budget of a normal run stays under 400", async () => {
     await run.done();
   }
   // Even a full-size plan reserves its batches before discovery spends any:
-  // 8,500 pools are 284 batches, plus one per network for rounding (22) and
-  // the fallback (3), after the 3 registry requests - which leaves 87.
-  assert.equal(requestReserve(8500), Math.ceil(8500 / 30) + 22 + 3);
+  // 8,500 pools are 284 batches, plus one per network for rounding (22), the
+  // fallback (6) and the Frontier step (3), after the 3 registry requests -
+  // which leaves 81, enough for the 80 of a full discovery.
+  assert.equal(requestReserve(8500), Math.ceil(8500 / 30) + 22 + 6 + 3);
   const allowance = 399 - 3 - requestReserve(8500);
-  assert.equal(allowance, 87);
+  assert.equal(allowance, 81);
+  assert.ok(allowance >= 2 * 20 + 40);
   // The reserve covers the worst spread of pools over networks: one pool more
   // than a whole batch on each of the 22 networks the providers price.
   const spread = measurementChains().flatMap((chain) =>

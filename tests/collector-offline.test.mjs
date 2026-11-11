@@ -27,6 +27,10 @@ const fixtureState = await readState(join(FIXTURES, "state"));
 const body = async (entry) =>
   JSON.parse(await readFile(join(FIXTURES, entry.file), "utf8"));
 const live = await import("../server/market-enricher.mjs").catch(() => null);
+// The replay also covers Frontier's own market figures: ten pooled coin markets.
+const FRONTIER_POOLS = JSON.parse(
+  await readFile(join(FIXTURES, "frontier-2.json"), "utf8"),
+).data.filter((coin) => coin.isLPd).length;
 
 async function scratch() {
   const dir = await mkdtemp(join(tmpdir(), "collector-offline-"));
@@ -44,7 +48,7 @@ const quietly = async (work) => {
 };
 
 test("the fixtures are complete recordings of real responses, within the live request budget", async () => {
-  assert.ok(manifest.entries.length <= 14);
+  assert.ok(manifest.entries.length <= 16);
   const count = (host) =>
     manifest.entries.filter((entry) => entry.provider === host).length;
   assert.ok(count("api.dexscreener.com") <= 5);
@@ -76,6 +80,40 @@ test("the fixtures are complete recordings of real responses, within the live re
   );
   assert.ok(fixtureState.pools.length > 20);
   assert.ok(fixtureState.pools.every((pool) => pool.source === "v4.xyz"));
+});
+
+test("what was not recorded is said so: the three Frontier answers are marked derived or synthetic, nothing else is", async () => {
+  const marked = manifest.entries.filter(
+    (entry) => "derived" in entry || "synthetic" in entry,
+  );
+  assert.deepEqual(
+    marked.map((entry) => entry.file),
+    ["frontier-2.json", "frontier-3.json", "goldsky-1.json"],
+  );
+  for (const entry of marked)
+    assert.match(
+      entry.derived ?? entry.synthetic,
+      /^(Derived, not recorded|Hand-built for the replay, never recorded):/,
+    );
+  // The index answer is invented: one round number for every pool.
+  const index = JSON.parse(
+    await readFile(join(FIXTURES, "goldsky-1.json"), "utf8"),
+  );
+  assert.ok(
+    index.data.pools.every(
+      (pool) => pool.totalValueLockedToken1 === "100000000",
+    ),
+  );
+  // The listing holds only fields the collector reads.
+  const coins = JSON.parse(
+    await readFile(join(FIXTURES, "frontier-2.json"), "utf8"),
+  );
+  assert.equal(coins.total, coins.data.length);
+  assert.ok(
+    coins.data.every(
+      (coin) => !("image" in coin) && !("creator" in coin) && !("tape" in coin),
+    ),
+  );
 });
 
 test("observation times of the recorded responses come from their Date and Age", () => {
@@ -202,7 +240,7 @@ test("an offline run replays the recording end to end without touching the netwo
     const RECORDED_ROWS_WITHOUT_A_FIGURE = 1;
     assert.equal(
       snapshot.pools.length,
-      manifest.burst.measured - RECORDED_ROWS_WITHOUT_A_FIGURE,
+      manifest.burst.measured - RECORDED_ROWS_WITHOUT_A_FIGURE + FRONTIER_POOLS,
     );
     assert.equal(
       snapshot.pools.some((pool) => pool.address.endsWith("31ef")),
@@ -230,6 +268,14 @@ test("an offline run replays the recording end to end without touching the netwo
     for (const pool of snapshot.pools) {
       if (pool.metricProvider === "dexscreener")
         assert.ok(dexDates.has(pool.metricUpdatedAt), pool.metricUpdatedAt);
+      else if (pool.metricProvider === "frontier")
+        assert.ok(
+          Date.parse(pool.metricUpdatedAt) <=
+            Date.parse(
+              manifest.entries.find((entry) => entry.file === "frontier-2.json")
+                .date,
+            ),
+        );
       else {
         assert.equal(pool.metricProvider, "geckoterminal");
         assert.equal(
@@ -278,7 +324,15 @@ test("an offline run replays the recording end to end without touching the netwo
     // look at the figures); a replay does not.
     assert.equal(
       status.counts.measuredPools,
-      manifest.burst.measured - RECORDED_ROWS_WITHOUT_A_FIGURE,
+      manifest.burst.measured - RECORDED_ROWS_WITHOUT_A_FIGURE + FRONTIER_POOLS,
+    );
+    assert.equal(status.counts.frontier.poolsSupplied, FRONTIER_POOLS);
+    assert.equal(status.counts.requests.frontier, 3);
+    assert.equal(status.counts.requests.goldsky, 1);
+    assert.equal(
+      snapshot.pools.filter((pool) => pool.metricProvider === "frontier")
+        .length,
+      FRONTIER_POOLS,
     );
     assert.equal(status.counts.trackedPools, snapshot.pools.length);
     assert.equal(

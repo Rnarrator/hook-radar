@@ -178,9 +178,11 @@ import {
   listNoun,
   listScopeLabel,
   networkMenu,
+  networksFigureNote,
   noPoolsOnNetwork,
   openingDetailTab,
   overviewFile,
+  poolsFigureNote,
   prepareEditionSnapshot,
   projectsFigureNote,
   recentTradingCaption,
@@ -4506,7 +4508,10 @@ export default function App() {
                           }
                           note={
                             STATIC_EDITION
-                              ? "Pools measured in this snapshot"
+                              ? poolsFigureNote(
+                                  scopedPoolCount,
+                                  snapshot.pools.length,
+                                )
                               : snapshot.inventory
                               ? filters.market === "all" &&
                                 !activeFilterCount &&
@@ -4551,9 +4556,16 @@ export default function App() {
                               : count(scopedDeploymentChains.length)
                           }
                           note={
-                            scopedMeasuredScope
-                              ? "Networks with measured pools in this view"
-                              : "Networks in this view"
+                            STATIC_EDITION
+                              ? networksFigureNote({
+                                  measuredScope: scopedMeasuredScope,
+                                  measuredNetworks: new Set(
+                                    scopedPools.map((pool) => pool.chain),
+                                  ).size,
+                                })
+                              : scopedMeasuredScope
+                                ? "Networks with measured pools in this view"
+                                : "Networks in this view"
                           }
                           icon={<Network size={16} />}
                         />

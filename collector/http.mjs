@@ -2,6 +2,7 @@ import { parseJsonWithoutUnderflow } from "../server/source-json.mjs";
 import {
   COOLDOWN_PROVIDERS,
   MAX_CONSECUTIVE_FAILURES,
+  MAX_REQUEST_BODY_BYTES,
   MAX_REQUESTS_PER_RUN,
   MAX_RETRY_AFTER_MS,
   PROVIDERS,
@@ -207,7 +208,14 @@ export function createHttpClient({
   }
 
   async function perform(id, state, url, options) {
-    const { maxBytes, timeout, notAfter, tolerate = [] } = options;
+    const {
+      maxBytes,
+      timeout,
+      notAfter,
+      tolerate = [],
+      method,
+      body: sent,
+    } = options;
     if (state.stopped)
       throw new ProviderError(
         "stopped",
@@ -218,6 +226,15 @@ export function createHttpClient({
         "budget",
         "The request budget of this run is spent.",
       );
+    if (
+      (method !== "GET" && method !== "POST") ||
+      (method === "POST"
+        ? typeof sent !== "string" ||
+          !sent ||
+          Buffer.byteLength(sent) > MAX_REQUEST_BODY_BYTES
+        : sent !== undefined)
+    )
+      throw new ProviderError("body", "The request is not allowed.");
     let target;
     try {
       target = new URL(url);
@@ -267,10 +284,17 @@ export function createHttpClient({
     try {
       try {
         response = await fetchImpl(url, {
-          method: "GET",
+          method,
+          ...(method === "POST" ? { body: sent } : {}),
           redirect: "error",
           signal: controller.signal,
-          headers: { accept: "application/json", "user-agent": userAgent },
+          headers: {
+            accept: "application/json",
+            "user-agent": userAgent,
+            ...(method === "POST"
+              ? { "content-type": "application/json" }
+              : {}),
+          },
         });
       } catch (error) {
         throw failure(
@@ -417,7 +441,9 @@ export function createHttpClient({
   }
 
   /** Fetch one JSON document. Rejects with a ProviderError; retries only after
-   * the one rate-limit cooldown described above.
+   * the one rate-limit cooldown described above. The request is a GET; a `body`
+   * (a JSON text of at most MAX_REQUEST_BODY_BYTES) makes it the one kind of
+   * POST the edition sends, a query to the public index Frontier names.
    * `notAfter` (a clock time) refuses, with code "budget", a request that would
    * have to start later than that, a cooldown included.
    * `tolerate` lists HTTP statuses that are an answer about this request alone:
@@ -431,11 +457,20 @@ export function createHttpClient({
       timeoutMs: timeout = timeoutMs,
       notAfter,
       tolerate = [],
+      body,
     } = {},
   ) {
     const state = lane(id);
+    const method = body === undefined ? "GET" : "POST";
     const run = () =>
-      perform(id, state, url, { maxBytes, timeout, notAfter, tolerate });
+      perform(id, state, url, {
+        maxBytes,
+        timeout,
+        notAfter,
+        tolerate,
+        method,
+        body,
+      });
     const result = state.tail.then(run, run);
     state.tail = result.then(
       () => {},

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Records REAL provider responses for the tests and for `run.mjs --offline`.
 //
-// It makes at most 13 requests, spread over the same code paths a real run uses
+// It makes at most 16 requests, spread over the same code paths a real run uses
 // (registry, the v4.xyz lists, one GeckoTerminal page, one exact lookup, five
-// DEX Screener batches and one GeckoTerminal fallback), through the same paced
-// client, so every gap is honoured. It never retries: a 429 or 403 aborts the
+// DEX Screener batches, one GeckoTerminal fallback and the three requests of
+// the Frontier step), through the same paced client, so every gap is honoured. It never retries: a 429 or 403 aborts the
 // recording and nothing is written. Run it only on purpose.
 //
 //   node collector/tools/record-fixtures.mjs [--out collector/fixtures]
@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { METRIC_CHAINS } from "../../server/market-chains.mjs";
 import { createHttpClient } from "../http.mjs";
 import { planBurst, runBurst } from "../measure.mjs";
+import { collectFrontier } from "../providers/frontier.mjs";
 import { loadRegistry } from "../registry.mjs";
 import {
   historyJson,
@@ -39,7 +40,8 @@ import { userAgent } from "../config.mjs";
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const CAPS = {
   registry: 2,
-  frontier: 1,
+  frontier: 3,
+  goldsky: 1,
   v4xyz: 3,
   geckoterminal: 2,
   dexscreener: 5,
@@ -92,7 +94,7 @@ const stamp = new Date(startedAt).toISOString();
 
 try {
   console.log("registry");
-  await loadRegistry({ client, saved: null });
+  const registry = await loadRegistry({ client, saved: null });
 
   console.log("indexer lists");
   const pools = [];
@@ -163,6 +165,13 @@ try {
   const burst = await runBurst({
     client,
     plan: planBurst(planned),
+    now: Date.now,
+  });
+
+  console.log("frontier pool markets");
+  await collectFrontier({
+    client,
+    frontierChains: registry.data.frontier,
     now: Date.now,
   });
 

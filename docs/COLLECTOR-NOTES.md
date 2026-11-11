@@ -56,18 +56,33 @@ which is not part of this repository; the numbers are in
    `status.json` says it happened.
 3. **Measurement burst.** The pools in state are grouped per network and sent to
    DEX Screener as exact-id batches of 30 (`/latest/dex/pairs/{network}/{id,id,...}`),
-   at least 400 ms between request starts. Which pools: the seeded pools first (at
-   most 8,000, most recently seen first), then the pools discovery found, in what
-   is left of 8,500 and at most 500. A newly discovered pool therefore never
-   pushes a seeded pool out of the burst (all seeded pools share one `lastSeen`
-   at first, so a single cut by recency would drop them in id order). Rows are accepted only under the live collector's
+   at least 400 ms between request starts. Which pools: the **priority list**
+   (`state/priority.json`, below) first, then the other seeded pools (at most 8,000
+   seeded pools in all, the priority list among them, most recently seen first),
+   then the pools discovery found, in what is left of 8,500 and at most 500. A
+   newly discovered pool therefore never pushes a seeded pool out of the burst
+   (all seeded pools share one `lastSeen` at first, so a single cut by recency
+   would drop them in id order). The priority list takes places inside the 8,000,
+   so the plan is no larger and a run no longer: it displaces the seeded pools that
+   went longest unanswered. A listed pool the state does not hold yet is added to
+   it (source `census`, first and last seen when the list was exported) and kept
+   from the first run that follows. Rows are accepted only under the live collector's
    rules (the pair address is a requested id, `dexId` is `uniswap`, labels, if
    any, include `v4`, the two currencies agree with the identity we hold). Ids
-   not returned are unresolved, never zero. Right after, at most three
-   GeckoTerminal `/pools/multi/` requests (up to 30 ids each, 90 in all) try the
-   unresolved pools, at least 12 s apart, under the same rules. Pools GeckoTerminal
-   measured last time come first (the live app's GeckoTerminal-measured pools carry
-   that hint from the seed), then the largest network's unresolved pools in id order.
+   not returned are unresolved, never zero. Right after, at most six
+   GeckoTerminal `/pools/multi/` requests (up to 30 ids each, 180 in all) try the
+   unresolved pools, at least 12 s apart, under the same rules. Priority-list
+   pools GeckoTerminal measured last time come first, then the rest of the
+   priority list, then other pools GeckoTerminal measured last time (the live app's
+   GeckoTerminal-measured pools carry that hint from the seed), then the plan's
+   order (the largest network's unresolved pools in id order). A pool is taken only
+   when it fits one of the six requests: a network with no open batch once the
+   limit is reached gets none, so no request goes to a few low-ranked pools while
+   higher-ranked ones wait. The cap was three; it is six because the pools of
+   platforms' own hooks that DEX Screener cannot price (it does not index Zora or
+   X Layer, and returns nothing for many Arbitrum, Polygon and Monad pools) come
+   first, and each request is 12 s: the six end about 72 s after the DEX Screener
+   batches do.
    A pool measured by DEX Screener is never also taken from GeckoTerminal, and
    two providers' figures for one pool are never combined. A row that carries no
    figure at all (no liquidity and no volume in any window, every one null) is an
@@ -84,6 +99,48 @@ which is not part of this repository; the numbers are in
    network, the network's other batches are not sent, the network is recorded
    (below), and its pools stay unresolved for the fallback to consider like any
    other unresolved pool.
+   **Frontier's own figures.** After the batches and the fallback, one more step
+   (three requests, `collector/providers/frontier.mjs`) reads Frontier's pooled
+   coin markets (`/coinsPage?limit=100`, only `isLPd` markets, at most the first 100
+   rows), its statistics (`/coinsStats`, for the ETH/USD rate) and, with the pool
+   ids from the listing, one POST to the public AMM index that Frontier's
+   configuration names (`subgraphs.ammV4`, on `api.goldsky.com`). The reading is the
+   live app's own: `collectFrontierMetrics` in `server/providers.mjs` is imported
+   and run unchanged, over a `fetchJson` that goes through the collector's paced
+   client (host-locked, one second apart, size limits, a truthful User-Agent). What
+   it produces is what the live app's Frontier rows are: the 24h volume of a pool's
+   native-ETH swaps (the index's swaps for the 1h, 6h and 24h windows when the
+   index head is under five minutes old and fewer than 1,000 swaps came back;
+   otherwise the listing's AMM-only 24h volume, with the 1h and 6h windows
+   unavailable), core reserves from the index (the hook's own holdings excluded),
+   both at the statistics' current ETH/USD rate, each pool's measurement time the
+   oldest of its sources' times. Bonding-curve volume and curve ETH are never
+   counted. Each row has `metricProvider: "frontier"`, the live source label
+   ("Frontier AMM index/configuration; USD estimates at current ETH/USD") and the
+   live evidence of each figure (`metricProvenance`). A pool the state knows keeps
+   its name and creation time and cannot be moved to another hook or other
+   currencies (the row is left out and counted). A pool the state does not know
+   is taken on the index's word for its hook address, checked against Frontier's
+   published hook list: the edition has no census for a pool newer than its
+   export, so it cannot check the pool's identity further. This is a weaker check
+   than the live app's, which applies a Frontier row only to a pool already in its
+   snapshot and requires the row to agree with its PoolManager census (the pool
+   id, hook and currencies). The hook address is still an exact on-chain address,
+   never a name, and attributing the pool to a project still needs the registry's
+   own evidence. Where DEX Screener or GeckoTerminal
+   measured the same pool, the newer measurement replaces the older whole, as in
+   the live app, and the two are never combined; `counts.frontier` says how many
+   rows were supplied, added, replaced an older row or were kept from another
+   provider. The step never fails the run: a source that does not answer, is
+   refused (a 429 or 403 stops that host for the run), is too large or invalid is
+   named `unavailable` in `sources` with the reason, and the pools of Frontier's hooks
+   keep the figures the other providers returned. The live app's fallback, one
+   configuration request per coin when the index is down, is not made: the
+   edition would pay up to ten requests for what DEX Screener already returns. The
+   step does not start later than 240 s into the burst (`FRONTIER_LATEST_START_MS`),
+   which keeps its worst case (10 s, 1 s and 10 s for the first two reads, 15 s for
+   the index) inside the five minutes; then it is skipped and said so. The
+   snapshot's time is taken after it.
 4. **Assemble.** The directory is built with the project's own `createDirectory`,
    asked for `strictFamilyNames` and `includeOfficialHooks` (see "Choices to know
    about"). Pools are attributed
@@ -93,7 +150,9 @@ which is not part of this repository; the numbers are in
    `marketCoverage`). The snapshot holds the registry-named projects, the
    published platforms and any project with at least one measured pool, and no
    `directory` field, so the client filters locally. Its `generatedAt` is the
-   moment the burst ended and freshness is evaluated at that moment.
+   moment the burst ended (Frontier's step included) and freshness is evaluated at
+   that moment. The coverage text names Frontier's public AMM index when pools
+   carry its figures, in the live app's words.
 5. **Overview files.** `analyticsOverviewAsync` (the live server's own function)
    builds `overview-all-h1`, `-h6`, `-h24` and `overview-<network>-h24` for every
    network, with the per-pool contributions the client re-slices locally, at the
@@ -165,7 +224,9 @@ a value above 90,000 is ignored and `0` turns the cooldown off.
 |---|---|
 | `DS_GAP_MS` / `GT_GAP_MS` / `V4_GAP_MS` | 400 / 12,000 / 5,000 ms between request starts |
 | `DS_BATCH_SIZE` | 30 ids per DEX Screener request |
-| `GT_FALLBACK_MAX_REQUESTS` / `GT_FALLBACK_BATCH_SIZE` | 3 requests of up to 30 ids |
+| `GT_FALLBACK_MAX_REQUESTS` / `GT_FALLBACK_BATCH_SIZE` | 6 requests of up to 30 ids |
+| `FRONTIER_MAX_REQUESTS` / `FRONTIER_LATEST_START_MS` | 3 requests (coin listing, statistics, one index query); the step starts at most 240 s into the burst |
+| `MAX_PRIORITY_POOLS` | 1,500: the most the priority list may hold (it holds 1,355) |
 | `MAX_MEASURED_POOLS` / `MAX_DISCOVERED_MEASURED` | 8,000 seeded pools, plus up to 500 found by discovery (8,500 in all) |
 | `MAX_RESOLVES_PER_RUN` | 40 exact-pool lookups |
 | `MAX_REQUESTS_PER_RUN` | 399 in all (hard stop) |
@@ -178,21 +239,28 @@ a value above 90,000 is ignored and `0` turns the cooldown off.
 | `REQUEST_TIMEOUT_MS`, `MAX_CONSECUTIVE_FAILURES` | 20 s; five failures in a row stop a provider for the run |
 | `RATE_LIMIT_WAIT_CAP_MS` / `RATE_LIMIT_DEFAULT_WAIT_MS` | 90,000 / 30,000 ms: the longest the one rate-limit cooldown of a run waits, and the wait when a 429 names none (Cloudflare's error 1015 page without a `Retry-After`) |
 | `MAX_RETRY_AFTER_MS` | 120,000 ms: the longest `Retry-After` honoured on any other status (a 503, say); beyond it the provider stops |
-| `COOLDOWN_PROVIDERS` | DEX Screener, GeckoTerminal and the v4.xyz indexer: the providers that may have the cooldown (the registry and Frontier fetches have a saved copy to fall back on and are not given one) |
+| `COOLDOWN_PROVIDERS` | DEX Screener, GeckoTerminal and the v4.xyz indexer: the providers that may have the cooldown (the registry and Frontier fetches have a saved copy to fall back on, and Goldsky is asked once: none is given one) |
 
 The request budget is reserved before discovery spends any of it: the batches the
 burst needs (8,500 pools are 284 batches, plus one per network for rounding), the
-fallback and the registry fetches come first, and discovery is trimmed to fit what
-is left (87 requests at full size; discovery wants 80). A full-size fake run in
-the tests (the seed's 8,000 pools on its 14 networks, 640 discovered pools on 20
-networks, providers that answer at once) makes 382 requests: 296 DEX Screener, 20
-GeckoTerminal pages and 3 fallback batches, 20 indexer lists and 40 lookups, 3
-registry fetches. Its collection takes about nine minutes of provider time, of
-which the burst is about two and a half. A real run varies with the networks the
-new pools fall on, never above 399. A retry after a rate-limit cooldown is one of
+fallback (6), Frontier's step (3) and the registry fetches come first, and
+discovery is trimmed to fit what is left (81 requests at full size; discovery
+wants 80). The priority list adds no request of its own: it takes places inside
+the plan. A full-size fake run in the tests (the seed's 8,000 pools on its 14
+networks, 640 discovered pools on 20 networks, providers that answer at once)
+makes 385 requests: 296 DEX Screener, 20 GeckoTerminal pages and 6 fallback
+batches, 20 indexer lists and 40 lookups, 3 registry fetches (no Frontier chain
+is configured in that fake, so none of Frontier's 3 is among them: a real run
+adds them, 388). Its collection takes about ten minutes of provider time, of
+which the burst is about three. A real run varies with the networks the new pools
+fall on, never above 399; the last real run before these changes made 375
+requests, so a real run is now expected to make about 381 and stays under 400. A retry after a rate-limit cooldown is one of
 those 399 requests. Only three providers can have one and each has one per run, so
-at most three retries are added; at full size discovery is allowed 87 requests and
-wants 80, which leaves room for them.
+at most three retries are added. They are not reserved: at full size discovery is
+allowed 81 requests and wants 80, so only one request is spare there. A retry is
+paid for by the part of the plan's reserve that the run does not use (the burst, its
+fallback and Frontier's step are each reserved at their largest, and most runs use
+less), and the client's 399-request hard stop applies to it like to any request.
 
 Provider etiquette, all of it tested: truthful User-Agent; per-provider gap;
 `Retry-After` honoured (the next request waits, and a wait longer than two minutes
@@ -260,8 +328,10 @@ node collector/run.mjs
   batches, so the gap can be about 0.75 s at most: 284 x 0.75 s is 213 s. With
   0.8 s or more, batches that cannot start by 225 s are not sent and the 80% rule
   decides whether the run is published.
-- A GeckoTerminal gap of 15 s keeps the three fallback requests inside the 270 s
-  limit even when DEX Screener takes the whole 225 s (225 + 2 x 15 = 255 s).
+- With the six fallback requests, a GeckoTerminal gap of 12 s starts the last one
+  about 60 s after the first. When DEX Screener takes the whole 225 s only the
+  first four start before the 270 s limit (a request that could only start
+  later is not sent), which the gate counts as unresolved pools, not as zero.
 - The cooldown is a safety net, not a plan. It doubles the gap from then on, so a
   0.75 s gap becomes 1.5 s and the batches after it may not all start in time.
   As arithmetic, not a recorded run: at 0.4 s between batches the 190th batch
@@ -305,10 +375,11 @@ fewer than 90% of the measured pools are current, so a thin run is not published
 | Provider | Used for | Not used for |
 |---|---|---|
 | DEX Screener (`api.dexscreener.com`) | The measurements: liquidity and 1h/6h/24h volume per exact pool id | Discovery |
-| GeckoTerminal (`api.geckoterminal.com`) | One top-pools page per network (candidate ids), and up to three exact-pool fallback batches | Anything else |
+| GeckoTerminal (`api.geckoterminal.com`) | One top-pools page per network (candidate ids), and up to six exact-pool fallback batches | Anything else |
 | v4.xyz indexer (`www.v4.xyz`) | Pool identity only: which hook, which two currencies. The paths are undocumented | Any amount |
 | Uniswap hooklist and chain registry (GitHub raw) | Hook deployments, project grouping, chain names | |
-| Frontier deployment configuration (`api.frontier.fun/chains`) | Exact hook addresses Frontier publishes, so its pools are attributed. It is not in the contract's list; see "Choices to know about" | |
+| Frontier (`api.frontier.fun`) | `/chains`: exact hook addresses Frontier publishes, so its pools are attributed (not in the contract's list; see "Choices to know about"). `/coinsPage?limit=100` and `/coinsStats`: the market figures of the pools of its own hooks (three requests with the index query) | Curve volume, curve ETH, anything outside its isLPd markets |
+| Goldsky (`api.goldsky.com`), Frontier's AMM index | One POST a run: the core reserves, the hook and the native-ETH swaps of the pools in Frontier's listing. The address comes from Frontier's configuration; no key is involved | Anything else, and any USD field of the index (it has no price feed) |
 
 DefiLlama and CoinGecko price APIs are not used. The collector still imports the
 server modules that mention them (`reserve-value.mjs` reaches them) but never calls
@@ -327,6 +398,7 @@ only be raised.
 |---|---|
 | `pools.json` | `{ schemaVersion, updatedAt, pools: [...] }`, one pool per line. A pool is `id` (lowercase bytes32), `chain`, `hookAddress`, `tokens` (two lowercase addresses; the native currency is the zero address), `name`, `createdAt`, `source`, `firstSeen`, `lastSeen`, for a pool GeckoTerminal measured last time `via: "geckoterminal"` (the fallback hint above), and optionally `dynamicFee` (below). `source` is `census` for the seed (identity verified by the live app's on-chain census) or `v4.xyz` for a pool found by discovery (identity from the indexer). `updatedAt` is the previous run's `generatedAt`. |
 | `hookless.json` | `chain:id` keys of pools the indexer resolved to the zero hook. |
+| `priority.json` | `{ schemaVersion, exportedAt, selection: { snapshotGeneratedAt, rule, counts }, pools: [...] }`, one pool per line: the pools that are always in the plan. A record holds seven fields and no others: `id`, `chain`, `hookAddress`, `tokens`, `name`, `createdAt` and `projectId` (the platform or project it was chosen for, a label: ownership is decided from the exact hook at every snapshot). The state refuses a file with any other field (a provider's address, a key, a figure), a web address in a name or a malformed identity. Written once by `collector/export-priority.mjs`; the collector only reads it. |
 | `census.json` | `{ exportedAt, seed: {...}, inventory }`. `inventory` is the live app's pool census as published, with its original `generatedAt`, per-network `updatedAt` and `headCheckedAt`, plus the time of the export. The one thing removed is each network's `sourceUrl`, the address of the data service the app read that network from (some embed an access key; see "Choices to know about"). The page shows it as "Census as of <date>", never as current. |
 | `history.json` | `{ schemaVersion, points: [{ timestamp, value, pools }] }`, newest last, at most 672 points. |
 | `registry.json` | Last fetched hooklist (without the decoded flags, which are recomputed from each address), chain registry and Frontier configuration, each with its fetch time. Rewritten only when the data changed. |
@@ -404,6 +476,42 @@ export again over the saved response (`--from-file` with the original
 the new field is removed, and `census.json`, `hookless.json` and `history.json`
 are identical.
 
+## The priority list
+
+The seed is the live app's top 8,000 pools by 24h volume on one day, so it holds
+few of the pools that launchpad platforms created afterwards, and most of it stops
+answering within days. `state/priority.json` is the second one-time export from
+the live app, made from the same kind of response (`node
+collector/export-priority.mjs --from-file <saved snapshot> --exported-at <its
+time>`; without `--from-file` it reads the local app, like the seed export). It
+holds 1,355 pools, chosen by a rule the file states:
+
+- every pool of the exact hooks that the 36 reviewed launchpad platforms publish
+  as their own (`platform-hook` paths of `shared/launchpad-registry.ts`) and of the
+  hooks that named projects deploy (not the unnamed on-chain hook projects), that
+  carried a measurement within 24 hours of that snapshot (963 are Pons's, 49
+  Aegis's, 16 Hookr.fun's, 14 Minara's and 14 Uniderp's, then smaller numbers);
+- for Doppler, Clanker, Zora and Flaunch, whose pools number in the millions, the
+  50 with the highest 24h volume among those measured within a week (they carried
+  nearly all the volume those protocols showed). A pool is listed once, under the
+  first label that chose it: Flaunch is labelled on 46, because four of its top
+  fifty are on the hook that ubi.fun also publishes and are listed under ubi.fun.
+
+The snapshot it was made from is the live app's last public one before it was
+stopped, 31 October 2026 18:32 UTC; of the 1,355, 623 were not in the state, and
+732 were. Each record is identity only: pool id, network, hook, the two currencies,
+name, creation time and the label of the platform or project it was chosen for.
+The exporter reads only those fields of the snapshot (never a provider address, a
+key or a figure), the state refuses a file with any other field, and
+`tests/collector-priority.test.mjs` pins both. Ownership is not taken from the
+label: the snapshot attributes a pool by its exact hook at every run, and a pool
+on the list that no registry evidence names simply is not attributed.
+
+The list does not make a platform's volume complete: a platform with millions of
+pools stays a lower bound (the page marks its sums "≥"), and the pools of a hot
+launch that has faded since are measured and found quiet. It is not refreshed by
+the collector; re-run the export from a newer snapshot to change it.
+
 ## Fixtures and offline mode
 
 `collector/fixtures/` holds 11 real responses recorded on 27 October 2026 by
@@ -413,8 +521,18 @@ one GeckoTerminal top-pools page and one fallback batch; three DEX Screener
 batches. Each file is the response body; `manifest.json` keeps its URL, status,
 `Date` and `Age`. They drive `run.mjs --offline` and the tests. The recorder goes
 through the same paced client and the same planner as a real run, makes at most
-13 requests (an answer that is not HTTP 200 aborts it and nothing is written), and
-was run once.
+16 requests (an answer that is not HTTP 200 aborts it and nothing is written), and
+was run once, before Frontier's step existed. Three more entries cover that step
+and were **not recorded**: the manifest marks them. `frontier-2.json` and
+`frontier-3.json` are derived from the public answers of `/coinsPage` and
+`/coinsStats` saved on 11 November 2026 (12 of the 86 coin rows, only the fields
+the collector reads, every time field moved by the same number of seconds into the
+recorded run so that the five-minute rule holds in the replay; the amounts are the
+API's). `goldsky-1.json` is hand-built: the public index was not asked, so it has
+the shape of its answer for the same ten pools with invented round numbers. A
+real run of the recorder, which now includes Frontier's step, replaces all three
+with recordings. Offline output is test output either way, and
+`scripts/check-edition-data.mjs` refuses it.
 `collector/fixtures/state/` is the state that reproduces those requests. The
 hooklist fixture is 6.3 MB because it is the unedited response.
 
@@ -449,7 +567,26 @@ test that reaches for a provider fails instead of calling it):
   Screener, the quality gate, history cap, state validation, the seed export.
 - `collector-offline`: the fixtures, parity on the real recorded responses, and an
   offline run end to end into a temporary directory, with the network disabled.
-- `collector-imports`: `collector/IMPORTS.md` is exactly the computed import list.
+- `collector-imports`: `collector/IMPORTS.md` is exactly the computed import list, and
+  the one live-app provider module the collector imports is the stateless Frontier
+  producer (`server/providers.mjs`), which reaches nothing of the runtime.
+- `collector-frontier`: the client's one kind of POST and its host lock; the live
+  Frontier code run over the paced client (three requests, in order, one second
+  apart, none per coin); its rows equal the producer's field for field and are
+  priced at the statistics' ETH/USD rate; a row without the producer's proof is
+  never used; the state's name, creation time, hook and currencies; the newer
+  measurement winning whole; a whole run (labels per pool, sources and request
+  counts, the coverage wording, the project row); and failure never failing the
+  run (the index down, the listing refused with 429, 403 or 500, answers of the
+  wrong shape, a step that throws, no Frontier chain).
+- `collector-priority`: what a priority record and file may hold (every other
+  field, a web address in a name and malformed identities refused), the committed
+  `state/priority.json`, the selection rule on a real offline snapshot (age limits,
+  top fifty of the shared protocols, a hook two entities publish, nothing leaked
+  from the provider addresses and keys placed in the input), the export command,
+  the planner (listed pools first, inside the seeded places, discovery kept), the
+  fallback order and its limit, and a run that adds, measures and keeps the listed
+  pools.
 - `collector-contract`: the numbers of the design written out as literals (the other
   files import the constants, so only this one notices a constant changed to pass a
   test), the 399-request budget, five failures stopping a provider, `notAfter`
@@ -559,6 +696,19 @@ the real runs and the gate.
   names the hooklist and chain registry only. Without Frontier's published hook
   addresses its pools would not be attributed to it (the live app does the same
   fetch). The fetch is optional: if it fails the project list is built without it.
+- **Frontier's market figures are a fourth source, and Goldsky a fifth host.**
+  The contract has no Frontier market data. Frontier's pools sit on its own hooks
+  and a few of them carry nearly all of what its pools trade (FOREVER/ETH alone
+  traded more than all the other pools of its hooks together), while the DEX
+  Screener sample held one of them. The live app reads Frontier's own API for
+  them, so the edition reads the same, with the same code, for three requests a
+  run. The figure is volume and core reserves of Uniswap v4 pools only: the volume
+  and liquidity Frontier's own site shows add trades on bonding curves and ETH held
+  in curves, which the live app never counts as v4 and neither does this edition,
+  so the two are not expected to agree (the owner's comparison of 10 November, `$281K`
+  24h from the site, is the same pools' AMM volume at the current ETH price; its
+  `$366K` liquidity is mostly curve ETH). The lower-bound mark stays on every
+  Frontier sum: the listing holds the first 100 coins and Frontier counts more.
 - **`inventory.running`** is kept as the live app published it. The census was
   exported while the live indexer was still running, so it is `true`; the client
   should not read it as "this edition is indexing".
@@ -579,8 +729,10 @@ the real runs and the gate.
   12,000 drops the least recently seen.
 - **The measured cap is 8,500, not 8,000.** The design says "cap 8,000". The seed is
   exactly 8,000 pools, so any discovery displaced a seeded pool, in id order. The plan
-  is now the seeded pools (up to 8,000) and then up to 500 discovered ones; the
-  request budget is sized for it.
+  is now the seeded pools (up to 8,000, the priority list among them) and then up to
+  500 discovered ones; the request budget is sized for it. The priority list's 1,355
+  pools displace the seeded pools that went longest unanswered rather than
+  enlarging the plan, which keeps the run's length and its requests as they were.
 - **Gates beyond the design's.** Besides the 500 pools and 80% requested, 80% of
   the requested pools must be answered, 90% of the measured pools must be current
   at the snapshot time, the 500 are pools with a current 24h volume, and the
@@ -628,4 +780,5 @@ the real runs and the gate.
   (Node 24 type stripping), so the same Node version is needed to run it.
 - Re-seeding replaces `state/pools.json` and `state/census.json` from a live
   Hook Radar app and discards the pools discovery added since (and their
-  `dynamicFee` evidence): do it deliberately.
+  `dynamicFee` evidence): do it deliberately. `state/priority.json` is separate;
+  the collector never writes it.

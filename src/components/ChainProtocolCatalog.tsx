@@ -24,7 +24,12 @@ import {
 import { count, money, windows } from "../model";
 import { formatMoneyExact } from "../charts/format";
 import { STATIC_EDITION, fullTimeLabel, timeLabel, utcDate } from "../edition";
-import { noPricedPoolNote, reviewNotesHeading } from "../edition-platform-copy";
+import {
+  lowerBoundMark,
+  noPricedPoolNote,
+  reviewNotesHeading,
+  rowScopeNotes,
+} from "../edition-platform-copy";
 import {
   ArrowRight,
   ChevronDown,
@@ -661,6 +666,18 @@ export function ChainProtocolCatalog({
                 const networksShown =
                   profile || chain === "all" ? row.chainSlugs : [];
                 const networkLimit = profile ? 6 : 4;
+                // Edition: the sums cover the pools measured in the snapshot,
+                // and the count beside them is a lower bound, so they are too.
+                const volumeMark = lowerBoundMark(
+                  row.poolCount,
+                  row.poolCountExact,
+                  row.volumeUsd,
+                );
+                const reservesMark = lowerBoundMark(
+                  row.poolCount,
+                  row.poolCountExact,
+                  row.liquidityUsd,
+                );
                 return (
                   <article
                     className={`chains-protocol${profile ? " is-launchpad" : ""}`}
@@ -911,12 +928,14 @@ export function ChainProtocolCatalog({
                         <div>
                           <dt>{metricLabels[2]}</dt>
                           <dd title={exactMoney(row.volumeUsd)}>
+                            {volumeMark}
                             {money(row.volumeUsd)}
                           </dd>
                         </div>
                         <div>
                           <dt>{metricLabels[3]}</dt>
                           <dd title={exactMoney(row.liquidityUsd)}>
+                            {reservesMark}
                             {money(row.liquidityUsd)}
                           </dd>
                         </div>
@@ -926,6 +945,16 @@ export function ChainProtocolCatalog({
                           {attributionNote(row)}
                         </p>
                       )}
+                      {launchpadMode &&
+                        rowScopeNotes(row).map((note) => (
+                          <p
+                            key={note}
+                            className="chains-protocol-attribution"
+                            data-testid="row-scope-note"
+                          >
+                            {note}
+                          </p>
+                        ))}
                       <div className="chains-protocol-disclosures">
                       <details className="chain-catalog-market">
                         <summary>

@@ -1,4 +1,4 @@
-import { evaluationNow } from "./edition.ts";
+import { evaluationNow, STATIC_EDITION } from "./edition.ts";
 import type {
   Category,
   HookDeployment,
@@ -249,6 +249,10 @@ export interface ChainProtocol {
    * platform's own sources publish, measured pool by pool (never the hooks of a
    * shared protocol, which stay counted under that protocol). */
   attribution?: PlatformAttribution;
+  /** Edition: the names of the other listed rows that publish a hook this row
+   * publishes too (the same network and address). The pools of such a hook are
+   * in each of those rows and are never added together. */
+  sharedHookWith?: string[];
 }
 
 export interface PlatformAttribution {
@@ -372,6 +376,53 @@ function familyPoolCount(
   return { poolCount: observedPools || null, poolCountExact: false };
 }
 
+/** For each row, the other rows that publish one of the same hooks: a hook is a
+ * network and an address. A reviewed platform's hooks are the ones its own
+ * sources publish; any other row's are its deployments. Two rows can hold the
+ * same hook when a platform's first-party record and a hook list name one
+ * contract differently; the page lists both and says so. */
+export function hookOverlapNames(
+  rows: readonly ChainProtocol[],
+  records: readonly (Pick<LaunchpadRecordLike, "paths"> & { id: string })[],
+  chain = "all",
+): Map<string, string[]> {
+  const platformRecords = new Map(records.map((record) => [record.id, record]));
+  const keysOf = (row: ChainProtocol): Set<string> => {
+    const record = row.attribution
+      ? platformRecords.get(row.project.id)
+      : undefined;
+    const keys = new Set<string>();
+    if (record) {
+      for (const path of record.paths)
+        if (
+          path.attribution === "platform-hook" &&
+          (chain === "all" || path.chain === chain)
+        )
+          for (const hook of path.hooks)
+            keys.add(`${path.chain}:${hook.address.toLowerCase()}`);
+    } else
+      for (const deployment of row.deployments)
+        keys.add(`${deployment.chain}:${deployment.address.toLowerCase()}`);
+    return keys;
+  };
+  const owners = new Map<string, ChainProtocol[]>();
+  for (const row of rows)
+    for (const key of keysOf(row)) {
+      const list = owners.get(key) || [];
+      list.push(row);
+      owners.set(key, list);
+    }
+  const overlap = new Map<string, string[]>();
+  for (const row of rows) {
+    const names = new Set<string>();
+    for (const key of keysOf(row))
+      for (const other of owners.get(key) || [])
+        if (other.project.id !== row.project.id) names.add(other.project.name);
+    if (names.size) overlap.set(row.project.id, [...names].sort());
+  }
+  return overlap;
+}
+
 const descending = (a: number | null, b: number | null) =>
   a === b ? 0 : a === null ? 1 : b === null ? -1 : b - a;
 
@@ -387,11 +438,13 @@ function buildChainBase(
     windowKey = "h24",
     now = evaluationNow(),
     listings = true,
+    hookOverlap = STATIC_EDITION,
   }: {
     chain?: string;
     windowKey?: WindowKey;
     now?: number;
     listings?: boolean;
+    hookOverlap?: boolean;
   } = {},
 ): ChainExplorerResult {
   const poolsByProject = new Map<string, Pool[]>();
@@ -632,6 +685,15 @@ function buildChainBase(
       ...(attribution ? { attribution } : {}),
     };
   });
+  if (hookOverlap)
+    for (const [id, names] of hookOverlapNames(
+      protocolRows,
+      reviewedLaunchpads,
+      chain,
+    )) {
+      const row = protocolRows.find((candidate) => candidate.project.id === id);
+      if (row) row.sharedHookWith = names;
+    }
   const protocols = protocolRows.sort(
     (a, b) =>
       descending(a.volumeUsd, b.volumeUsd) ||
@@ -731,6 +793,7 @@ export function buildChains(
     windowKey = "h24",
     now = evaluationNow(),
     listings = true,
+    hookOverlap = STATIC_EDITION,
   }: {
     chain?: string;
     role?: ChainRole | "all";
@@ -739,6 +802,8 @@ export function buildChains(
     now?: number;
     /** Include reviewed launchpad platforms that the service does not publish. */
     listings?: boolean;
+    /** Edition: say which rows publish the same hook (see `sharedHookWith`). */
+    hookOverlap?: boolean;
   } = {},
 ): ChainExplorerResult {
   let cache = chainCache.get(snapshot);
@@ -763,7 +828,7 @@ export function buildChains(
     };
     chainCache.set(snapshot, cache);
   }
-  const scopeKey = `${listings ? "listings" : "published"}:${chain}`;
+  const scopeKey = `${listings ? "listings" : "published"}:${hookOverlap ? "overlap" : "plain"}:${chain}`;
   let base = cache.scopes.get(scopeKey);
   if (!base) {
     base = buildChainBase(snapshot, cache.analytics, {
@@ -771,6 +836,7 @@ export function buildChains(
       windowKey,
       now,
       listings,
+      hookOverlap,
     });
     if (cache.scopes.size >= 32)
       cache.scopes.delete(cache.scopes.keys().next().value!);
@@ -1077,7 +1143,16 @@ export function launchpadEntryFromRecord(
   {
     reviewedAt,
     protocolName,
-  }: { reviewedAt?: string; protocolName?: (id: string) => string | null } = {},
+    hooksByChain = STATIC_EDITION,
+  }: {
+    reviewedAt?: string;
+    protocolName?: (id: string) => string | null;
+    /** Count a hook once for each network it is deployed on, as the rest of the
+     * page does (a hook is a chain and an address). Off, an address deployed on
+     * two networks counts once, as the live page has always counted it; the
+     * edition turns it on. */
+    hooksByChain?: boolean;
+  } = {},
 ): LaunchpadRegistryEntry {
   const models = new Set<LaunchpadHookModel>();
   for (const path of record.paths) {
@@ -1098,7 +1173,13 @@ export function launchpadEntryFromRecord(
     new Set(
       record.paths
         .filter((path) => path.attribution === attribution)
-        .flatMap((path) => path.hooks.map((hook) => hook.address)),
+        .flatMap((path) =>
+          path.hooks.map((hook) =>
+            hooksByChain
+              ? `${path.chain}:${hook.address.toLowerCase()}`
+              : hook.address,
+          ),
+        ),
     ).size;
   const own = unique("platform-hook");
   const shared = unique("shared-protocol");

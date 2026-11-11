@@ -158,19 +158,28 @@ export function historyCsv(
     scope = "all-networks",
     exportedAt,
     snapshotAt,
+    poolsAt,
   }: {
     range: AnalyticsHistoryRange;
     scope?: string;
     exportedAt: string;
     snapshotAt?: string;
+    /** Edition: how many pools stood behind a point, when the history file says. */
+    poolsAt?: (point: Point) => number | undefined;
   },
 ): string {
   const snapshotColumn = snapshotAt === undefined ? [] : [snapshotAt];
+  // Edition: how many pools were measured behind each value, when it is known,
+  // so a fall caused by a smaller sample is not read as a fall in volume.
+  const withPools =
+    poolsAt !== undefined &&
+    points.some((point) => poolsAt(point) !== undefined);
   const rows = [
     [
       "observed_at_utc",
       "original_timestamp",
       "recorded_volume_usd_h24_rolling",
+      ...(withPools ? ["pools_measured"] : []),
       "metric",
       "scope",
       "range",
@@ -181,6 +190,7 @@ export function historyCsv(
       new Date(analyticsPointTime(point)).toISOString(),
       point.timestamp,
       point.value,
+      ...(withPools ? [poolsAt!(point) ?? ""] : []),
       "tracked hook-pool volume, rolling 24h (not total Uniswap volume)",
       scope,
       range,

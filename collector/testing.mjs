@@ -33,6 +33,8 @@ export function fakeFetch(clock, answer) {
       url: String(url),
       at: clock.now(),
       headers: options.headers,
+      method: options.method ?? "GET",
+      body: options.body,
     };
     calls.push(call);
     const reply = await answer(call, calls.length);
