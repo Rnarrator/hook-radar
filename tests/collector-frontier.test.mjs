@@ -556,6 +556,10 @@ test("a run publishes Frontier's own figures for its pools, labelled per pool, w
       poolsReplacingOlderRow: 1,
       poolsKeptFromOtherProvider: 0,
       poolsLeftOutOnMismatch: 0,
+      // The recorded listing holds 12 coin rows (10 pooled, 2 curve-only) and
+      // says its own total is 12.
+      listingRows: 12,
+      listingTotal: 12,
       failure: null,
     });
     assert.equal(status.counts.measuredPools, 10);

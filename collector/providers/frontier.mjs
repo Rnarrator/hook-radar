@@ -38,9 +38,14 @@ const failureNote = (error) =>
 /** The `fetchJson` the live collector expects, over the paced client. It never
  * rejects: a failed, refused, oversized or invalid answer is `unavailable` with
  * no data and no time, exactly like the live store's. `requests` counts the
- * requests sent for each source id. */
+ * requests sent for each source id. `listing` says what the coin listing itself
+ * reported when it answered: `rows` (how many coin rows it held, before any is
+ * filtered out) and `total` (the `total` field of the listing, which is Frontier's
+ * own count and can be larger than the rows read). Both are null until the
+ * listing has answered with those fields: null is not zero. */
 export function frontierFetchJson(client) {
   const requests = {};
+  const listing = { rows: null, total: null };
   const fetchJson = async (id, url, options = {}) => {
     const source = SOURCES[id];
     if (!source)
@@ -58,6 +63,13 @@ export function frontierFetchJson(client) {
         ...(options.method === "POST" ? { body: options.body } : {}),
       });
       requests[id] = (requests[id] ?? 0) + 1;
+      if (id === "frontier-coins") {
+        const rows = result.data?.data;
+        const total = result.data?.total;
+        listing.rows = Array.isArray(rows) ? rows.length : null;
+        listing.total =
+          Number.isSafeInteger(total) && total >= 0 ? total : null;
+      }
       const data = options.validate
         ? options.validate(result.data)
         : result.data;
@@ -82,7 +94,7 @@ export function frontierFetchJson(client) {
       };
     }
   };
-  return { fetchJson, requests };
+  return { fetchJson, requests, listing };
 }
 
 const sameTokens = (a, b) =>
@@ -174,6 +186,9 @@ const emptyStep = () => ({
   sources: [],
   requests: {},
   pricedCoins: 0,
+  // What the coin listing reported (see frontierFetchJson): null when it did not
+  // answer, which is not zero.
+  listing: { rows: null, total: null },
   failure: null,
 });
 
@@ -224,7 +239,7 @@ export async function collectFrontier({
 }) {
   const empty = emptyStep();
   try {
-    const { fetchJson, requests } = frontierFetchJson(client);
+    const { fetchJson, requests, listing } = frontierFetchJson(client);
     const metrics = await collectFrontierMetrics({
       fetchJson,
       frontierChains: frontierChains ?? [],
@@ -236,6 +251,7 @@ export async function collectFrontier({
       sources: metrics.sources,
       requests,
       pricedCoins: metrics.totalObservedPools,
+      listing: { ...listing },
     };
   } catch (error) {
     // The live code does not throw on a failed source; anything that does is a

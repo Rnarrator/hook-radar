@@ -316,7 +316,7 @@ test("the v4.xyz note comes before Pages is switched on, because from then on th
     ["deploy-ftp.yml", ftpYml()],
   ]) {
     const collect = text.match(
-      /- name: Collect the snapshot\n(?:\s+#.*\n|\s+env:\n|\s+COLLECTOR_MAX_DISCOVERY: .*\n)*\s+run: (.+)\n/,
+      /- name: Collect the snapshot\n(?:\s+#.*\n|\s+env:\n|\s+COLLECTOR_(?:MAX_DISCOVERY|FULL_PLAN|RETRY_MAX_BATCHES|DAILY_MAX_REQUESTS): .*\n)*\s+run: (.+)\n/,
     );
     assert.ok(collect, `${name} has the Collect step`);
     assert.match(
@@ -406,7 +406,9 @@ test("the one-line v4.xyz edit can be made on both workflows and undone, and no 
       head !== -1 &&
         after
           .slice(head + 1, changed[0])
-          .every((l) => /^\s+(?:#|env:|COLLECTOR_MAX_DISCOVERY:)/.test(l)),
+          .every((l) =>
+            /^\s+(?:#|env:|COLLECTOR_(?:MAX_DISCOVERY|FULL_PLAN|RETRY_MAX_BATCHES|DAILY_MAX_REQUESTS):)/.test(l),
+          ),
       `${name}: the changed line belongs to the Collect step`,
     );
     // The way back restores the file, byte for byte.

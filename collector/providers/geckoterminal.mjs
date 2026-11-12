@@ -39,36 +39,74 @@ export function geckoMultiUrl(chain, ids) {
   return `https://api.geckoterminal.com/api/v2/networks/${chain.gecko}/pools/multi/${ids.join(",")}?include=base_token,quote_token,dex&include_composition=true`;
 }
 
-/** Fallback rows: an exact requested pool on this chain's Uniswap v4 DEX whose
- * currencies agree with the identity we hold. Same rules as the live collector. */
-export function acceptGeckoPools(value, chain, requested, structuralById) {
+const providerFailure = (code, message) =>
+  Object.assign(new Error(message), { code });
+
+/** The rows of one fallback batch, sorted: an exact requested pool on this
+ * chain's Uniswap v4 DEX whose currencies agree with the identity we hold
+ * (`accepted`), and every other row with its reason (`rejected`, each
+ * `{ id, reason }`; `id` is null when the row names no pool id): `identity` (not a
+ * pool asked about, or a row whose own id does not name it), `chain` (another
+ * DEX) or `tokens` (the currencies disagree). Same rules as the live collector.
+ * A batch of an unexpected shape, or one that names a pool twice, throws. */
+export function classifyGeckoPools(value, chain, requested, structuralById) {
   const rows = value?.data;
   if (!Array.isArray(rows) || rows.length > GT_FALLBACK_BATCH_SIZE)
-    throw new Error("Market source returned an unexpected batch shape");
+    throw providerFailure(
+      "shape",
+      "Market source returned an unexpected batch shape",
+    );
   const wanted = new Set(requested.map((id) => id.toLowerCase()));
   const seen = new Set();
   const accepted = [];
+  const rejected = [];
   for (const row of rows) {
     const id = row?.attributes?.address?.toLowerCase?.();
-    if (!isPoolId(id) || !wanted.has(id)) continue;
-    if (row.type !== "pool" || row.id !== `${chain.gecko}_${id}`) continue;
+    if (!isPoolId(id) || !wanted.has(id)) {
+      rejected.push({ id: isPoolId(id) ? id : null, reason: "identity" });
+      continue;
+    }
+    if (row.type !== "pool" || row.id !== `${chain.gecko}_${id}`) {
+      rejected.push({ id, reason: "identity" });
+      continue;
+    }
     const dex = row.relationships?.dex?.data?.id;
     if (
       typeof dex === "string" &&
       (chain.dex ? dex !== chain.dex : !dex.startsWith("uniswap-v4"))
-    )
+    ) {
+      rejected.push({ id, reason: "chain" });
       continue;
+    }
     const expected = structuralById
       ?.get(id)
       ?.tokens?.filter(isAddress)
       .map((token) => token.toLowerCase());
-    if (!tokensAgree(row, "geckoterminal", expected, ZERO_ADDRESS)) continue;
+    if (!tokensAgree(row, "geckoterminal", expected, ZERO_ADDRESS)) {
+      rejected.push({ id, reason: "tokens" });
+      continue;
+    }
     if (seen.has(id))
-      throw new Error("Market source returned ambiguous pool IDs");
+      throw providerFailure(
+        "ambiguous",
+        "Market source returned ambiguous pool IDs",
+      );
     seen.add(id);
     accepted.push(row);
   }
-  return accepted;
+  return { accepted, rejected, returned: rows.length };
+}
+
+/** The rows classifyGeckoPools accepts, and nothing else: an exact requested
+ * pool on this chain's Uniswap v4 DEX whose currencies agree with the identity
+ * we hold.
+ *
+ * FOR THE TESTS. The collector calls classifyGeckoPools (it needs the rejected
+ * rows and their reasons); this is that call's `accepted`, so the two cannot
+ * differ, and tests/collector-foundation.test.mjs checks that nothing in
+ * collector/ calls this one. */
+export function acceptGeckoPools(value, chain, requested, structuralById) {
+  return classifyGeckoPools(value, chain, requested, structuralById).accepted;
 }
 
 export function normalizeGeckoPool(row, chain, structural, observedAt) {

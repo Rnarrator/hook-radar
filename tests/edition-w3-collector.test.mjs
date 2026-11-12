@@ -368,19 +368,24 @@ test("a published snapshot flags the unindexed network and still passes the clie
 // ---- C1: the gate counts pools answered -----------------------------------------
 
 test("the gate refuses a run in which half of the batches were asked and not answered", async () => {
-  // Every second batch fails with HTTP 503, so five failures never come in a
-  // row and the provider is never stopped: all 600 pools are requested.
+  // Every second request fails with HTTP 503, so five failures never come in a
+  // row and the provider is never stopped: all 600 pools are requested. Ten of the
+  // twenty batches fail; the retry asks eight of them again, and the provider fails
+  // every second request again, so four recover: 420 of 600 are answered. (Before a
+  // failed batch was asked again the gate judged 300 of 600; it refuses 70% too.)
   const pools = basePools(600);
   const { result, dir } = await collect({
     pools,
     dex: (call, n) => (n % 2 === 0 ? { status: 503, body: "busy" } : null),
   });
   assert.equal(result.quality.checks.requestedPools, 600);
-  assert.equal(result.quality.checks.checkedPools, 300);
+  assert.equal(result.quality.checks.checkedPools, 420);
+  assert.equal(result.status.counts.dexscreener.retry.failedFirstPass, 10);
+  assert.equal(result.status.counts.dexscreener.retry.recovered, 4);
   assert.equal(result.ok, false);
   assert.match(
     result.quality.failures.join(" "),
-    /Only 300 of 600 requested pools were answered \(50%\); at least 80% are required\./,
+    /Only 420 of 600 requested pools were answered \(70%\); at least 80% are required\./,
   );
   assert.equal(result.published, false);
   assert.equal(existsSync(join(dir, "data")), false, "nothing is written");
@@ -597,10 +602,13 @@ test("a requested pool a provider failed on and the other answered counts as ans
     return (call) =>
       ++sent % 3 === 0 ? { status: 503, body: "busy" } : answers(call);
   };
+  // (Asked again once, a failed batch could answer the second time: this test is
+  // about what the fallback adds, so the retry is off here; collector-retry has it.)
   const { burst } = await burstOver(pools, {
     dex: failEveryThird(dexAnswers(pools)),
     gecko: geckoAnswers(base, pools),
     fallbackRequests: 3,
+    retryBatches: 0,
   });
   assert.equal(burst.requestedPools, 600);
   assert.equal(burst.answeredPools, 510, "420 from DEX Screener, 90 rescued");
@@ -610,6 +618,7 @@ test("a requested pool a provider failed on and the other answered counts as ans
     dex: failEveryThird(dexAnswers(pools)),
     gecko: geckoAnswers(base, pools),
     fallbackRequests: 0,
+    retryBatches: 0,
   });
   assert.equal(bare.answeredPools, 420);
   const run = ({ answeredPools, requestedPools }) =>
@@ -734,11 +743,14 @@ test("a network whose batches keep failing is left after five, while the others 
     now: clock.now,
     sleep: clock.sleep,
   });
+  // The first pass over the plan is what this test pins; the five failed batches
+  // would be asked again once by the retry (collector-retry).
   const burst = await runBurst({
     client,
     plan: planBurst(pools),
     now: clock.now,
     fallbackRequests: 0,
+    retryBatches: 0,
   });
   const ethereumCalls = dexCalls(fetchImpl).filter((call) =>
     call.url.includes("/ethereum/"),
@@ -1308,7 +1320,28 @@ test("the notes describe the gate, the size and the real runs as they are", () =
   assert.match(notes, /about 10 MB \(about 1 MB gzipped\)/);
   assert.equal(notes.includes("about 21 MB (1.9 MB gzipped)"), false);
   assert.equal(notes.includes("A real run was not made in this task"), false);
-  assert.match(notes, /no run has yet been made from GitHub-hosted runner/i);
+  // Runs have been made from GitHub-hosted runners (the repository's public run
+  // list shows them), and the notes say what that list showed on the day it was
+  // read, not that none was made.
+  assert.equal(
+    /no run has yet been made from GitHub-hosted/i.test(notes),
+    false,
+  );
+  assert.match(notes, /has also run on GitHub-hosted runners/);
+  // The count is a dated observation: when it is refreshed the numbers change,
+  // so what is pinned is that the runs add up and the date is given.
+  const [, total, byHand, bySchedule] =
+    /held (\w+) runs, (\w+) started by hand and (\w+) by the schedule/.exec(
+      notes,
+    ) ?? [];
+  const words = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7 };
+  assert.ok(total && words[total] > 0, "the notes count the runs");
+  assert.equal(words[total], words[byHand] + words[bySchedule]);
+  assert.match(notes, /on \d+ November 2026 the repository's public run list/);
+  // The run list is named by what it is, not by the owner's repository address.
+  assert.equal(/api\.github\.com\/repos\//.test(notes), false);
+  assert.match(notes, /each ending green/);
+  assert.match(notes, /shows that the job ran, not which runs published/);
   assert.match(notes, /were answered/);
   assert.equal(
     how.includes(

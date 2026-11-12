@@ -1,7 +1,14 @@
 // Every limit and gap of the Auto Snapshot collector. The values are the
 // contract of the edition's design (the live project's design contract, which
-// is not part of this repository); environment overrides may only make the
-// collector slower or smaller, never faster or larger.
+// is not part of this repository). Environment overrides may only make the
+// collector slower or smaller, or return it to a size the contract already
+// allowed: COLLECTOR_FULL_PLAN restores the earlier plan that asks about every
+// known pool in every run. That plan has the same 399-request ceiling, the same
+// gaps and the same quality gates; it is the larger of the two plans and the
+// one the design was first sized for, and with it the GeckoTerminal fallback keeps
+// its earlier order (the same six requests). No override may raise a limit, shorten a
+// gap, weaken a gate or lengthen the burst. tests/collector-contract.test.mjs
+// holds every switch to this, one by one.
 
 export const COLLECTOR_VERSION = "1.0.0";
 export const PROJECT_NAME = "HookRadarAutoSnapshot";
@@ -19,7 +26,38 @@ export const GT_FALLBACK_BATCH_SIZE = 30;
 // index Zora or X Layer at all, so the fallback is six requests (180 pools)
 // where it was three. Each takes 12 s, so the six end 72 s after the DEX
 // Screener batches do, inside the burst's own deadline.
+//
+// This is the one number to change to ask GeckoTerminal about more pools: 12
+// requests would double the fallback (360 pools a run, 144 more requests a day
+// when a run collects in each hour) at the same pace, one request every 12 seconds. It is
+// not raised here because this lane already runs at the rate GeckoTerminal
+// documents for keyless use (about five requests a minute), more of it is more
+// load on a provider whose terms the owner has not yet read, and that is the
+// owner's decision (docs/edition/PROVIDER-TERMS.md). With 12, the requests start
+// 12 s apart from the end of the DEX Screener batches (about 90 s at the
+// ceiling), so about ten of them start before FALLBACK_LATEST_START_MS below and
+// the rest are not sent: the cap can cut the fallback, never stretch the burst.
 export const GT_FALLBACK_MAX_REQUESTS = 6;
+// The lane plan's fallback (collector/fallback.mjs) asks, in every run, about the
+// pools GeckoTerminal priced last time that answered in the last 72 hours and the
+// pools of a network DEX Screener does not index (tier 0), in at most this many
+// requests, and about the rest in rotation. A third of the requests (rounded
+// down) are always the rotation's, so with six requests tier 0 has four and the
+// rotation two, and with twelve tier 0 has eight and the rotation four. What tier 0
+// does not use goes to the rotation.
+export const FALLBACK_TIER0_MAX_REQUESTS = 8;
+export const FALLBACK_SWEEP_RESERVE_DIVISOR = 3;
+// A network the rotation has not visited for this long is served before the others,
+// so that every network with pools is asked about once a day when the requests
+// allow it (the longest unvisited first).
+export const FALLBACK_SWEEP_OVERDUE_MS = 24 * 60 * 60 * 1000;
+// No GeckoTerminal fallback request starts later than this after the burst began, a
+// wait for the provider's gap or a Retry-After included. The Frontier step may not
+// start later than FRONTIER_LATEST_START_MS (below); a last request that starts at
+// 200 s and takes the 20 s a request may take ends 20 s before that, so the
+// fallback cannot push Frontier out of the five-minute window. Before this rule the
+// fallback could start as late as the burst's own deadline (BURST_DEADLINE_MS).
+export const FALLBACK_LATEST_START_MS = 200000;
 export const GT_DISCOVERY_PAGE_CYCLE = 5;
 // Pools with identity verified by the live app's census (the seed) are measured
 // first, up to MAX_MEASURED_POOLS. Pools found by discovery are measured on top
@@ -79,12 +117,107 @@ export const DYNAMIC_FEE_FLAG = 0x800000;
 // tests/edition-history-cap.test.mjs holds the three equal.
 export const HISTORY_MAX_POINTS = 2016;
 export const HISTORY_MIN_SPACING_MS = 300000;
-// A pool's lastSeen moves at most once a day so the committed state stays quiet.
+// A pool's lastSeen moves at most once a day so the committed state stays quiet,
+// except that a pool whose lastSeen is still its firstSeen (never answered since
+// it was added) is stamped at its first answer: see nextPools in run.mjs.
 export const LAST_SEEN_GRANULARITY_MS = 24 * 60 * 60 * 1000;
+
+// The lane plan (planLanes in measure.mjs). A run asks DEX Screener about the
+// pools that matter for this snapshot and about the others in rotation, using
+// only fields the state already holds: lastSeen (the last time a provider
+// measured the pool), firstSeen and the saved time of the last good run.
+//   HOT   answered, last seen under 72 hours before the anchor: every run.
+//   NEW   never answered, first seen under 72 hours before the anchor: every
+//         run, at most LANE_NEW_MAX_POOLS of them (the newest; the rest wait in
+//         COLD).
+//   WARM  answered 72 hours to 7 days before the anchor: once every 3 hours.
+//   COOL  answered 7 days or more before the anchor: once every 6 hours.
+//   COLD  never answered, first seen 72 hours or more before the anchor: once
+//         every 12 hours.
+// A lane with a period is a wheel: a pool's phase is the first 32 bits of its id
+// as a fraction (ids are hashes, so phases are even) and it falls due once per
+// period. A run asks the pools that fell due since the previous good run, so a
+// run after a long gap asks more and a refused run is covered by the next. Every
+// pool is asked at the first run at or after each of its due times, which makes
+// "at least once in two periods" true whenever the runs are no further apart
+// than the period (and a gap of a period or more asks the whole lane), as long
+// as the ceiling below does not cut it: a pool the ceiling cuts waits for its
+// next turn, a whole period later, and when WARM and COOL are large the ceiling
+// binds in ordinary runs, so the guarantee is a statement about the plan and
+// about an uncut run, not about every pool in every run (COLLECTOR-NOTES, "The
+// ceiling", has the measured size of that).
+// The anchor is the run's time, but never later than the last saved time plus a
+// day: a pool's lastSeen moves at most once a day, so after an outage the lanes do
+// not age pools out of HOT that answered in the last good run. HOT is 72 hours so
+// that a pool which answered in the last good run is HOT with a day of margin
+// (its lastSeen is under a day older than that run, and the anchor is at most a
+// day after it).
+export const LANE_HOT_MAX_AGE_MS = 72 * 60 * 60 * 1000;
+export const LANE_NEW_MAX_AGE_MS = 72 * 60 * 60 * 1000;
+export const LANE_NEW_MAX_POOLS = 600;
+export const LANE_WARM_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+export const LANE_PERIOD_MS = Object.freeze({
+  warm: 3 * 60 * 60 * 1000,
+  cool: 6 * 60 * 60 * 1000,
+  cold: 12 * 60 * 60 * 1000,
+});
+export const LANE_ANCHOR_MAX_AHEAD_MS = LAST_SEEN_GRANULARITY_MS;
+// The saved time of a run is the end of its burst; its window on the wheels
+// ended when it made its plan, up to a burst earlier. A run therefore starts
+// its window this long before the saved time, so no stretch of time is left out
+// between two windows (a pool due in it would be skipped, and always the same
+// ones when the runs keep a regular rhythm). The burst, the Frontier step and
+// the five-minute rule leave a run under six minutes between plan and saved
+// time. A pool due in the overlap is asked in two runs in a row.
+export const LANE_WINDOW_OVERLAP_MS = 6 * 60 * 1000;
+// The plan never asks for more DEX Screener batches than this (rounded up per
+// network). When it would, the pools of COLD are cut first, then COOL, then
+// WARM, the ones that fell due most recently first. HOT and NEW are never cut. A
+// cut pool is asked at its next turn on the wheel, so a lane the ceiling keeps
+// cutting is asked rarely (COLD first: it is cut whole when the lanes above it
+// fill the ceiling). A run says so in status.json (counts.plan.ceilingBound) and
+// the snapshot's DEX Screener note says so too.
+export const LANE_MAX_BATCHES = 220;
+// Safeguard: when HOT and NEW together hold fewer pools than this share of the
+// pools with a current 24h volume behind the previous history point, the lanes
+// are not trusted and the run uses the plan that asks about every known pool.
+export const LANE_MIN_SHARE_OF_PREVIOUS = 0.9;
+// Room the request budget keeps for the pools discovery adds to the plan, in
+// DEX Screener batches (150 pools are five batches, and rounding per network).
+export const LANE_DISCOVERED_RESERVE_BATCHES = 10;
+// The lane plan's refusal of a network that did not answer. The quality gate
+// judges the pools requested against the pools planned, and the lane plan plans
+// many fewer pools than the plan that asks about every one (it leaves out the pools
+// that are not due), so a network that did not answer weighs less in that share
+// than it did and the gate alone no longer refuses a run that lost it. A run with
+// the lane plan therefore also refuses when DEX Screener did not answer for a
+// network (five batches failed in a row, MAX_CONSECUTIVE_FAILURES, or two or more
+// failed and none was answered) that holds at least this many HOT pools, and fewer
+// than MIN_REQUESTED_SHARE of that network's HOT and NEW pools were answered. This
+// is an addition to the gate, in collector/lane-guard.mjs: collector/quality.mjs
+// and its inputs are unchanged.
+export const LANE_GUARD_MIN_HOT_POOLS = 50;
 
 export const REQUEST_TIMEOUT_MS = 20000;
 export const MAX_RETRY_AFTER_MS = 120000;
 export const MAX_CONSECUTIVE_FAILURES = 5;
+// A DEX Screener batch that failed with a retryable error (a network error, a
+// timeout, an answer that is not JSON or not of the right shape, an HTTP 5xx or a
+// 408) is asked again once, after the first pass over the plan (runBurst in
+// measure.mjs). Never a 429 (the client owns the cooldown), a 403, or a 400. At most
+// RETRY_MAX_BATCHES batches a run, none starting later than RETRY_BURST_LIMIT_MS
+// after the burst began (a wait for the provider's gap or a Retry-After included):
+// the last may take the 20 s a request may take, so it ends before the fallback's
+// last start (FALLBACK_LATEST_START_MS) and Frontier's (FRONTIER_LATEST_START_MS),
+// and a retry cannot push the snapshot's oldest measurement past the five-minute
+// rule. A retry is one of the 399 requests: it is sent only while the run has
+// requests left beyond what the fallback and Frontier's step need. A network that
+// answers HTTP 400 as its first answer is not indexed, which is not a batch that
+// failed: it is not asked again and is not counted among those that failed.
+// COLLECTOR_RETRY_MAX_BATCHES (resolveRetryMaxBatches below) can only lower the
+// number, and 0 switches the retry off.
+export const RETRY_MAX_BATCHES = 8;
+export const RETRY_BURST_LIMIT_MS = 150000;
 
 // After a first HTTP 429 that says how long to wait (a Retry-After header, or
 // Cloudflare's "error code: 1015" page) a provider gets one cooldown per run:
@@ -245,6 +378,21 @@ export function resolveMaxDiscovery(env = process.env) {
   return /^[0-9]{1,6}$/.test(text) ? Number(text) : undefined;
 }
 
+/** Whether COLLECTOR_FULL_PLAN asks for the earlier plan, which asks DEX
+ * Screener about every known pool in every run instead of the lane plan. It is
+ * the way back if the lane plan misbehaves: the Snapshot workflow passes the
+ * repository variable of the same name. Only 1, true, yes or on (any case) turn it
+ * on; an empty or any other value changes nothing. The full plan is the larger
+ * plan, the one the 399-request ceiling was sized for, so the switch can return
+ * the collector to its earlier size and never beyond it. */
+export function resolveFullPlan(env = process.env) {
+  const text =
+    typeof env.COLLECTOR_FULL_PLAN === "string"
+      ? env.COLLECTOR_FULL_PLAN.trim().toLowerCase()
+      : "";
+  return text === "1" || text === "true" || text === "yes" || text === "on";
+}
+
 /** How many GeckoTerminal requests the daily-volume step may send in a run:
  * COLLECTOR_DAILY_MAX_REQUESTS can lower the contract's DAILY_MAX_REQUESTS and
  * never raise it; 0 switches the step off. An empty or invalid value (anything
@@ -257,6 +405,21 @@ export function resolveDailyMaxRequests(env = process.env) {
   return /^[0-9]{1,6}$/.test(text)
     ? Math.min(DAILY_MAX_REQUESTS, Number(text))
     : DAILY_MAX_REQUESTS;
+}
+
+/** How many DEX Screener batches that failed the run may ask again:
+ * COLLECTOR_RETRY_MAX_BATCHES can lower the contract's RETRY_MAX_BATCHES and never
+ * raise it; 0 switches the retry off. It is the way back if the retry misbehaves
+ * (the Snapshot workflow passes the repository variable of the same name). An empty
+ * or invalid value (anything but a whole number from 0 to 999999) changes nothing. */
+export function resolveRetryMaxBatches(env = process.env) {
+  const text =
+    typeof env.COLLECTOR_RETRY_MAX_BATCHES === "string"
+      ? env.COLLECTOR_RETRY_MAX_BATCHES.trim()
+      : "";
+  return /^[0-9]{1,6}$/.test(text)
+    ? Math.min(RETRY_MAX_BATCHES, Number(text))
+    : RETRY_MAX_BATCHES;
 }
 
 /** The longest rate-limit wait: COLLECTOR_RETRY_AFTER_CAP_MS can lower it and

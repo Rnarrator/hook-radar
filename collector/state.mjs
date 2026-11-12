@@ -99,6 +99,112 @@ export function isPriorityPool(row) {
   );
 }
 
+// The header of pools.json may carry `cursors`: small bookmarks a step keeps
+// between runs (where a rotation or a scan stopped). The shape is
+// { family: { key: { field: value } } }, for example
+// { gt: { robinhood: { p: 12, at: 480123 } }, scan: { base: { block: 123, at: 5 } } }.
+// A field is a number of at least 0 or a short text; the whole object stays small
+// (CURSORS_MAX_BYTES bytes of UTF-8 as written to the file), so a bad or runaway
+// writer can neither bloat the committed state nor smuggle a structure into it.
+// A file without `cursors` has none.
+//
+// Two places hold the shape strictly and one does not fail a run over it:
+// readState refuses a header that does not have it (the file is damaged), and
+// writeState refuses to write one (a file the next run could not read), but a
+// step's proposal reaches the file only through resolveCursors, below, which
+// keeps the cursors the run read when the proposal is bad.
+export const CURSORS_MAX_FAMILIES = 16;
+export const CURSORS_MAX_KEYS = 64;
+export const CURSORS_MAX_FIELDS = 16;
+export const CURSORS_MAX_BYTES = 8192;
+const CURSOR_FAMILY = /^[a-z][A-Za-z0-9]{0,31}$/;
+const CURSOR_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
+const CURSOR_FIELD = /^[a-z][A-Za-z0-9]{0,31}$/;
+// A plain object: one made by {} or JSON.parse, or by Object.create(null).
+const isPlainObject = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
+/** Why `value` is not cursors, as one short word, or null when it is. The words:
+ * `shape` (not the nested objects of the allowed names and values),
+ * `too-many-families`, `too-many-keys`, `too-many-fields`, `too-big`. */
+export function cursorsProblem(value) {
+  if (!isPlainObject(value)) return "shape";
+  const families = Object.entries(value);
+  if (families.length > CURSORS_MAX_FAMILIES) return "too-many-families";
+  for (const [family, keys] of families) {
+    if (!CURSOR_FAMILY.test(family) || !isPlainObject(keys)) return "shape";
+    const entries = Object.entries(keys);
+    if (entries.length > CURSORS_MAX_KEYS) return "too-many-keys";
+    for (const [key, fields] of entries) {
+      if (!CURSOR_KEY.test(key) || !isPlainObject(fields)) return "shape";
+      const items = Object.entries(fields);
+      if (items.length > CURSORS_MAX_FIELDS) return "too-many-fields";
+      for (const [name, item] of items)
+        if (
+          !CURSOR_FIELD.test(name) ||
+          !(
+            (typeof item === "number" && Number.isFinite(item) && item >= 0) ||
+            (typeof item === "string" && item.length <= 100)
+          )
+        )
+          return "shape";
+    }
+  }
+  return Buffer.byteLength(JSON.stringify(value), "utf8") <= CURSORS_MAX_BYTES
+    ? null
+    : "too-big";
+}
+
+export const isCursors = (value) => cursorsProblem(value) === null;
+
+/** The cursors a run may write, and why a step's proposal was not used.
+ *
+ * `proposed` is what the steps of the run left the bookmarks as, `kept` what the
+ * run read from the header (which readState has already checked). A proposal of
+ * the allowed shape is written, keys in order; one that is not (or that cannot
+ * be read at all) is not written: the header keeps `kept` and `refused` is the
+ * short reason (see cursorsProblem; `unreadable` for a value that cannot be
+ * inspected). A bookmark that is wrong costs a step its place and a line in
+ * status.json, never the run: this is called before anything is published. */
+export function resolveCursors(proposed, kept) {
+  let problem;
+  try {
+    problem = cursorsProblem(proposed);
+  } catch {
+    problem = "unreadable";
+  }
+  return problem === null
+    ? { cursors: sortedCursors(proposed), refused: null }
+    : { cursors: kept, refused: problem };
+}
+
+/** `resolveCursors` for a step given as a function: `move` gets a copy of the
+ * cursors that were read and returns the cursors to keep. A step that throws
+ * leaves them as they were (`refused` is `threw`). */
+export function nextCursors(kept, move = (cursors) => cursors) {
+  let proposed;
+  try {
+    proposed = move(structuredClone(kept));
+  } catch {
+    return { cursors: kept, refused: "threw" };
+  }
+  return resolveCursors(proposed, kept);
+}
+
+/** The same cursors with every key in order, so a rewrite that changes nothing
+ * changes no byte of the file. */
+export function sortedCursors(value) {
+  if (!isPlainObject(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, sortedCursors(value[key])]),
+  );
+}
+
 const PRIORITY_SELECTION_KEYS = ["snapshotGeneratedAt", "rule", "counts"];
 
 /** The priority file as written: its pools, and how they were chosen. */
@@ -311,6 +417,8 @@ export async function readState(dir) {
     (poolsFile.updatedAt !== null && !isIso(poolsFile.updatedAt))
   )
     throw new Error("pools.json has an unexpected shape.");
+  if (poolsFile.cursors !== undefined && !isCursors(poolsFile.cursors))
+    throw new Error("pools.json has cursors of an unexpected shape.");
   const bad = poolsFile.pools.findIndex((row) => !isStatePool(row));
   if (bad >= 0) throw new Error(`pools.json row ${bad} is not a valid pool.`);
   const seen = new Set();
@@ -358,6 +466,8 @@ export async function readState(dir) {
   return {
     updatedAt: poolsFile.updatedAt ?? null,
     pools: poolsFile.pools,
+    // The bookmarks the header holds; none when the file has none.
+    cursors: poolsFile.cursors ?? {},
     hookless: new Set(hooklessFile?.pools ?? []),
     census: censusFile,
     history: historyFile?.points ?? [],
@@ -382,8 +492,14 @@ const byKey = (a, b) =>
       ? -1
       : 1;
 
-export const poolsJson = (updatedAt, pools) =>
-  rowsJson({ schemaVersion: 1, updatedAt }, "pools", [...pools].sort(byKey));
+/** pools.json: the header (`cursors` is `{}` when no step keeps a bookmark), then
+ * one pool per line. */
+export const poolsJson = (updatedAt, pools, cursors = {}) =>
+  rowsJson(
+    { schemaVersion: 1, updatedAt, cursors: sortedCursors(cursors) },
+    "pools",
+    [...pools].sort(byKey),
+  );
 export const hooklessJson = (updatedAt, keys) =>
   rowsJson({ schemaVersion: 1, updatedAt }, "pools", [...keys].sort());
 export const historyJson = (points) =>
@@ -393,12 +509,22 @@ export const priorityJson = (header, pools) =>
 export const dailyJson = (updatedAt, records) =>
   rowsJson({ schemaVersion: 1, updatedAt }, "pools", [...records].sort(byKey));
 
-/** Write the run's state. Registry is rewritten only when its data changed. */
+/** Write the run's state. Registry is rewritten only when its data changed.
+ * `cursors` are written back into pools.json's header as they were read, unless
+ * a step moved them. A shape readState would refuse is refused here before
+ * anything is written (a file the next run could not read is worse than none),
+ * so a run passes its cursors through resolveCursors first and never gets here
+ * with a bad one. */
 export async function writeState(
   dir,
-  { updatedAt, pools, hookless, history, registry, daily },
+  { updatedAt, pools, cursors = {}, hookless, history, registry, daily },
 ) {
-  await writeFileAtomic(join(dir, "pools.json"), poolsJson(updatedAt, pools));
+  if (!isCursors(cursors))
+    throw new Error("The cursors to write are not of the allowed shape.");
+  await writeFileAtomic(
+    join(dir, "pools.json"),
+    poolsJson(updatedAt, pools, cursors),
+  );
   await writeFileAtomic(
     join(dir, "hookless.json"),
     hooklessJson(updatedAt, hookless),

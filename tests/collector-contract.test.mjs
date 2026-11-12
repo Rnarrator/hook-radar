@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -12,7 +12,14 @@ import {
 import { MARKET_MAX_AGE_MS } from "../shared/market-freshness.ts";
 import * as config from "../collector/config.mjs";
 import { createHttpClient, ProviderError } from "../collector/http.mjs";
-import { planBurst, runBurst } from "../collector/measure.mjs";
+import {
+  decidePlanMode,
+  planBurst,
+  planLanes,
+  planMeasurement,
+  runBurst,
+} from "../collector/measure.mjs";
+import { requestReserve } from "../collector/run.mjs";
 import {
   loadRegistry,
   REGISTRY_SOURCES,
@@ -66,6 +73,17 @@ test("the contract numbers are the ones the design states", () => {
     DS_BATCH_SIZE: 30,
     GT_FALLBACK_BATCH_SIZE: 30,
     GT_FALLBACK_MAX_REQUESTS: 6,
+    // The lane plan's GeckoTerminal fallback: the load stays six requests; tier 0 takes
+    // at most eight, a third of the requests are the rotation's, a network not visited
+    // for a day is served first, and no request starts after 200 s.
+    FALLBACK_TIER0_MAX_REQUESTS: 8,
+    FALLBACK_SWEEP_RESERVE_DIVISOR: 3,
+    FALLBACK_SWEEP_OVERDUE_MS: 86400000,
+    FALLBACK_LATEST_START_MS: 200000,
+    // A DEX Screener batch that failed is asked again once: at most eight a run, none
+    // starting after 150 s (collector-retry has the rest).
+    RETRY_MAX_BATCHES: 8,
+    RETRY_BURST_LIMIT_MS: 150000,
     MAX_PRIORITY_POOLS: 1500,
     GT_DISCOVERY_PAGE_CYCLE: 5,
     MAX_MEASURED_POOLS: 8000,
@@ -90,6 +108,18 @@ test("the contract numbers are the ones the design states", () => {
     DYNAMIC_FEE_FLAG: 8388608,
     FRONTIER_MAX_REQUESTS: 3,
     FRONTIER_LATEST_START_MS: 240000,
+    // The lane plan (collector/config.mjs): the thresholds of the lanes, the
+    // wheels' overlap, the batch ceiling and the safeguard.
+    LANE_HOT_MAX_AGE_MS: 72 * 3600000,
+    LANE_NEW_MAX_AGE_MS: 72 * 3600000,
+    LANE_NEW_MAX_POOLS: 600,
+    LANE_WARM_MAX_AGE_MS: 7 * 86400000,
+    LANE_ANCHOR_MAX_AHEAD_MS: 86400000,
+    LANE_WINDOW_OVERLAP_MS: 360000,
+    LANE_MAX_BATCHES: 220,
+    LANE_MIN_SHARE_OF_PREVIOUS: 0.9,
+    LANE_DISCOVERED_RESERVE_BATCHES: 10,
+    LANE_GUARD_MIN_HOT_POOLS: 50,
     DAILY_JOIN_RANK: 40,
     DAILY_KEEP_RANK: 60,
     DAILY_RANK_GRACE_MS: 259200000,
@@ -103,6 +133,44 @@ test("the contract numbers are the ones the design states", () => {
   };
   for (const [name, value] of Object.entries(pinned))
     assert.equal(config[name], value, name);
+  assert.deepEqual(
+    { ...config.LANE_PERIOD_MS },
+    { warm: 3 * 3600000, cool: 6 * 3600000, cold: 12 * 3600000 },
+  );
+  // The lane plan stays inside the request budget: the registry (3), discovery at
+  // full size (20 lists, 20 pages, 40 lookups), the plan at its ceiling and the
+  // room for the pools discovery adds to it, the fallback, the Frontier step and
+  // the 7D and 30D step that follows them (20 GeckoTerminal requests).
+  assert.ok(
+    3 +
+      80 +
+      config.LANE_MAX_BATCHES +
+      config.LANE_DISCOVERED_RESERVE_BATCHES +
+      config.GT_FALLBACK_MAX_REQUESTS +
+      config.FRONTIER_MAX_REQUESTS +
+      config.DAILY_MAX_REQUESTS <=
+      config.MAX_REQUESTS_PER_RUN,
+  );
+  assert.equal(
+    3 +
+      80 +
+      config.LANE_MAX_BATCHES +
+      config.LANE_DISCOVERED_RESERVE_BATCHES +
+      config.GT_FALLBACK_MAX_REQUESTS +
+      config.FRONTIER_MAX_REQUESTS +
+      config.DAILY_MAX_REQUESTS,
+    342,
+    "the worst case of a lane plan, daily step included",
+  );
+  // The retries of failed DEX Screener batches (at most eight) are taken from what
+  // is left, and the worst case with all of them is still inside the limit.
+  assert.ok(342 + config.RETRY_MAX_BATCHES <= config.MAX_REQUESTS_PER_RUN);
+  // The last retry starts by 150 s and may take 20 s: it ends before the fallback's
+  // last start (200 s) and before Frontier's (240 s).
+  assert.ok(
+    config.RETRY_BURST_LIMIT_MS + config.REQUEST_TIMEOUT_MS <
+      config.FALLBACK_LATEST_START_MS,
+  );
   assert.deepEqual(
     { ...config.resolveGaps({}) },
     {
@@ -293,11 +361,12 @@ test("a late Retry-After ends the burst; it does not push requests past the budg
   assert.ok(burst.endedAt - burst.startedAt < 300000 - 20000);
 });
 
-test("no request of any kind starts after 270 seconds, and fallback requests are 12 seconds apart", async () => {
-  // One slow DEX Screener answer ends the burst's first phase at 260 s: the
-  // first fallback request may start, the second (12 s later) may not.
+test("no fallback request starts after 200 seconds, no request of any kind after 270, and fallback requests are 12 seconds apart", async () => {
+  // One slow DEX Screener answer ends the burst's first phase at 190 s: the
+  // first fallback request may start, the second (12 s later, at 202 s) may not.
   const slow = harness((call) => {
-    if (call.url.startsWith(DS)) slow.clock.advance(260000);
+    if (call.url.startsWith(DS) && slow.clock.now() === T0)
+      slow.clock.advance(190000);
     return { body: call.url.startsWith(DS) ? { pairs: null } : { data: [] } };
   });
   const late = await runBurst({
@@ -309,6 +378,32 @@ test("no request of any kind starts after 270 seconds, and fallback requests are
   assert.equal(gecko.length, 1);
   assert.equal(late.fallback.requests, 1);
   assert.equal(late.fallback.ids, 30);
+  assert.ok(gecko[0].at - T0 < config.FALLBACK_LATEST_START_MS);
+
+  // A phase that ends at 260 s leaves no room for any: before the 200 s rule the
+  // first would have started, up to the burst's own deadline of 270 s.
+  const slower = harness((call) => {
+    if (call.url.startsWith(DS) && slower.clock.now() === T0)
+      slower.clock.advance(260000);
+    return { body: call.url.startsWith(DS) ? { pairs: null } : { data: [] } };
+  });
+  const later = await runBurst({
+    client: slower.client,
+    plan: planBurst(manyPools(90)),
+    now: slower.clock.now,
+  });
+  assert.equal(
+    slower.fetchImpl.calls.filter((call) => call.url.startsWith(GT)).length,
+    0,
+  );
+  assert.equal(later.fallback.requests, 0);
+  assert.equal(config.FALLBACK_LATEST_START_MS, 200000);
+  // The last fallback request starts by 200 s and may take 20 s: it ends before
+  // the Frontier step may start (240 s), so the fallback cannot push Frontier out.
+  assert.ok(
+    config.FALLBACK_LATEST_START_MS + config.REQUEST_TIMEOUT_MS <=
+      config.FRONTIER_LATEST_START_MS,
+  );
 
   const quick = harness((call) => ({
     body: call.url.startsWith(DS) ? { pairs: null } : { data: [] },
@@ -545,4 +640,283 @@ test("a test cannot reach a provider: the process's fetch refuses", async () => 
     fetch("https://api.dexscreener.com/latest/dex/pairs/base/0x0"),
     /tried to reach the network/,
   );
+});
+
+// The environment switches. The contract is that none of them can make the
+// collector faster or larger than the design allows: they slow it down, shrink it
+// or return it to a size the contract already allowed. A switch that did more
+// would let a repository variable (or a stray environment setting on a
+// computer) take a run past a provider's limit.
+
+const SWITCHES = [
+  "COLLECTOR_DAILY_MAX_REQUESTS", // the 7D and 30D step's requests: can only be lowered (0 switches it off)
+  "COLLECTOR_DS_GAP_MS", // a gap between requests: can only be raised
+  "COLLECTOR_FULL_PLAN", // the earlier plan: the larger plan, at the contract's size
+  "COLLECTOR_GT_GAP_MS", // a gap between requests: can only be raised
+  "COLLECTOR_MAX_DISCOVERY", // discovery: can only be lowered
+  "COLLECTOR_RETRY_AFTER_CAP_MS", // the longest wait: can only be shortened
+  "COLLECTOR_RETRY_MAX_BATCHES", // the batches asked again: can only be lowered (0 switches the retry off)
+  "COLLECTOR_V4_GAP_MS", // a gap between requests: can only be raised
+];
+
+test("the collector reads exactly these environment switches, and the workflows pass only those", async () => {
+  const root = new URL("../", import.meta.url);
+  const files = [];
+  for (const dir of ["collector/", "collector/tools/"])
+    for (const name of await readdir(new URL(dir, root)))
+      if (name.endsWith(".mjs")) files.push(`${dir}${name}`);
+  files.push(
+    ".github/workflows/snapshot.yml",
+    ".github/workflows/deploy-ftp.yml",
+  );
+  const switches = new Set();
+  const others = new Set();
+  for (const file of files) {
+    const text = await readFile(new URL(file, root), "utf8");
+    for (const [, name] of text.matchAll(/\benv\??\.([A-Z][A-Z0-9_]+)/g))
+      (name.startsWith("COLLECTOR_") ? switches : others).add(name);
+    for (const [, name] of text.matchAll(/^\s+(COLLECTOR_[A-Z0-9_]+):/gm))
+      switches.add(name);
+  }
+  assert.deepEqual([...switches].sort(), SWITCHES);
+  // Nothing else is read from the environment but the repository's name (the
+  // User-Agent) and the marker GitHub sets (which only makes the trace refuse).
+  assert.deepEqual([...others].sort(), ["GITHUB_ACTIONS", "GITHUB_REPOSITORY"]);
+});
+
+test("the contract text says what an environment switch may do, and COLLECTOR_FULL_PLAN is the allowed return to the earlier plan", async () => {
+  const text = (
+    await readFile(new URL("../collector/config.mjs", import.meta.url), "utf8")
+  ).replace(/\r\n/g, "\n");
+  const head = text.slice(0, text.indexOf("export const COLLECTOR_VERSION"));
+  const flat = head.replace(/\n\/\/ ?/g, " ");
+  assert.match(
+    flat,
+    /Environment overrides may only make the collector slower or smaller, or return it to a size the contract already allowed: COLLECTOR_FULL_PLAN restores the earlier plan that asks about every known pool in every run\./,
+  );
+  assert.match(flat, /same 399-request ceiling, the same gaps and the same quality gates/);
+  assert.match(
+    flat,
+    /No override may raise a limit, shorten a gap, weaken a gate or lengthen the burst\./,
+  );
+  assert.doesNotMatch(flat, /never faster or larger/);
+});
+
+test("no switch can raise a limit, shorten a gap or weaken a gate", () => {
+  // The gaps: any value gives the contract gap or a longer one.
+  const values = [
+    undefined,
+    "",
+    " ",
+    "0",
+    "-5",
+    "1",
+    "399",
+    "400",
+    "401",
+    "12000",
+    "99999999",
+    "abc",
+    "NaN",
+    "Infinity",
+    "-Infinity",
+    "1e9",
+    "0x10",
+    "399.5",
+  ];
+  for (const value of values) {
+    const gaps = config.resolveGaps({
+      COLLECTOR_DS_GAP_MS: value,
+      COLLECTOR_GT_GAP_MS: value,
+      COLLECTOR_V4_GAP_MS: value,
+    });
+    assert.ok(gaps.dexscreener >= config.DS_GAP_MS, String(value));
+    assert.ok(gaps.geckoterminal >= config.GT_GAP_MS, String(value));
+    assert.ok(gaps.v4xyz >= config.V4_GAP_MS, String(value));
+    assert.equal(gaps.registry, config.REGISTRY_GAP_MS);
+    assert.equal(gaps.frontier, config.REGISTRY_GAP_MS);
+    assert.equal(gaps.goldsky, config.REGISTRY_GAP_MS);
+    // The longest rate-limit wait: any value gives the contract's or a shorter one.
+    const cap = config.resolveRateLimitCap({
+      COLLECTOR_RETRY_AFTER_CAP_MS: value,
+    });
+    assert.ok(cap >= 0 && cap <= config.RATE_LIMIT_WAIT_CAP_MS, String(value));
+    // Discovery: no value asks for more than "no limit".
+    const limit = config.resolveMaxDiscovery({
+      COLLECTOR_MAX_DISCOVERY: value,
+    });
+    assert.ok(
+      limit === undefined || (Number.isSafeInteger(limit) && limit >= 0),
+      String(value),
+    );
+    // The 7D and 30D step: no value gives more than the contract's 20 requests.
+    const daily = config.resolveDailyMaxRequests({
+      COLLECTOR_DAILY_MAX_REQUESTS: value,
+    });
+    assert.ok(
+      Number.isSafeInteger(daily) &&
+        daily >= 0 &&
+        daily <= config.DAILY_MAX_REQUESTS,
+      String(value),
+    );
+    // The retry of a failed DEX Screener batch: no value gives more than the
+    // contract's 8 batches a run.
+    const retries = config.resolveRetryMaxBatches({
+      COLLECTOR_RETRY_MAX_BATCHES: value,
+    });
+    assert.ok(
+      Number.isSafeInteger(retries) &&
+        retries >= 0 &&
+        retries <= config.RETRY_MAX_BATCHES,
+      String(value),
+    );
+    // The full plan: a boolean.
+    assert.equal(
+      typeof config.resolveFullPlan({ COLLECTOR_FULL_PLAN: value }),
+      "boolean",
+    );
+  }
+  assert.equal(config.RETRY_MAX_BATCHES, 8);
+  for (const [value, expected] of [
+    ["0", 0],
+    ["3", 3],
+    [" 8 ", 8],
+    ["9", 8],
+    ["999999", 8],
+    ["1000000", 8],
+    ["-1", 8],
+    ["2.5", 8],
+    ["x", 8],
+    ["", 8],
+    [undefined, 8],
+  ])
+    assert.equal(
+      config.resolveRetryMaxBatches({ COLLECTOR_RETRY_MAX_BATCHES: value }),
+      expected,
+      String(value),
+    );
+  assert.equal(config.resolveRetryMaxBatches({}), 8);
+  for (const [value, expected] of [
+    ["0", 0],
+    ["5", 5],
+    ["20", 20],
+    ["21", 20],
+    ["999999", 20],
+    ["1000000", 20],
+    ["-1", 20],
+    ["x", 20],
+    [undefined, 20],
+  ])
+    assert.equal(
+      config.resolveDailyMaxRequests({ COLLECTOR_DAILY_MAX_REQUESTS: value }),
+      expected,
+      String(value),
+    );
+  assert.equal(
+    config.resolveGaps({ COLLECTOR_DS_GAP_MS: "750" }).dexscreener,
+    750,
+  );
+  assert.equal(
+    config.resolveRateLimitCap({ COLLECTOR_RETRY_AFTER_CAP_MS: "1000" }),
+    1000,
+  );
+  assert.equal(
+    config.resolveRateLimitCap({ COLLECTOR_RETRY_AFTER_CAP_MS: "0" }),
+    0,
+  );
+  assert.equal(
+    config.resolveRateLimitCap({ COLLECTOR_RETRY_AFTER_CAP_MS: "999999" }),
+    90000,
+  );
+  // Only the four plain words turn the full plan on.
+  for (const on of ["1", "true", "TRUE", " yes ", "On"])
+    assert.equal(config.resolveFullPlan({ COLLECTOR_FULL_PLAN: on }), true, on);
+  for (const off of [
+    undefined,
+    "",
+    "0",
+    "false",
+    "no",
+    "off",
+    "enable",
+    "2",
+    "true!",
+  ])
+    assert.equal(
+      config.resolveFullPlan({ COLLECTOR_FULL_PLAN: off }),
+      false,
+      String(off),
+    );
+});
+
+test("COLLECTOR_FULL_PLAN returns the run to the size the contract allowed and no larger; without it the plan is smaller", () => {
+  const pool = (n, extra) => ({
+    id: `0x${n.toString(16).padStart(8, "0")}${"0".repeat(56)}`,
+    chain: "base",
+    hookAddress: address(1),
+    tokens: [address(2), address(3)],
+    name: "A / B",
+    createdAt: null,
+    source: "census",
+    ...extra,
+  });
+  const at = Date.parse("2026-11-12T00:00:00.000Z");
+  const iso = (ms) => new Date(ms).toISOString();
+  const world = Array.from({ length: 9000 }, (_, n) =>
+    n < 1500
+      ? pool(n, {
+          firstSeen: iso(at - 9e9),
+          lastSeen: iso(at - (n % 20) * 3600000),
+        })
+      : pool(n, { firstSeen: iso(at - 9e9), lastSeen: iso(at - 9e9) }),
+  );
+  const decide = (forced) =>
+    decidePlanMode({
+      pools: world,
+      nowMs: at + 3600000,
+      updatedAtMs: at,
+      previousPoint: { pools: 1200 },
+      forced,
+    });
+  const lanes = planMeasurement(world, {
+    decision: decide(null),
+    nowMs: at + 3600000,
+    updatedAtMs: at,
+  });
+  const full = planMeasurement(world, {
+    decision: decide("forced"),
+    nowMs: at + 3600000,
+    updatedAtMs: at,
+    full: {
+      maxPools: config.MAX_MEASURED_POOLS + config.MAX_DISCOVERED_MEASURED,
+      maxSeeded: config.MAX_MEASURED_POOLS,
+    },
+  });
+  assert.equal(lanes.mode, "lanes");
+  assert.equal(full.mode, "full");
+  // The full plan is the contract's: at most 8,500 pools, sized for 399 requests.
+  assert.ok(
+    full.planned <= config.MAX_MEASURED_POOLS + config.MAX_DISCOVERED_MEASURED,
+  );
+  assert.ok(
+    requestReserve(
+      config.MAX_MEASURED_POOLS + config.MAX_DISCOVERED_MEASURED,
+    ) +
+      3 +
+      80 <=
+      config.MAX_REQUESTS_PER_RUN,
+  );
+  // The lane plan is never larger than it, and never above its ceiling (HOT and
+  // NEW are 1,500 pools here, well below it).
+  assert.ok(lanes.batches <= full.batches);
+  assert.ok(lanes.batches <= config.LANE_MAX_BATCHES);
+  assert.ok(lanes.planned <= full.planned);
+  // Whatever the gap, the lane plan's ceiling holds unless HOT and NEW alone
+  // exceed it.
+  for (const gap of [1, 6, 24, 240])
+    assert.ok(
+      planLanes(world, { nowMs: at + gap * 3600000, updatedAtMs: at }).batches <=
+        config.LANE_MAX_BATCHES,
+      `gap ${gap} h`,
+    );
 });

@@ -14,6 +14,7 @@ import {
   validateEnvioPools,
   validateIndexerPoolIdentity,
 } from "./providers/v4xyz.mjs";
+import { failureReason } from "./measure.mjs";
 import { poolKey } from "./state.mjs";
 
 export const discoveryStats = (page = null, resolveBudget = 0) => ({
@@ -21,6 +22,9 @@ export const discoveryStats = (page = null, resolveBudget = 0) => ({
   geckoPages: 0,
   geckoCandidates: 0,
   geckoPageFailures: 0,
+  // Why those pages failed, as short words (`http-503`, `timeout`, `shape`, ...:
+  // see failureReason in measure.mjs), each with its count.
+  geckoPageFailureReasons: {},
   indexerLists: 0,
   indexerListed: 0,
   indexerListFailures: 0,
@@ -165,7 +169,14 @@ export async function discoverPools({
           marketDiscoveryUrl(chain, stats.page),
           { maxBytes: GT_MAX_BYTES, notAfter },
         );
-        const { data } = validateMarketDiscovery(result.data, chain);
+        let data;
+        try {
+          ({ data } = validateMarketDiscovery(result.data, chain));
+        } catch (invalid) {
+          // The page arrived and is not a page of pools: the answer's own code
+          // (the client's failures carry theirs).
+          throw Object.assign(invalid, { code: "shape" });
+        }
         stats.geckoPages++;
         for (const row of data) {
           const id = row.attributes.address.toLowerCase();
@@ -180,6 +191,9 @@ export async function discoverPools({
         if (outOfTime(error)) break;
         // A failed page is read again when the rotation comes round.
         stats.geckoPageFailures++;
+        const reason = failureReason(error);
+        stats.geckoPageFailureReasons[reason] =
+          (stats.geckoPageFailureReasons[reason] ?? 0) + 1;
       }
       waiting.push(later);
     }
@@ -194,5 +208,10 @@ export async function discoverPools({
 
   await Promise.all([listIndexer(), listGecko()]);
   await Promise.all(resolving);
+  stats.geckoPageFailureReasons = Object.fromEntries(
+    Object.entries(stats.geckoPageFailureReasons).sort(([a], [b]) =>
+      a < b ? -1 : a > b ? 1 : 0,
+    ),
+  );
   return { found, hookless: foundHookless, stats };
 }

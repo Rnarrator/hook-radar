@@ -14,7 +14,13 @@ import {
   marketMeasurementState,
 } from "../shared/market-freshness.ts";
 import { isSnapshot } from "../src/model.ts";
-import { DYNAMIC_FEE_FLAG } from "./config.mjs";
+import {
+  DYNAMIC_FEE_FLAG,
+  LANE_HOT_MAX_AGE_MS,
+  LANE_NEW_MAX_AGE_MS,
+  LANE_PERIOD_MS,
+  LANE_WARM_MAX_AGE_MS,
+} from "./config.mjs";
 import {
   appendHistoryPoint,
   historyPointFor,
@@ -135,11 +141,15 @@ function repairChains(chains, extra) {
 }
 
 /** One row per network that has hook pools, from what this run asked and what a
- * provider answered. `checkedPools` counts pools a provider answered for, even
- * with nothing usable; `attemptedPools` counts pools asked about. A network the
- * run never asked about still appears (nothing attempted, nothing checked), so
- * the totals are the census's and not those of the networks that happened to be
- * requested.
+ * provider answered. `checkedPools` counts pools a provider answered for in this
+ * snapshot, even with nothing usable; `attemptedPools` counts pools asked about in
+ * this snapshot. With the lane plan a run asks about the pools that answer and
+ * the new pools every time and about the others in turn, so a pool that was not
+ * due is unchecked in this snapshot (`pendingPools`), and the counts say what
+ * this snapshot asked, not how much of the network has ever been asked. A network
+ * the run never asked about still appears (nothing attempted, nothing checked),
+ * so the totals are the census's and not those of the networks that happened to
+ * be requested.
  *
  * A network DEX Screener answered HTTP 400 for (it does not index it) carries
  * `unsupported: true`, so the page can say that instead of "did not respond".
@@ -265,13 +275,64 @@ export function frontierSources(frontier, measured) {
   });
 }
 
+const hoursOf = (ms) => ms / (60 * 60 * 1000);
+
+/** What the lane plan asked DEX Screener about, as a sentence for the source note
+ * (null when the run used the full plan, which asked about every pool it held).
+ * The periods are the config's own. */
+export function lanePlanNote(lanePlan) {
+  if (!lanePlan) return "";
+  const number = (n) => n.toLocaleString("en-US");
+  // When the plan reached its ceiling the periods below are not what happened to
+  // every pool: the pools the ceiling cut wait for their next turn. The pools that
+  // answer and the new pools are never cut and discovery adds new ones after the
+  // plan is checked, so a run can send more batches than the limit; it says so.
+  const sent =
+    Number.isSafeInteger(lanePlan.batches) && lanePlan.batches > lanePlan.maxBatches
+      ? ` and sent ${number(lanePlan.batches)}, because the pools that answer and the new pools are never left out`
+      : "";
+  const ceiling = lanePlan.ceilingBound
+    ? ` This plan reached its limit of ${number(lanePlan.maxBatches)} batches a run${sent}, so some of the pools that were due were left for their next turn.`
+    : "";
+  // The pools GeckoTerminal priced last time are asked about on the 3-hour wheel
+  // here. GeckoTerminal is asked about the ones not priced here first in each run,
+  // as far as its requests reach (its fallback has a few requests of 30 pools, and
+  // a request holds the pools of one network), so the sentence does not say that
+  // all of them are asked every time.
+  const gecko =
+    lanePlan.geckoCarried > 0
+      ? ` The ${number(lanePlan.geckoCarried)} pools GeckoTerminal priced that answered in the last ${hoursOf(LANE_HOT_MAX_AGE_MS)} hours are asked about here every ${hoursOf(LANE_PERIOD_MS.warm)} hours, and GeckoTerminal is asked about the ones not priced here first in each run, as many as its requests allow.`
+      : "";
+  return ` This snapshot asked about ${number(lanePlan.asked)} of the ${number(lanePlan.known)} pools the collector knows: the pools that answered in the last ${hoursOf(LANE_HOT_MAX_AGE_MS)} hours and the pools first seen in the last ${hoursOf(LANE_NEW_MAX_AGE_MS)} hours every time, the others in turn (answered ${hoursOf(LANE_HOT_MAX_AGE_MS)} hours to ${hoursOf(LANE_WARM_MAX_AGE_MS) / 24} days ago: every ${hoursOf(LANE_PERIOD_MS.warm)} hours; answered longer ago: every ${hoursOf(LANE_PERIOD_MS.cool)} hours; never answered: every ${hoursOf(LANE_PERIOD_MS.cold)} hours).${gecko}${ceiling} A pool that was not asked is unchecked in this snapshot, not zero.`;
+}
+
+/** The sentence about DEX Screener batches that failed and were asked again (see
+ * runBurst): how many failed, how many recovered on the second try and where the
+ * ones that did not are. Empty when no batch failed, so a clean run says nothing of
+ * it. `retry` is telemetry.dexscreener.retry of the burst; `names` maps a network
+ * slug to the name the page shows. */
+export function retryNote(retry, names = new Map()) {
+  if (!retry || !(retry.failedFirstPass > 0)) return "";
+  const failed = retry.failedFirstPass;
+  const still =
+    retry.stillFailed > 0
+      ? ` Still failed: ${retry.networks.stillFailed
+          .map((slug) => names.get(slug) ?? slug)
+          .sort()
+          .join(", ")}.`
+      : "";
+  return ` ${failed} batch${failed === 1 ? "" : "es"} failed, ${retry.recovered} recovered on a second try.${still}`;
+}
+
 /** The sources the snapshot names: every provider actually used, with its real
  * request count and the times of its first and last request. A request the
  * collector sent again after a rate-limit answer is one of the requests counted,
  * and the wait is stated. `unsupportedNetworks` are the slugs of networks DEX
  * Screener does not index; `chains` gives them the names the page shows.
  * `stats` are the requests of the measurement phase: the daily-volume step that
- * follows reads GeckoTerminal as well, and is a source of its own (`daily`). */
+ * follows reads GeckoTerminal as well, and is a source of its own (`daily`).
+ * `lanePlan` (`{ asked, known }`, or null for the full plan) adds what the lane
+ * plan asked DEX Screener about to its note. */
 export function providerSources({
   stats,
   measured,
@@ -282,6 +343,8 @@ export function providerSources({
   chains = [],
   frontier = null,
   daily = null,
+  lanePlan = null,
+  dexRetry = null,
 }) {
   const latest = (provider) => {
     const times = [...measured.values()]
@@ -320,7 +383,7 @@ export function providerSources({
       url: "https://dexscreener.com",
       status: statusOf(count > 0),
       updatedAt: latest("dexscreener"),
-      note: `Exact-pool lookups in batches of up to 30: ${span(ds)}. ${count.toLocaleString("en-US")} pools returned a matching Uniswap v4 row with a liquidity or volume figure; pools it did not return, or returned without one, are unresolved, not zero.${unindexedNote}${waitNote(ds)}${stopNote(ds)}`,
+      note: `Exact-pool lookups in batches of up to 30: ${span(ds)}. ${count.toLocaleString("en-US")} pools returned a matching Uniswap v4 row with a liquidity or volume figure; pools it did not return, or returned without one, are unresolved, not zero.${lanePlanNote(lanePlan)}${retryNote(dexRetry, names)}${unindexedNote}${waitNote(ds)}${stopNote(ds)}`,
     });
   }
   const gt = stats.geckoterminal;

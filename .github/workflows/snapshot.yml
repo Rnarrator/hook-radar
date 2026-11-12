@@ -22,6 +22,23 @@
 # in seconds with "Nothing to do". The timer only asks;
 # docs/EXTERNAL-TRIGGER.md explains how to set it up.
 #
+# What a run asks DEX Screener about. The collector does not ask about every known
+# pool in every run: it asks about the pools that answered in the last three days
+# and the pools first seen in the last three days every time, and about the others
+# in turn (every 3, 6 or 12 hours, by how long ago they last answered). A run after
+# a long gap asks about what fell due in the gap. If that plan misbehaves, the
+# repository variable COLLECTOR_FULL_PLAN=true (see the Collect step) returns to
+# asking about every known pool, and the collector does so by itself when the
+# lanes would ask about too few pools or too many, or the planner fails (it says
+# so in status.json and in the run's annotations). A run with the lanes is also
+# refused when DEX Screener did not answer for a larger network (a failed run is
+# not repeated for 90 minutes, so a short failure of one large network can cost one
+# or two snapshots: deliberate, see docs/COLLECTOR-NOTES.md). The step
+# "Collect the snapshot" prints which plan ran. A DEX Screener batch that failed with
+# an error that may be gone a moment later is asked again once (at most 8 a run);
+# the repository variable COLLECTOR_RETRY_MAX_BATCHES can lower that, and 0 switches
+# it off.
+#
 # Looking for new pools reads the slow providers, so a scheduled run does it
 # only when the last snapshot was saved in an earlier three-hour block of the
 # UTC day than the present one (the blocks the collector rotates its discovery
@@ -33,8 +50,8 @@
 # The last step of a collecting run reads, at most twice a day per pool, the daily
 # volume of the largest pools (7D and 30D) from GeckoTerminal: up to 20 requests,
 # after everything else, on the same paced lane and inside the 399-request cap. It
-# never fails a run; COLLECTOR_DAILY_MAX_REQUESTS (set in
-# the Collect step's env) can lower it, and 0 switches it off.
+# never fails a run; the repository variable COLLECTOR_DAILY_MAX_REQUESTS (see the
+# Collect step) can lower it, and 0 switches it off.
 #
 # The safeguard that matters most: the deploy job needs the collect job. If the
 # collector refuses to publish (too few pools with a current volume, a provider
@@ -283,6 +300,25 @@ jobs:
           # Empty: look for new pools too. 0: measure the known pools only. The
           # collector reads it like --max-discovery and can only lower discovery.
           COLLECTOR_MAX_DISCOVERY: ${{ needs.gate.outputs.max_discovery }}
+          # The way back. Create the repository variable COLLECTOR_FULL_PLAN with
+          # the value true (Settings, Secrets and variables, Actions, Variables)
+          # and the next run asks DEX Screener about every known pool, as the
+          # collector did before the lane plan. It is the larger of the two plans
+          # and inside the same 399-request ceiling; delete the variable to go back
+          # to the lanes. Unset or empty changes nothing. The collector reads it
+          # like --full-plan: it returns the run to its earlier size and no further.
+          COLLECTOR_FULL_PLAN: ${{ vars.COLLECTOR_FULL_PLAN }}
+          # The way back from the retry of a failed DEX Screener batch (at most 8 a
+          # run). Create the repository variable COLLECTOR_RETRY_MAX_BATCHES with a
+          # whole number from 0 to 8: it can only lower the 8, and 0 switches the retry
+          # off. Unset, empty or anything else changes nothing.
+          COLLECTOR_RETRY_MAX_BATCHES: ${{ vars.COLLECTOR_RETRY_MAX_BATCHES }}
+          # The way back from the 7D and 30D step (at most 20 GeckoTerminal requests, the
+          # last thing a run does). Create the repository variable
+          # COLLECTOR_DAILY_MAX_REQUESTS with a whole number from 0 to 20: it can only
+          # lower the 20, and 0 switches the step off. Unset, empty or anything else
+          # changes nothing.
+          COLLECTOR_DAILY_MAX_REQUESTS: ${{ vars.COLLECTOR_DAILY_MAX_REQUESTS }}
         run: node collector/run.mjs
 
       - name: Build the site

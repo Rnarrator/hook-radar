@@ -54,10 +54,17 @@ which is not part of this repository; the numbers are in
    to 2,099 s, 35 minutes of the job's 45). What it cuts
    is read again by the next run, and `counts.discovery.cutShort` in
    `status.json` says it happened.
-3. **Measurement burst.** The pools in state are grouped per network and sent to
-   DEX Screener as exact-id batches of 30 (`/latest/dex/pairs/{network}/{id,id,...}`),
-   at least 400 ms between request starts. Which pools: the **priority list**
-   (`state/priority.json`, below) first, then the other seeded pools (at most 8,000
+3. **Measurement burst.** The pools a run asks about are grouped per network and
+   sent to DEX Screener as exact-id batches of 30 (`/latest/dex/pairs/{network}/{id,id,...}`),
+   at least 400 ms between request starts. Which pools: by default the **lane
+   plan** ("The lane plan", below), which asks about the pools that answered in the
+   last 72 hours and the pools first seen in the last 72 hours in every run, and
+   about the others in rotation, in at most 220 batches. The plan that asks about
+   every known pool (the **full plan**, which the collector used before the lane
+   plan) is the way back: it runs when `COLLECTOR_FULL_PLAN` or `--full-plan` asks
+   for it, with `--max-pools`, and when the lanes cannot be trusted. In the full
+   plan the **priority list**
+   (`state/priority.json`, below) comes first, then the other seeded pools (at most 8,000
    seeded pools in all, the priority list among them, most recently seen first),
    then the pools discovery found, in what is left of 8,500 and at most 500. A
    newly discovered pool therefore never pushes a seeded pool out of the burst
@@ -66,12 +73,19 @@ which is not part of this repository; the numbers are in
    so the plan is no larger and a run no longer: it displaces the seeded pools that
    went longest unanswered. A listed pool the state does not hold yet is added to
    it (source `census`, first and last seen when the list was exported) and kept
-   from the first run that follows. Rows are accepted only under the live collector's
+   from the first run that follows; that holds in the lane plan too, where the list
+   no longer chooses or ranks pools (what a pool has answered does) and
+   `counts.priorityPools` only counts the listed pools the plan took and measured.
+   Rows are accepted only under the live collector's
    rules (the pair address is a requested id, `dexId` is `uniswap`, labels, if
    any, include `v4`, the two currencies agree with the identity we hold). Ids
    not returned are unresolved, never zero. Right after, at most six
    GeckoTerminal `/pools/multi/` requests (up to 30 ids each, 180 in all) try the
-   unresolved pools, at least 12 s apart, under the same rules. Priority-list
+   unresolved pools, at least 12 s apart, under the same rules. In the lane plan
+   the requests go first to the pools GeckoTerminal priced last time and to the pools
+   of a network DEX Screener does not index, and the rest of them to a rotation over
+   every network ("The GeckoTerminal fallback", below). In the full plan (the way
+   back) the order is the earlier one: priority-list
    pools GeckoTerminal measured last time come first, then the rest of the
    priority list, then other pools GeckoTerminal measured last time (the live app's
    GeckoTerminal-measured pools carry that hint from the seed), then the plan's
@@ -83,6 +97,22 @@ which is not part of this repository; the numbers are in
    X Layer, and returns nothing for many Arbitrum, Polygon and Monad pools) come
    first, and each request is 12 s: the six end about 72 s after the DEX Screener
    batches do.
+   The pools the fallback may take are the unresolved pools of the plan. With the
+   lane plan, which asks DEX Screener about few pools in a run, they are every
+   known pool of a network GeckoTerminal serves that no provider measured in this
+   run, whether or not DEX Screener was asked about it in this run (the plan's own
+   pools first, in the plan's order). A network that only GeckoTerminal was asked
+   about has a statistics row of its own: what GeckoTerminal answers for it is counted
+   (`checkedPools`, `measuredPools`, `counts.geckoterminal.measuredByNetwork`) and the
+   network's coverage row is live. Its `attemptedPools` stays what DEX Screener was asked
+   about, as everywhere (`counts.requestedPools`, which the quality gate judges, is
+   DEX Screener's alone). No fallback request starts later than 200 s after
+   the burst began (`FALLBACK_LATEST_START_MS`), a wait for the provider's gap or a
+   rate-limit cooldown included: the last one then ends (20 s at most) before the
+   Frontier step may start (240 s), so the fallback cannot make Frontier's step be
+   skipped, as it could when the fallback might start as late as the burst's own
+   deadline. An offline replay has no real time (its clock stands still while the
+   lane's gaps are counted up), so it keeps the burst's own deadline.
    A pool measured by DEX Screener is never also taken from GeckoTerminal, and
    two providers' figures for one pool are never combined. A row that carries no
    figure at all (no liquidity and no volume in any window, every one null) is an
@@ -99,6 +129,41 @@ which is not part of this repository; the numbers are in
    network, the network's other batches are not sent, the network is recorded
    (below), and its pools stay unresolved for the fallback to consider like any
    other unresolved pool.
+   **A batch that failed is asked again once.** After the first pass over the plan,
+   each DEX Screener batch that failed with a retryable error is asked again once,
+   before the GeckoTerminal fallback. Retryable: a network error, a timeout, an answer
+   that is not JSON or not of the shape of an answer (`shape`), an HTTP 5xx or an HTTP
+   408. Never: a 429 (the client's one cooldown is the only answer to it, and a second
+   429 stops the provider), a 403 (it stops the provider), an HTTP 400 (a network's first
+   answer says it is not indexed, and that is not a batch that failed at all: it is not on
+   the retry's list, not in its counts and not in the sentence of the note, though
+   `failedBatches` still counts it where it happened; a later one says the request was
+   refused, is a failed batch and is not asked again), any other 4xx, an answer that is too large or names a pool twice (it would be the same again),
+   or an error that has no code (a defect in the collector, which is counted and never
+   asked again). The batches of the pools that answer go first (the lane plan's HOT,
+   then NEW, WARM, COOL and COLD; the full plan has no lanes: the order they failed).
+   At most 8 a run (`RETRY_MAX_BATCHES`; the repository variable `COLLECTOR_RETRY_MAX_BATCHES`
+   can lower it and `0` switches the retry off, below); none starting later than 150 s after the
+   burst began (`RETRY_BURST_LIMIT_MS`), a wait for the provider's gap or a
+   `Retry-After` included, so a 503 that asks for a long wait is not repeated; none once
+   DEX Screener is stopped; and only while the run has requests left beyond what the
+   fallback (6) and Frontier's step (3) need. A retry is one of the 399 requests and
+   keeps the 400 ms gap; it is not reserved, it uses what the plan's reserve leaves
+   over. It cannot move the oldest measurement past the five-minute rule: the rows of a
+   retried batch are newer than those of the first pass, and the last retry starts
+   before 150 s and takes 20 s at most, so it ends before the fallback's last start
+   (200 s) and Frontier's (240 s). A retried batch's pools are counted once as requested;
+   a batch that answers the second time is counted as answered; one that fails again
+   stays unanswered, and the gate judges it exactly as it judged a failed batch before
+   (`collector/quality.mjs` and its inputs are unchanged). The first failure stays
+   counted where it happened (`failedBatches`). A batch can be repeated more than once
+   in a run only through the client's own rate-limit cooldown, which is separate.
+   Before this a failed batch was never asked again and nothing was published about
+   it: the design's replay of run 7 with the batch that holds Ethereum's USDC and USDT
+   lost (35.1% of the tracked 24h volume) passed every gate (answered share 99.64%)
+   and wrote a history point at 57% of the previous one. A clean run asks nothing
+   again; how often a batch fails is what `counts.dexscreener.retry` records from now
+   on (0 of 288 and 0 of 285 batches in the two earlier runs that have the data).
    **Frontier's own figures.** After the batches and the fallback, one more step
    (three requests, `collector/providers/frontier.mjs`) reads Frontier's pooled
    coin markets (`/coinsPage?limit=100`, only `isLPd` markets, at most the first 100
@@ -131,7 +196,9 @@ which is not part of this repository; the numbers are in
    measured the same pool, the newer measurement replaces the older whole, as in
    the live app, and the two are never combined; `counts.frontier` says how many
    rows were supplied, added, replaced an older row or were kept from another
-   provider. The step never fails the run: a source that does not answer, is
+   provider, and how many coin rows the listing held (`listingRows`) and what total
+   it reported itself (`listingTotal`; both null when the listing did not answer,
+   which is not zero). The step never fails the run: a source that does not answer, is
    refused (a 429 or 403 stops that host for the run), is too large or invalid is
    named `unavailable` in `sources` with the reason, and the pools of Frontier's hooks
    keep the figures the other providers returned. The live app's fallback, one
@@ -212,8 +279,12 @@ which is not part of this repository; the numbers are in
      requests (DEX Screener 288, GeckoTerminal 26, v4.xyz 60, registry 2, Frontier 3,
      Goldsky 1), so the step could send 19; the documented full-size fake run is 388
      (11 left); the ceiling of a discovery run, 3 + 306 + 6 + 3 + 80, is 398 (1 left).
-     A run without discovery makes about 300, so a checkpoint run sends 20 of the 99
-     left and the others none. The worst discovery run (900 s of discovery, the 270 s
+     Those three are figures of the full plan (`COLLECTOR_FULL_PLAN`), which asks about
+     every known pool. With the lane plan, the default, a run is smaller: about 135
+     without discovery and 239 with it on the real state of 12 November (replays on fake
+     providers), so the 399 leave the step its 20 requests in every run.
+     A full-plan run without discovery makes about 300, so a checkpoint run sends 20 of
+     the 99 left and the others none. The worst discovery run (900 s of discovery, the 270 s
      burst deadline, 36 s of Frontier, 240 s and one last request of the step) is
      about 24 minutes of the job's 45. `COLLECTOR_DAILY_MAX_REQUESTS` can lower the
      20 and `0` switches the step off (below).
@@ -275,6 +346,463 @@ which is not part of this repository; the numbers are in
    `status.json`, then `snapshot.json` last (it is the marker that the set is
    complete), then the state files.
 
+### The lane plan
+
+`planLanes` in `collector/measure.mjs`; every number is in `collector/config.mjs`
+(`LANE_*`) and pinned by `tests/collector-contract.test.mjs`. It uses only what
+`state/pools.json` already holds: each pool's `lastSeen` (the last time a provider
+measured it), its `firstSeen` and the saved time of the last good run (`updatedAt`).
+No pool gets a new field and the lanes keep no bookmark (the only bookmarks in the
+state are those of the GeckoTerminal fallback's rotation, below).
+
+| Lane | Pools | Asked |
+|---|---|---|
+| HOT | answered (`lastSeen` later than `firstSeen`), last seen less than 72 hours before the anchor | every run |
+| NEW | never answered, first seen less than 72 hours before the anchor; at most 600, the newest (the rest wait in COLD) | every run |
+| WARM | answered 72 hours to 7 days before the anchor, and the pools GeckoTerminal priced last time that answered in the last 72 hours (GeckoTerminal's tier 0 asks about those first in each run, as far as its requests reach; below) | once per 3 hours |
+| COOL | answered 7 days or more before the anchor | once per 6 hours |
+| COLD | never answered, first seen 72 hours or more before the anchor | once per 12 hours |
+
+- **The anchor** is the plan's time, but never later than the saved time plus 24
+  hours. A pool's `lastSeen` moves at most once a day (`LAST_SEEN_GRANULARITY_MS`;
+  the first answer of a pool never answered stamps it at once), so a pool that was
+  measured in the last good run has a `lastSeen` less than a day older than that
+  run. After an outage the anchor stops a day after the saved time, so the lanes do
+  not age pools out of HOT that answered in the last good run. HOT is 72 hours so
+  that this holds with a day to spare; `tests/collector-lanes.test.mjs` holds it for
+  every `lastSeen` age under a day and every gap, and `nextPools`' own stamp to
+  the same rule.
+- **The wheels.** WARM, COOL and COLD are wheels. A pool's phase is the first 32 bits
+  of its id as a fraction of 1 (pool ids are hashes, so the phases are even) and it
+  falls due once per period, at (a whole number + its phase) x the period. A run asks
+  the pools that fell due in the window from 6 minutes before the saved time of the
+  last good run to the time of its own plan; a window as long as a lane's period
+  asks the whole lane. The 6 minutes (`LANE_WINDOW_OVERLAP_MS`) are the stretch
+  between a run's plan and its saved time (its burst and Frontier's step): without
+  them that stretch is left out between two windows, and a pool due in it is
+  skipped, always the same ones when the runs keep a regular rhythm. A pool due in
+  the overlap is asked in two runs in a row. Nothing is remembered between runs, a
+  refused run is covered by the next one (the saved time only moves on a good run) and
+  the same state at the same time gives the same requests.
+- **The guarantee**, for a pool the ceiling below does not cut: a pool is asked
+  again by the first run at or after one period since it was last asked. So such a
+  pool is asked at least once in any two periods of its lane when the runs are no
+  further apart than that period, and in every run when they are further apart.
+  Gaps up to ten hours (the longest seen in the live edition is 9.1 hours) are in the
+  tests. It is the guarantee of the plan, not of every run: a pool the ceiling cuts
+  waits for its next turn, a whole period later, and when the ceiling binds in
+  ordinary runs (next paragraph) a pool can be cut again and again. The change's
+  first design capped the window at six hours; a simulation of 400 runs with gaps
+  between 0.5 and 10 hours left one COLD pool unasked for 75 hours with that cap, and
+  that is why the cap was not built. The ceiling that was built does the same thing
+  once it binds: the same simulation (gaps between 0.5 and 10 hours, a state with
+  WARM 1,400 and COOL 900, which is where WARM and COOL are within days) leaves a COLD
+  pool unasked for 75.7 hours with the ceiling and for 21.9 hours without it. So the ceiling is not a
+  better answer to that case than the cap was. It was kept because it bounds a run's
+  size (requests and time), which the cap does not.
+- **The ceiling.** A plan is at most 220 DEX Screener batches (`LANE_MAX_BATCHES`,
+  rounded up per network). When it would be larger, COLD is cut first, then COOL,
+  then WARM, the pools that fell due most recently first; HOT and NEW are never cut.
+  A cut pool is asked at its next turn on the wheel. The run says so in `status.json`
+  (`counts.plan.ceilingBound`, `counts.plan.trimmed`, `counts.droppedForCap`), in the
+  DEX Screener note of the snapshot ("This plan reached its limit of 220 batches a
+  run, so some of the pools that were due were left for their next turn") and in a
+  line of its output (a workflow notice on GitHub). If HOT and NEW alone need more
+  than 220 batches (about 6,600 pools; they are never cut) the full plan runs
+  instead and the run says so loudly (`counts.plan.reason` is `above-ceiling`).
+  **How often the ceiling binds** depends on how many pools sit in WARM and COOL, and
+  that number grows. On the state of 12 November WARM is empty and COOL holds 897
+  pools, so the dry-run table below stays under 220 up to a gap of 6 hours and reaches
+  it at 9. About 350 pools a day stop answering (about a quarter of the pools measured
+  one day are not measured the next, on the figures the design was built from), so WARM
+  fills within days and COOL, which has no age limit, keeps growing until the state's
+  cap. The planner, run on made-up pools in the live state's proportions (a simulation,
+  not a run: no provider is asked, and a pool that stops answering never answers
+  again, which is the worst case: one that does returns to HOT), gives the figures
+  below. They come from simulation scripts that are not kept in the repository;
+  `tests/collector-lanes.test.mjs` pins the property they show (the ceiling binds in
+  ordinary runs and a COLD pool then waits more than two periods; with no ceiling it
+  does not) at a tenth of the size.
+
+| State and gaps (600 runs) | Runs at the ceiling | Batches a run, mean | Longest wait: COLD / COOL / WARM |
+|---|---|---|---|
+| HOT 1,900, NEW 90, WARM 1,400, COOL 900, COLD 4,700; the gaps seen in the live edition (2.4, 2.9, 6.9, 9.1, 1.8, 4.6, 3.7, 1.1, 5.2, 3.0 hours, in turn) | 120 (20%) | 178 | 28.2 / 12.4 / 9.2 hours |
+| the same state, gaps drawn between 0.5 and 10 hours | 271 (45%) | 189 | 75.7 / 15.8 / 12.3 hours |
+| the same, with no ceiling (1,000 batches) | 0 | 184 and 202 (at most 269 and 280) | 19.1 and 21.9 / 12.4 and 15.8 / 9.2 and 12.3 hours |
+| the same, with a ceiling of 260 | 60 and 81 | 184 and 201 | 26.0 and 36.6 / 12.4 and 15.8 / 9.2 and 12.3 hours |
+
+  Over 45 days, with 350 pools a day that stop answering and 290 new answering pools a
+  day (the state kept at its 12,000-pool cap, the gaps above), COOL grows to about
+  10,000 pools; the ceiling binds in a third of the runs by day 15 and in 57% to 80% of
+  them from day 20; a run is 190 to 210 batches on average (the full plan is about
+  290), so the saving is about 30% and not the 67% of a light run at a 1-hour gap; and
+  COLD is no longer asked at all by day 35. The saving at the start (a state with an
+  empty WARM) is therefore not the saving the lane plan keeps. What follows from it is
+  for the owner to decide: a higher ceiling (the 399-request budget allows up to about
+  270 batches, the 7D and 30D step included: 3 + 80 + 270 + 10 + 6 + 3 + 20 = 392),
+  slower wheels for pools that answered a long time ago, or the full plan. An age limit
+  on COOL alone (asking the pools that answered 30 days or more ago once a day) would
+  not be enough: on day 39 of the 45-day simulation 2,400 of COOL's 9,680 pools are
+  that old and 7,280 are 7 to 30 days old, so it would remove about a fifth of COOL's
+  asks (2,400 pools asked a quarter as often); the growth is in the younger pools. `counts.plan.ceilingBound` and `counts.plan.trimmed` in `status.json`
+  say, run by run, what it is today. The guarantee above is true of the plan when no
+  pool is cut; the table is what happens when pools are.
+- **A network that does not answer.** The quality gate refuses a run when fewer than
+  80% of the planned pools were requested. With the full plan a network that stopped
+  answering was a large part of the plan (its cold pools made it heavy), so the gate
+  refused the run: on the real state of 12 November a Base outage left 6,226 of 8,333
+  planned pools requested (75%) and the full plan refused. The lane plan plans only
+  the pools that matter and those that fell due, so the same network weighs less: the
+  Base pools the outage kept from being requested were 25% of the full plan and 19%
+  of the lane plan at a gap of 3.7 hours, and the gate allows 20%. The same outage
+  left 89% requested at a gap of 1 hour and 81% at 3.7 hours: the gate alone
+  published it, without a single Base pool (about 12% of the pools priced). A run with
+  the lane plan therefore also refuses, in `collector/lane-guard.mjs` (the gate in
+  `collector/quality.mjs` and its inputs are unchanged), when DEX Screener did not
+  answer for a network that holds at least 50 HOT pools (`LANE_GUARD_MIN_HOT_POOLS`)
+  and fewer than 80% (the gate's own share) of that network's HOT and NEW pools were
+  answered. "Did not answer for" is the burst's own definition of an outage
+  (`downNetworks` in `counts`): five batches failed in a row for the network (the rest
+  of its batches are not sent), or two or more failed and none was ever answered. One
+  failed batch, a few failures among answers, a burst that ran out of time (the gate's
+  shares judge that) and a network DEX Screener does not index (HTTP 400 as its first
+  answer, `unsupportedNetworks`) do not refuse; a network with fewer than 50 HOT pools
+  is not judged (it can only be a few percent of the sample), but it is listed in
+  `counts.downNetworks`. A refusal prints the sentence, writes nothing and leaves the
+  site on the last snapshot, as any refusal does, so the 90 minutes after a failed run
+  apply. The same outage, from the run on the real state at gaps of 1, 3.7, 6 and 9
+  hours with a fake DEX Screener that answers HTTP 500 for one network: Base, Ethereum,
+  Arc and Ink (216, 199, 87 and 58 HOT pools) are refused at every gap (the full plan
+  refuses Base and publishes the other three: the guard is stricter than the full plan
+  there, on purpose, because it judges the pools that answer and not the weight of the
+  cold pools); Unichain (26 HOT pools) publishes at every gap. A full plan is not
+  judged by the guard (its gate is what it was). There is no escape hatch: a network
+  that stays down for hours keeps the site on its last snapshot, which the page shows
+  as old, as the full plan did for Base.
+  **What this costs, so that it is a choice and not a surprise.** The guard refuses
+  outages that the collector before the lane plan published: on the real state of 12 November
+  with a fake DEX Screener that fails one network for the whole run, a run of that
+  collector (the full plan) published Ethereum's outage and Arc's, without a pool of
+  that network, and refused Base's and Robinhood's by the gate's 80% share; the lane plan
+  with its guard refuses all four. The Snapshot workflow does not collect for 90
+  minutes after a failed run (`RETRY_AFTER_FAILURE_MINUTES`), and the repeat of a failed batch
+  does not make up for it (once five in a row have failed the rest of the network's batches
+  are not sent, and the repeat covers only the batches that were), so a short DEX Screener failure for one larger network can cost one or two hourly
+  snapshots that the earlier collector would have published with that network missing. That
+  is the trade: a snapshot that silently leaves a network out is not published, and the
+  guard is not loosened to shorten the wait. If shorter waits are wanted, the place to
+  change is the workflow's 90-minute rule for a failure whose message names a network, as a
+  separate decision. What to look at in the first runs: a refused run prints the reasons in
+  the step "Collect the snapshot" and writes no `status.json`; a published run lists, in
+  `counts.plan.networkGuard.networks`, each network DEX Screener did not answer for that was
+  not refused (fewer than 50 HOT pools, or enough of them answered), and `counts.downNetworks`
+  names them all.
+- **Batches** are made lane by lane inside a network, HOT first, each lane in id
+  order, so a batch is full of pools that answer and a batch that fails does not take
+  a pool that answers with it. The 399-request cap, the burst limits, the pacing, the
+  five-minute rule and the quality gate are those of the full plan, and the gate gets
+  the same inputs (`plannedPools` is the pools the plan asks about). The same inputs
+  do not make the same protection, because the denominator is the plan's own and the
+  lane plan is smaller and weighted differently: the guard above adds what the full
+  plan's weights gave.
+- **The discovery cap.** `MAX_DISCOVERED_MEASURED` (500) belongs to the full plan. In
+  the lane plan the pools discovery found are NEW and all asked (NEW holds at most
+  600).
+- **When the full plan runs instead.** The lane plan is the default. The full plan
+  runs when `COLLECTOR_FULL_PLAN` is `1`, `true`, `yes` or `on` (the Snapshot workflow
+  passes the repository variable of that name; empty or unset changes nothing), when
+  `--full-plan` or `--max-pools` is given, and when the lanes cannot be trusted: the
+  state has no saved time, or one later than the run, or no history point to compare
+  with, or HOT and NEW hold fewer than 90% (`LANE_MIN_SHARE_OF_PREVIOUS`) of the
+  pools with a current 24h volume behind the previous history point. Every pool that
+  answered in the last good run is HOT or NEW, so a smaller plan means something is
+  wrong with the state or the lanes, and the full plan is the safe answer. So is a
+  plan that is too large: HOT and NEW are never cut, and when they alone need more
+  than 220 batches (`above-ceiling`) the lane plan would pass its ceiling and the
+  request budget. And so is a planner that throws (`planner-error`): the exception is
+  caught, the full plan is made, the reason carries the exception's message, and the
+  run reports it like the others instead of failing the collect step. The switch
+  is reported loudly when nothing asked for it: `counts.plan.fellBack` is `true`,
+  `counts.plan.reason` and `counts.plan.detail` say why, the run prints a `WARNING`
+  line and on GitHub an annotation ("Lane plan not used"). The offline replay has no
+  saved time, so it uses the full plan.
+- **The request reserve** for discovery follows the plan: the batches of the plan made
+  before discovery, 10 for the pools discovery adds (`LANE_DISCOVERED_RESERVE_BATCHES`),
+  the fallback (6) and Frontier's step (3). At the ceiling that is 239, so discovery at
+  full size (80) is never cut by it. The full plan's reserve (8,500 pools: 315) is what
+  it was.
+- **Dry run.** `node collector/tools/plan-dry-run.mjs <state-folder> <gap-hours> [...]`
+  prints the lanes, the pools and the DEX Screener batches the plan would make for a
+  state and a gap (hours after its saved time), and where the pools measured in the
+  last day sit in the lanes (and, when some pools are carried by GeckoTerminal, how many
+  of the WARM pools they are). It reads the folder and nothing else: it sends no request
+  and writes no file.
+
+On the public state of 12 November 2026 (8,956 pools, saved 02:40 UTC, 1,408 pools
+with a current 24h volume at its last history point) the dry run gives the plan
+below. These are plan sizes for that state, not requests that were made: no run
+with the lane plan has been made on GitHub yet. The lanes at that moment: HOT 1,851,
+NEW 90, WARM 0, COOL 897, COLD 6,118. All 1,497 pools measured in the day before the
+saved time (every pool the last good run could have measured, since a pool's
+`lastSeen` is stamped within a day of its answer) are HOT at every gap.
+
+| Gap since the saved time | Pools asked | DEX Screener batches | Full plan |
+|---|---|---|---|
+| 1 hour | 2,670 | 99 | 293 |
+| 3.7 hours (the median gap seen) | 4,492 | 162 | 293 |
+| 6 hours | 6,011 | 212 | 293 |
+| 9 hours | 6,285 | 220 (ceiling reached, 1,225 COLD pools cut) | 293 |
+
+The same batches by lane (each lane's share is the batches its pools add after the lanes
+before it; WARM is empty on that state):
+
+| Gap | HOT | NEW | COOL | COLD | Total |
+|---|---|---|---|---|---|
+| 1 hour | 65 | 7 | 6 | 21 | 99 |
+| 3.7 hours | 65 | 7 | 20 | 70 | 162 |
+| 6 hours | 65 | 7 | 31 | 109 | 212 |
+| 9 hours | 65 | 7 | 31 | 117 | 220 |
+
+The size of a run depends on the gap and on the state: as pools stop answering they
+move from HOT to WARM and then to COOL, which are asked in turn, so WARM and COOL
+grow and a run grows with them. The ceiling bounds it, and it is that ceiling, not the
+table above, that a run meets in a few days: the table is the state of a day on which
+WARM is empty (see "The ceiling").
+
+### The GeckoTerminal fallback
+
+`planFallback` in `collector/fallback.mjs`, run by `runBurst` after the DEX Screener
+batches. It is the lane plan's: the full plan keeps the earlier order (above). The load
+is what it was: `GT_FALLBACK_MAX_REQUESTS` is 6, one request every 12 s, none starting
+later than 200 s after the burst began.
+
+Why. The earlier order asked the same pools in every run: in a replay of run 7 (12
+November) five requests for the first 150 unresolved Robinhood pools and one for X
+Layer's 7, 14 of the 157 priced. The pools GeckoTerminal had priced in the live app on
+six other networks (Arbitrum, BNB Chain, Monad, OP Mainnet, Polygon, Soneium) were never
+asked, so 14 of the 22 networks never got a price from this path. And a pool GeckoTerminal
+prices is in a snapshot only in a run that asks GeckoTerminal about it, so asking it in
+some runs and not in others makes the count of priced pools go up and down.
+
+- **Candidates.** Every known pool of a network GeckoTerminal serves that no provider
+  measured in this run, whether or not DEX Screener was asked about it (the lane plan asks
+  about few pools in a run). A pool DEX Screener measured is never taken from GeckoTerminal.
+- **Tier 0, in every run.** The pools GeckoTerminal priced last time (`via` in the state)
+  that answered in the last 72 hours (`carried`), then every pool of a network DEX
+  Screener answered HTTP 400 for in this run (`unindexed`; it is known only in a run that
+  asked DEX Screener about the network, which the COLD wheel does once in 12 hours; a pool
+  of such a network that GeckoTerminal prices becomes `carried` and is asked in every run
+  after). Within each kind the network with the most pools comes first (a tie goes to the
+  slug) and inside a network the most recently answered first, then the id; the carried pools
+  come before the unindexed ones. A request holds one network, so a block of a network is
+  asked whole and the largest block is the one that is never left out when carried pools sit on
+  more networks than tier 0 has requests. It was ordered by recency before: in a simulation of
+  145 carried pools on seven networks (200 draws, no request) the largest block, 76 pools, got
+  no request in a quarter of the draws and one request (30 pools) in the rest, and between 31
+  and 79 of the 145 were asked; ordered by size the same simulation asks 98 of them, the 76 of
+  the largest included, in every draw. These pools leave HOT: DEX
+  Screener has not priced them, so it asks about them on the 3-hour wheel of WARM
+  (`counts.lanes.warm` includes them, `counts.plan.geckoCarried` counts them, and the
+  safeguard counts them with HOT and NEW; when there are some, the DEX Screener note of the
+  snapshot adds a sentence that says how many they are, that DEX Screener asks about them on
+  its wheel, and that GeckoTerminal is asked first in each run about the ones not priced
+  there, as many as its requests allow: not all of them when they are more than tier 0 can
+  hold, below). A request holds pools of one network.
+- **How many requests tier 0 may take.** At most 8 (`FALLBACK_TIER0_MAX_REQUESTS`) and at
+  most what is left when a third of the requests (rounded down,
+  `FALLBACK_SWEEP_RESERVE_DIVISOR`) are kept for the rotation. With the six requests of
+  the contract that is 4 (up to 120 pools, fewer when they sit on more networks than there
+  are requests: the last request of a network is not full) and 2 for the rotation; with 12 it
+  would be 8 and 4. What tier 0 does not use goes to the rotation. A reserve is kept because without
+  one a large tier 0 would take every request and the rotation, which is what reaches the
+  networks that were never asked, would not run. A tier 0 request with room left (the end of a
+  network's list) is filled up with pools of the rotation of its network: a request costs
+  the same however many pools it holds. The carried pools that do not fit join the
+  rotation, so they are not lost; they leave tier 0 when they have been silent for 72
+  hours, as they would anyway.
+- **The rotation.** A network keeps two bookmarks in the header of `pools.json`
+  (`cursors.gt[network]`): `p`, the place of the last pool that had never answered that was
+  asked, `q`, the same for the pools that had answered before, and `at`, the hour (since 1970)
+  of its last visit. A pool's place is the last 48 bits of its id as a number, so a request
+  takes the next 30 pools after the bookmarks, 15 of each kind (a kind that has fewer leaves
+  the rest to the other), going round to the start after the last; a pool measured since is
+  simply no longer a candidate, a new one is reached in its turn. The network a request goes to:
+  first one the rotation has not visited for 24 hours (`FALLBACK_SWEEP_OVERDUE_MS`; one never
+  visited counts as the longest), the longest first; then the network with the largest product of
+  the hours since its visit and the requests its pools need, so a large network is visited
+  more often, in proportion to its size. A network served in this run counts as visited now, so
+  the requests of one run go to different networks while there are some. The bookmark moves only
+  for a request that was answered, and only if every earlier request of the run that moved it was
+  answered (a later request's bookmark is worked out as if the earlier one was): a request that
+  fails leaves the pools to be asked again. Nothing else is stored: the same state, bookmarks and
+  clock give the same requests.
+- **What it does and does not guarantee.** A network with pools is visited at least once a day
+  when the requests allow it. On the public state of 12 November (8,956 pools on GeckoTerminal
+  networks, 82 of them carried, 18 networks) a plan-only simulation (no request; nobody
+  answers, and DEX Screener is taken to answer HTTP 400 for X Layer, Tempo and Zora in every run,
+  which makes tier 0 larger than it will be) gives, for seven days:
+
+| Runs | Requests a run | Pools asked at least once in 7 days (of 8,956) | Longest wait between visits of a network |
+|---|---|---|---|
+| hourly | 6 | 7,719 | 24 h (Robinhood 2 h, Base and Ethereum 8 h, Arc and Ink 12 h, the others 24 h) |
+| every 3.7 hours (the median gap seen) | 6 | 2,205 | 29.6 h |
+| every 6 hours | 6 | 1,155 | 42 h |
+| hourly | 12 | 7,905 | 6 h |
+| every 3.7 hours | 12 | 3,972 | 22.2 h |
+
+  So at six requests the daily visit holds when the runs are hourly and not at the gaps the
+  edition has seen: the rotation has two requests a run (13 a day at a 3.7-hour gap) for 18
+  networks. That is a property of the load, not of the planner, and it is the case for the
+  owner to weigh against twelve requests. The simulation is a plan, not a run: how many of the
+  pools asked about answer is not known until real runs ask them (the yield per request, which
+  the real runs record in `counts.geckoterminal.fallback`).
+- **A run that reaches the fallback late.** No request starts later than 200 s after the
+  burst began, and tier 0 takes the largest network first (above), so when the DEX Screener
+  batches take most of those 200 s the requests that are left out are the smallest networks'.
+  At the pace of 31 October (0.76 s a batch) a run after a gap of 9 hours or more is bound by
+  the ceiling of 220 batches, ends them at about 194 s and sends 3 fallback requests, all for
+  Robinhood: the 7 X Layer pools GeckoTerminal priced last time wait for the next run (a replay
+  on the real state, no request: 78 of the 146 pools GeckoTerminal priced last time measured,
+  against 83 after a gap of 1.2 hours, which sends 6). It matters after an outage of about
+  nine hours, which has happened (11 to 12 November); the order before this rotation measured
+  14 of the 146 in the same replay. Putting the networks DEX Screener does not index first, or
+  keeping one tier 0 request for the smallest carried network, would change which pools are
+  left out and not how many, and it is not done here.
+- **The number to change.** `GT_FALLBACK_MAX_REQUESTS` in `collector/config.mjs`, 6 now.
+  Twelve would be 6 more requests in each run (up to 144 more a day when a run collects in each hour:
+  the lane would send up to 288 requests a day instead of 144), at the same pace, one every 12
+  s; about ten of the twelve start before the 200 s limit, the rest are not sent. It is not
+  raised here because the lane already runs at the rate GeckoTerminal documents for keyless
+  use and more load on a provider whose terms have not been read is the owner's decision
+  (`PROVIDER-TERMS.md`). Nothing else needs to change: the split, the reserve and the status
+  counts follow the constant.
+- **How to read it.** `counts.geckoterminal.fallback` (below) counts pools **measured in this
+  snapshot** by the tier they were taken for, not pools found since the edition began, and
+  `pricedLastTime` gives the pools that GeckoTerminal priced when they were last measured against
+  those that carry a measurement now: the difference is the pools that are priced in one run and
+  not in the next. A rise in the pools with a current volume that comes only from the rotation
+  finding pools one run and losing them the next is not a gain; tier 0 is what keeps found pools.
+
+### What `status.json` counts
+
+`counts` says what the run did, so that a failure or a gap can be found from the
+published file. Besides the counts described above (the pools requested, answered,
+checked and measured, the requests per provider, the rate-limit waits, discovery,
+Frontier), it holds:
+
+- `counts.dexscreener`: `batches` (the exact-id batches the burst sent; the client's
+  `counts.requests.dexscreener` is one higher for a request repeated after a
+  rate-limit wait and for each retry); `failedBatches` (`total` and `byReason`: `http-500`
+  and the like for an HTTP status, `timeout`, `network`, `size`, `json`, `shape` for an
+  answer of an unexpected shape, `ambiguous` for one that names a pool twice,
+  `rate-limited`, `forbidden`, `other`); `rowsReturned` (the rows of the batches that
+  were answered); `rowsRejected` (`total` and `byReason`: `identity`, the row is not for a
+  pool that was asked about; `chain`, it is for another network, another DEX or
+  another Uniswap version; `tokens`, its currencies disagree with the identity the
+  state holds); `poolsWithRow` (the pools an accepted row came back for) of which
+  `rowsWithoutValue` carried no liquidity and no volume (an answer, not a
+  measurement); and `poolsAsked` (the pools in the batches sent, the same number as
+  `counts.requestedPools`). So `rowsReturned` is `rowsRejected.total` plus `poolsWithRow`.
+- `counts.dexscreener.retry`: what was done about the batches that failed when they were
+  first asked. `maxBatches` and `burstLimitMs` (the limits of this run), `failedFirstPass` (the
+  batches that failed: `failedBatches.total` less the networks DEX Screener answered HTTP 400
+  for as their first answer, which are not indexed, listed in `unsupportedNetworks` and not a
+  failure that could be asked again, so a run with an unindexed network and no failure has 0
+  here), `retried` (asked again),
+  `recovered` (answered the second time), `stillFailed` (unanswered at the end: asked again
+  and failed, or not asked again), `notRetried` (why the others were not asked again:
+  `not-retryable` for a failure that would not change, `limit`, `time`, `requests`,
+  `stopped`, `not-sent`), `networks` (`recovered` and `stillFailed`: the networks), and
+  `stillFailedBatches` (at most 25: `chain`, `pools`, the last `reason` and whether it was
+  `retried`), and `error` (null; the short message of a defect in the retry step, which is
+  counted and never fails the run). The DEX Screener source note of the snapshot says
+  `3 batches failed, 2 recovered on a second try. Still failed: Base.` only when a batch
+  failed; a clean run says nothing of it. The client's `counts.requests.dexscreener` is
+  `batches` plus the retries sent plus the requests repeated after a rate-limit wait.
+- `counts.geckoterminal`: the exact-pool lookups of the measurement burst, which today
+  are the fallback for pools DEX Screener did not answer. `requests`, `failures`
+  (`total` and `byReason`, as above), `idsAsked`, `measured`, `measuredByNetwork` and
+  `errors` (`total` and `last`: errors that were not a provider's answer, which means a
+  defect in the collector; the fallback goes on and the run is not failed, so this is
+  where a defect shows; `last` is the short message, null when there was none). A provider's
+  answer is what the paced client throws for a request (its `ProviderError`, with any code) and
+  what the classifier throws for an answer it cannot use (`shape`, `ambiguous`); anything
+  else, a Node system error such as `ECONNRESET` included, is a defect and is counted here.
+  The name is the provider's and stays: a later kind of exact-pool lookup adds to this
+  object rather than to a new one. The discovery pages are not in it: they are in
+  `counts.discovery` (`geckoPages` read, `geckoPageFailures` and
+  `geckoPageFailureReasons`, the same short reasons as above, `shape` for a page that
+  arrived and is not a page of pools). `counts.requests.geckoterminal` is the client's
+  own total and counts both kinds. The v4.xyz lists and lookups that failed are counted
+  in `counts.discovery` without a reason.
+- `counts.geckoterminal.fallback`: what the GeckoTerminal fallback did in this run.
+  `mode` (`tiers`: the lane plan's, or `ordered`: the earlier order of the full plan, or
+  after a planner defect, which `errors` shows), `limit` (the request limit), `split`
+  (`tier0`, the most requests tier 0 could take, and `sweepReserve`, the least the rotation
+  had; null for `ordered`), `available` (the pools there were for `carried`, `unindexed`
+  and `sweep` before the limit cut; null for `ordered`), `requests` (`tier0`, `sweep`,
+  `ordered`: the requests sent by the kind of request), `idsAsked` and `measured` (by the tier
+  each pool was taken for: `carried`, `unindexed`, `sweep`, `ordered`; `measured` is
+  pools measured in this snapshot), `networks` (`requests`, `ids` and `measured` for each
+  network asked), `pricedLastTime` (`known`: the pools the run knows that GeckoTerminal
+  priced when they were last measured; `measuredNow`: how many of them carry a measurement
+  in this snapshot, from either provider) and `bookmarksMoved` (the networks whose rotation
+  bookmark moved). `counts.plan.geckoCarried` is the number of pools in WARM that GeckoTerminal
+  carries (null when the plan was chosen without judging the lanes: a requested full plan,
+  or no saved time or history).
+- `counts.cursors`: `families`, how many bookmark families the header of `pools.json`
+  was written with (`gt` is one), and `refused`, which is null unless a step proposed bookmarks of a
+  shape the header does not allow (`shape`, `too-many-families`, `too-many-keys`,
+  `too-many-fields`, `too-big`, `unreadable`) or threw (`threw`): the run then kept the
+  bookmarks it read, published as usual, and says so here.
+- `counts.plannedPools`, `requestedPools`, `answeredPools` and `checkedPools`: with the
+  lane plan these say what **this snapshot** asked: the pools the plan asked DEX
+  Screener about, those that were sent, those either provider answered for (the gate's
+  `answeredPools`), and (`checkedPools`) every pool a provider answered for. A pool that
+  was not due on its wheel is in none of them; it is in `counts.deferredPools`.
+  `counts.droppedForCap` is only what a cap left out: the pools the lane plan's batch
+  ceiling cut (the full plan: the pools its 8,500 left out). So `plannedPools +
+  deferredPools + droppedForCap` is every known pool on a network DEX Screener is
+  asked about (the state's, the priority list's and those discovery found in the run),
+  and the page's "checked" counts for a network are those of this snapshot, not of
+  every snapshot so far.
+- `counts.plan`: `mode` (`lanes` or `full`); `reason` and `detail` (null with the
+  lanes; with the full plan why it ran: `forced`, `max-pools`, `no-saved-time`,
+  `saved-time-in-future`, `no-history`, `below-floor`, `above-ceiling` or
+  `planner-error`); `fellBack` (true when the full plan ran although nothing asked for
+  it: the safeguard fired or the state had nothing to start the lanes from; the run
+  also prints a warning); `batches` (DEX
+  Screener batches planned, rounded up per network); `maxBatches`, `ceilingBound`
+  (the ceiling cut pools, or HOT and NEW alone exceed it) and `trimmed` (`warm`,
+  `cool`, `cold`: the pools it cut) and `newOverflow` (new pools beyond the 600 of
+  NEW, which wait in COLD); `hotAndNew`, `floor` and `previousPools` (the
+  safeguard's numbers: HOT plus NEW, 90% of the pools behind the previous history
+  point, those pools; null when the safeguard was not reached); `periodsHours`
+  (`warm`, `cool`, `cold`); and `windowFrom`, `windowTo` and `anchor` (UTC: the
+  wheels' window and the time the lanes were judged at); and `networkGuard` (the
+  guard's two numbers, `minHotPools` and `minShare`, and a row `{ chain, hot, hotAndNew,
+  answered, share, refused }` for each network DEX Screener did not answer for). The
+  lane-only fields are null with the full plan. If the plan could not be described
+  (it never has been) `counts.plan` holds only `mode`, `reason`, `detail`, `fellBack`,
+  `batches` and `error`, and `counts.lanes` is null: a run that passed its gate is not
+  failed for that.
+- `counts.downNetworks`: the networks DEX Screener did not answer for (five failed
+  batches in a row, or two or more with none answered), as slugs; `[]` when none.
+  `counts.unsupportedNetworks` is the networks it answered HTTP 400 for.
+- `counts.lanes`: with the lane plan, for each of `hot`, `new`, `warm`, `cool` and
+  `cold`: `known` (the pools in the lane), `scheduled` (planned for this run),
+  `requested` (sent to DEX Screener), `answered` (either provider answered for them)
+  and `measured` (they carry a market value). Null with the full plan.
+- `counts.frontier.listingRows` and `listingTotal`: see the Frontier step above.
+- `counts.providers`: for each provider, what the paced client itself recorded:
+  `requests`, `succeeded`, `failed`, `lastStatus` (the last HTTP status), `firstRequestAt`
+  and `lastRequestAt` (UTC; null when it was not asked) and `stopped` (null, or why
+  and when the provider was stopped for the run).
+
+Counting asks nothing and keeps nothing: the numbers are read from what the run
+already did. They are counts of requests and rows, never an estimate of a pool or
+of a figure, and an unanswered request is not a zero.
+
 ## Commands
 
 | Command | Meaning |
@@ -284,10 +812,12 @@ which is not part of this repository; the numbers are in
 | `--out <dir>` | Write the data files to `<dir>` and the updated state to `<dir>/state`. `public/data` and `state/` are not touched. |
 | `--state <dir>` | Read state from `<dir>` (default `state/`, or the fixture state with `--offline`). |
 | `--max-discovery <n>` | Discovery looks at the first `n` networks only (`0` turns it off). |
-| `--max-pools <n>` | Measure at most `n` pools. |
+| `--max-pools <n>` | Measure at most `n` pools. The cap belongs to the full plan, so this selects it. |
+| `--full-plan` | Ask DEX Screener about every known pool, as before the lane plan (`COLLECTOR_FULL_PLAN=1` does the same). |
 | `--min-current <n>` | Minimum number of pools with a current 24h volume for the gate. Values below 500 are accepted only with `--offline`. |
 | `--offline` | Replay the recorded fixtures: no network call at all. Reads `collector/fixtures/state`, treats a request that was not recorded as an empty answer, and requires `--out` (or `--no-publish`): an offline run never writes into `public/data`. The gate minimum defaults to 20 because the recording is small. Its `status.json` carries `"offline": true`. |
 | `--verbose` | One line per request outcome on stderr. |
+| `--trace <keys>` | For a run on your own computer: after the result line, say what the run did with each pool named (`chain:0x<64 hex digits>`, separated by commas, at most 50): `measured` (and by whom, with its figures), `rejected` (a row came back and why it was not used), `no-market-value` (answered with no row, or a row with no liquidity and no volume), `not-answered` (its batch failed) or `not-asked` (and why: not a pool the run knows, a network DEX Screener has no namespace for, left out of the plan, or its batch was never sent), with what DEX Screener and GeckoTerminal each did. It asks no request, keeps no figure and changes no file, and it refuses to run when `GITHUB_ACTIONS` is set, so the hourly job cannot carry it. |
 
 Exit codes: `0` passed (and written, unless `--no-publish`), `1` the gate refused
 or the run failed (publish nothing, keep the last good snapshot), `2` usage error.
@@ -297,6 +827,9 @@ Other programs:
 - `node collector/export-seed.mjs` seeds `state/pools.json` and `state/census.json`
   from the live Hook Radar app (below).
 - `node collector/tools/record-fixtures.mjs` records real provider responses (below).
+- `node collector/tools/plan-dry-run.mjs <state-folder> <gap-hours> [...] [--json]` says
+  what the plan would ask DEX Screener about for a state and a gap (see "The lane
+  plan"). It makes no request and writes no file.
 - `node collector/tools/imports.mjs [--check]` lists the files outside `collector/`
   that the collector imports; `collector/IMPORTS.md` is that list.
 
@@ -311,9 +844,29 @@ discovery off; the Snapshot workflow sets it to `0` for the runs that only
 measure the pools already known). Like every environment setting it can only
 make a run smaller: an empty or invalid value (anything but a whole number from
 0 to 999,999) changes nothing, a large number is the same as no limit, and
-`--max-discovery` on the command line wins. `COLLECTOR_DAILY_MAX_REQUESTS` limits
-the 7D and 30D step the same way: a whole number from 0 to 999,999 that can only
-lower its 20 requests, `0` switches the step off, anything else changes nothing.
+`--max-discovery` on the command line wins.
+`COLLECTOR_DAILY_MAX_REQUESTS` limits the 7D and 30D step the same way: a whole
+number from 0 to 999,999 that can only lower its 20 requests, `0` switches the
+step off, anything else changes nothing.
+`COLLECTOR_RETRY_MAX_BATCHES` limits the retry of a failed DEX Screener batch the same way: a
+whole number from 0 to 999,999 that can only lower its 8 batches a run, `0` switches the
+retry off, anything else changes nothing. It is the way back if the retry misbehaves; the
+full plan does not turn it off.
+`COLLECTOR_FULL_PLAN` (`1`, `true`, `yes` or `on`, any case) returns the run to
+the plan that asks about every known pool, as before the lane plan; the Snapshot
+workflow passes the repository variable of the same name, so it is the way back
+without editing a file. That plan is the larger one and the one the 399-request
+ceiling was sized for: the switch returns the collector to its earlier size and
+no further. An empty or any other value changes nothing. These eight variables
+(`COLLECTOR_DS_GAP_MS`, `COLLECTOR_GT_GAP_MS`, `COLLECTOR_V4_GAP_MS`,
+`COLLECTOR_RETRY_AFTER_CAP_MS`, `COLLECTOR_MAX_DISCOVERY`, `COLLECTOR_FULL_PLAN`,
+`COLLECTOR_DAILY_MAX_REQUESTS`, `COLLECTOR_RETRY_MAX_BATCHES`) are all the collector reads, besides
+`GITHUB_REPOSITORY` and `GITHUB_ACTIONS`; `tests/collector-contract.test.mjs` lists
+them, holds each to "slower, smaller or back to the earlier size" and fails when
+another appears. `COLLECTOR_FULL_PLAN`, `COLLECTOR_MAX_DISCOVERY`,
+`COLLECTOR_RETRY_MAX_BATCHES` and `COLLECTOR_DAILY_MAX_REQUESTS` are wired to the workflow
+(`COLLECTOR_MAX_DISCOVERY` is set from the gate's output, the other three from the
+repository variable of the same name); the gaps and the rate-limit cap are not.
 
 ## Limits and gaps (all in `collector/config.mjs`)
 
@@ -321,10 +874,22 @@ lower its 20 requests, `0` switches the step off, anything else changes nothing.
 |---|---|
 | `DS_GAP_MS` / `GT_GAP_MS` / `V4_GAP_MS` | 400 / 12,000 / 5,000 ms between request starts |
 | `DS_BATCH_SIZE` | 30 ids per DEX Screener request |
-| `GT_FALLBACK_MAX_REQUESTS` / `GT_FALLBACK_BATCH_SIZE` | 6 requests of up to 30 ids |
+| `GT_FALLBACK_MAX_REQUESTS` / `GT_FALLBACK_BATCH_SIZE` | 6 requests of up to 30 ids (the one number to change to ask GeckoTerminal about more pools: 12 would be 6 more requests a run) |
+| `FALLBACK_TIER0_MAX_REQUESTS` / `FALLBACK_SWEEP_RESERVE_DIVISOR` | 8 / 3: tier 0 of the lane plan's fallback takes at most 8 requests and at most what is left after a third of the requests (rounded down) are kept for the rotation: 4 at 6 requests, 8 at 12 |
+| `FALLBACK_SWEEP_OVERDUE_MS` | 24 hours: a network the rotation has not visited for this long is served first |
+| `RETRY_MAX_BATCHES` / `RETRY_BURST_LIMIT_MS` | 8 / 150,000 ms: a DEX Screener batch that failed with a retryable error is asked again once, at most 8 a run (`COLLECTOR_RETRY_MAX_BATCHES` can lower it, `0` switches it off), none starting after 150 s into the burst (the last may take 20 s, so it ends before the fallback's last start and Frontier's) |
+| `FALLBACK_LATEST_START_MS` | 200,000 ms: no GeckoTerminal fallback request starts later than this after the burst began, a gap or cooldown wait included |
 | `FRONTIER_MAX_REQUESTS` / `FRONTIER_LATEST_START_MS` | 3 requests (coin listing, statistics, one index query); the step starts at most 240 s into the burst |
 | `MAX_PRIORITY_POOLS` | 1,500: the most the priority list may hold (it holds 1,355) |
-| `MAX_MEASURED_POOLS` / `MAX_DISCOVERED_MEASURED` | 8,000 seeded pools, plus up to 500 found by discovery (8,500 in all) |
+| `MAX_MEASURED_POOLS` / `MAX_DISCOVERED_MEASURED` | 8,000 seeded pools, plus up to 500 found by discovery (8,500 in all): the full plan's caps |
+| `LANE_HOT_MAX_AGE_MS` / `LANE_NEW_MAX_AGE_MS` / `LANE_WARM_MAX_AGE_MS` | 72 hours / 72 hours / 7 days: the lane plan's lane boundaries, judged at the anchor |
+| `LANE_NEW_MAX_POOLS` | 600: the newest never-answered pools asked in every run; the others wait in COLD |
+| `LANE_PERIOD_MS` | WARM 3 hours, COOL 6 hours, COLD 12 hours |
+| `LANE_ANCHOR_MAX_AHEAD_MS` / `LANE_WINDOW_OVERLAP_MS` | 24 hours / 6 minutes: the anchor is at most this long after the saved time; the wheels' window starts this long before the saved time |
+| `LANE_MAX_BATCHES` | 220 DEX Screener batches in a lane plan (COLD, then COOL, then WARM are cut to keep to it) |
+| `LANE_MIN_SHARE_OF_PREVIOUS` | 0.9: HOT and NEW must hold this share of the pools behind the previous history point, or the full plan runs |
+| `LANE_DISCOVERED_RESERVE_BATCHES` | 10: room the request reserve keeps for the pools discovery adds to the lane plan |
+| `LANE_GUARD_MIN_HOT_POOLS` | 50: a network with this many HOT pools that DEX Screener did not answer for refuses the run (see "A network that does not answer") |
 | `MAX_RESOLVES_PER_RUN` | 40 exact-pool lookups |
 | `MAX_REQUESTS_PER_RUN` | 399 in all (hard stop) |
 | `DAILY_JOIN_RANK` / `DAILY_KEEP_RANK` / `DAILY_RANK_GRACE_MS` | 40 / 60 / 3 days: a pool joins the 7D and 30D reads at rank 40, stays to rank 60, and an unmeasured pool keeps its record three days |
@@ -345,11 +910,17 @@ lower its 20 requests, `0` switches the step off, anything else changes nothing.
 | `COOLDOWN_PROVIDERS` | DEX Screener, GeckoTerminal and the v4.xyz indexer: the providers that may have the cooldown (the registry and Frontier fetches have a saved copy to fall back on, and Goldsky is asked once: none is given one) |
 
 The request budget is reserved before discovery spends any of it: the batches the
-burst needs (8,500 pools are 284 batches, plus one per network for rounding), the
-fallback (6), Frontier's step (3) and the registry fetches come first, and
-discovery is trimmed to fit what is left (81 requests at full size; discovery
-wants 80). The priority list adds no request of its own: it takes places inside
-the plan. A full-size fake run in the tests (the seed's 8,000 pools on its 14
+burst needs, the fallback (6), Frontier's step (3) and the registry fetches come
+first, and discovery is trimmed to fit what is left. With the lane plan the burst's
+batches are those of the plan made before discovery plus 10, at most 220 plus 10, so
+discovery at full size (80 requests) fits with room to spare: at the ceiling a run is
+3 registry fetches, 80 for discovery, 230 for the burst, 6 and 3, which is 322, and the
+7D and 30D step that ends a run (up to 20 GeckoTerminal requests, only what the 399
+leave) makes it 342 against 399 (the full plan's arithmetic follows). With the full plan the batches are those of
+8,500 pools (284 batches, plus one per network for rounding), and discovery is
+trimmed to what is left (81 requests at full size; discovery wants 80). The
+priority list adds no request of its own: it takes places inside the plan. A
+full-size fake run in the tests (the seed's 8,000 pools on its 14
 networks, 640 discovered pools on 20 networks, providers that answer at once)
 makes 385 requests: 296 DEX Screener, 20 GeckoTerminal pages and 6 fallback
 batches, 20 indexer lists and 40 lookups, 3 registry fetches (no Frontier chain
@@ -357,13 +928,30 @@ is configured in that fake, so none of Frontier's 3 is among them: a real run
 adds them, 388). Its collection takes about ten minutes of provider time, of
 which the burst is about three. A real run varies with the networks the new pools
 fall on, never above 399; the last real run before these changes made 375
-requests, so a real run is now expected to make about 381 and stays under 400. A retry after a rate-limit cooldown is one of
+requests, so a real run with the full plan is expected to make about 381 and stays under 400. A retry after a rate-limit cooldown is one of
 those 399 requests. Only three providers can have one and each has one per run, so
 at most three retries are added. They are not reserved: at full size discovery is
 allowed 81 requests and wants 80, so only one request is spare there. A retry is
 paid for by the part of the plan's reserve that the run does not use (the burst, its
 fallback and Frontier's step are each reserved at their largest, and most runs use
 less), and the client's 399-request hard stop applies to it like to any request.
+A retry of a failed DEX Screener batch (at most 8 a run) is paid for the same way and
+only while the run has requests left beyond the fallback's and Frontier's: the worst
+case of a lane plan above, 342, becomes 350 with all eight, against 399.
+
+That 342 assumes the plan after discovery is no larger than 230 batches, and it can
+be larger: HOT and NEW pools are never cut, the check that sends a state with too many
+of them to the full plan runs before discovery, and discovery adds new pools to NEW (up
+to `LANE_NEW_MAX_POOLS`, 600) after it. A bound that does not depend on either: at most
+220 batches before discovery, 20 more for the 600 new pools and at most 22 for rounding
+per network, 262 in all, so 3 + 80 + 262 + 8 retries + 6 + 3 + 20 = 382, and 385 with the
+one cooldown second try each of DEX Screener, GeckoTerminal and the v4.xyz indexer may
+have. That is under 399 with 14 to spare, and the 399-request stop of the paced client
+holds whatever the plan does: the step that comes last is the one it cuts. A replay of
+such a run (6,550 pools planned in 234 batches, discovery on, batches failing once and
+8 asked again) made 351 requests; `tests/collector-heavy.test.mjs` runs it. When the plan
+is larger than its ceiling for that reason the DEX Screener note and the run's notice say
+so and say how many batches it sent. The figure "about 381" above is the full plan's.
 
 Provider etiquette, all of it tested: truthful User-Agent; per-provider gap;
 `Retry-After` honoured (the next request waits, and a wait longer than two minutes
@@ -378,12 +966,14 @@ gives DEX Screener, GeckoTerminal and the v4.xyz indexer one cooldown: the
 collector waits the stated time, sends the refused request once more (same
 ids, same URL) and doubles that provider's gap for the rest of the run. It waits
 only if the wait is at most 90 s, the retry could start inside the time the phase
-allows (225 s for the DEX Screener batches, 270 s for the fallback) and the request
+allows (225 s for the DEX Screener batches, 200 s for the fallback) and the request
 budget has room; the retry is a request like any other and counts toward the 399.
 Anything else stops the provider for the run, as it did before, and the gate
 decides whether what was gathered is enough: a second 429 from that provider, a
 429 that names no wait, a wait over the cap or past the phase limit, and every
-403. Nothing else is retried (not a 5xx, a timeout or another 4xx). The first 429
+403. The client retries nothing else; the burst asks a DEX Screener batch that failed
+with a 5xx, a timeout or another retryable error once more (step 3 above, which never
+repeats a 429, a 403 or a 400). The first 429
 does not count toward the five failures in a row. `status.json` records the wait
 in `counts.rateLimitWaits` (per provider: `times`, `waitedMs`), the retried
 request is in `counts.requests`, and the source note says `Waited 23 s after a
@@ -427,14 +1017,17 @@ node collector/run.mjs
 ```
 
 - Raise `COLLECTOR_DS_GAP_MS` and `COLLECTOR_GT_GAP_MS` (they can only be raised).
-- Keep the DEX Screener burst under its 225 s start limit. 8,500 pools are 284
-  batches, so the gap can be about 0.75 s at most: 284 x 0.75 s is 213 s. With
-  0.8 s or more, batches that cannot start by 225 s are not sent and the 80% rule
-  decides whether the run is published.
+- Keep the DEX Screener burst under its 225 s start limit. The full plan's 8,500
+  pools are 284 batches, so the gap can be about 0.75 s at most: 284 x 0.75 s is
+  213 s. With 0.8 s or more, batches that cannot start by 225 s are not sent and
+  the 80% rule decides whether the run is published. The lane plan is at most 220
+  batches, which by the same arithmetic leaves room for a gap of about 1 s (220 x
+  1 s is 220 s).
 - With the six fallback requests, a GeckoTerminal gap of 12 s starts the last one
-  about 60 s after the first. When DEX Screener takes the whole 225 s only the
-  first four start before the 270 s limit (a request that could only start
-  later is not sent), which the gate counts as unresolved pools, not as zero.
+  about 60 s after the first. No fallback request starts later than 200 s after the
+  burst began, so when DEX Screener takes more than 200 s none starts (a request
+  that could only start later is not sent), which the gate counts as unresolved
+  pools, not as zero.
 - The cooldown is a safety net, not a plan. It doubles the gap from then on, so a
   0.75 s gap becomes 1.5 s and the batches after it may not all start in time.
   As arithmetic, not a recorded run: at 0.4 s between batches the 190th batch
@@ -499,7 +1092,7 @@ only be raised.
 
 | File | Content |
 |---|---|
-| `pools.json` | `{ schemaVersion, updatedAt, pools: [...] }`, one pool per line. A pool is `id` (lowercase bytes32), `chain`, `hookAddress`, `tokens` (two lowercase addresses; the native currency is the zero address), `name`, `createdAt`, `source`, `firstSeen`, `lastSeen`, for a pool GeckoTerminal measured last time `via: "geckoterminal"` (the fallback hint above), and optionally `dynamicFee` (below). `source` is `census` for the seed (identity verified by the live app's on-chain census) or `v4.xyz` for a pool found by discovery (identity from the indexer). `updatedAt` is the previous run's `generatedAt`. |
+| `pools.json` | `{ schemaVersion, updatedAt, cursors, pools: [...] }`, one pool per line. `cursors` is the bookmarks that a step keeps between runs, `{ family: { key: { field: number or short text } } }` (at most 16 families of 64 keys of 16 fields, a field a number of at least 0 or a text of at most 100 characters, 8,192 bytes of JSON in all); the GeckoTerminal fallback's rotation keeps one family, `gt`, `{ network: { p, q, at } }` (the places of the last pool it asked that had never answered and of the last that had, and the hour of its last visit; about 2 KB), and a run writes the rest of what it read back unchanged; it is `{}` until the first run with the lane plan has moved a bookmark, and a file without it reads as having none. A file whose `cursors` has another shape is refused when it is read, as any malformed state is. A step that proposes bookmarks of another shape does not fail the run: the run is published, the header keeps the cursors that were read, and `counts.cursors.refused` in `status.json` says why. A pool is `id` (lowercase bytes32), `chain`, `hookAddress`, `tokens` (two lowercase addresses; the native currency is the zero address), `name`, `createdAt`, `source`, `firstSeen`, `lastSeen`, for a pool GeckoTerminal measured last time `via: "geckoterminal"` (the fallback hint above), and optionally `dynamicFee` (below). `source` is `census` for the seed (identity verified by the live app's on-chain census) or `v4.xyz` for a pool found by discovery (identity from the indexer). `updatedAt` is the previous run's `generatedAt`. |
 | `hookless.json` | `chain:id` keys of pools the indexer resolved to the zero hook. |
 | `priority.json` | `{ schemaVersion, exportedAt, selection: { snapshotGeneratedAt, rule, counts }, pools: [...] }`, one pool per line: the pools that are always in the plan. A record holds seven fields and no others: `id`, `chain`, `hookAddress`, `tokens`, `name`, `createdAt` and `projectId` (the platform or project it was chosen for, a label: ownership is decided from the exact hook at every snapshot). The state refuses a file with any other field (a provider's address, a key, a figure), a web address in a name or a malformed identity. Written once by `collector/export-priority.mjs`; the collector only reads it. |
 | `census.json` | `{ exportedAt, seed: {...}, inventory }`. `inventory` is the live app's pool census as published, with its original `generatedAt`, per-network `updatedAt` and `headCheckedAt`, plus the time of the export. The one thing removed is each network's `sourceUrl`, the address of the data service the app read that network from (some embed an access key; see "Choices to know about"). The page shows it as "Census as of <date>", never as current. |
@@ -507,7 +1100,14 @@ only be raised.
 | `daily.json` | `{ schemaVersion, updatedAt, pools: [...] }`, one record per line, at most 60: `chain`, `id`, `lastRankedAt` (moves at most once a day), `attemptedAt` and `result` (the last definite answer: `ok`, `none`, `missing`, `unreadable`; null before the first), `fetchedAt` (when the last readable answer was true), `bad` (unreadable answers in a row), `start` (the pool's first day at GeckoTerminal, when its whole history was seen) and `days` (`[dayNumber, usd]`, complete UTC days, at most 35). About 50 KB. Written by the collector only, and only when the records changed; never committed from a worktree. A missing file means no daily data yet; one that cannot be read, is not JSON (conflict markers after a merge) or has the wrong shape is ignored with a note in `counts.daily.note` and replaced by the next published run. |
 | `registry.json` | Last fetched hooklist (without the decoded flags, which are recomputed from each address), chain registry and Frontier configuration, each with its fetch time. Rewritten only when the data changed. |
 
-`lastSeen` moves at most once a day per pool, so the committed file stays quiet.
+`lastSeen` is the last time a provider measured the pool. It moves at most once a
+day, so the committed file stays quiet, with one exception: a pool whose `lastSeen`
+is still its `firstSeen` has not been measured since it was added, and its first
+measurement stamps it at once. A pool added and answered inside one day (a pool
+found by discovery, for example) therefore shows a `lastSeen` later than its
+`firstSeen`. A pool with the two equal has no recorded answer: it has not answered
+since it was added, or it answered before this rule began and the answer was not
+recorded (it was stamped at most once a day); its next answer stamps it.
 When state grows past 12,000 pools the least recently seen are dropped. The burst
 measures the seeded pools first and the most recently seen discovered pools after
 them (see "Measurement burst").
@@ -620,11 +1220,21 @@ the collector; re-run the export from a newer snapshot to change it.
 
 A pool created after that snapshot is not on the list. Umia's pool on UmiaHookV2
 on Robinhood Chain (SLOP / USDG, created 10 November 2026) is one: it is a
-discovered pool, so it is measured only while it stays among the 500 most
-recently seen discovered pools; if enough newer discoveries push it out, its last
-reading ages until its freshness expires and its figures are no longer shown.
-Putting it on the list is a new export, made deliberately (the list holds 1,355
-of the 1,500 it may).
+discovered pool. With the full plan it is measured only while it stays among the
+500 most recently seen discovered pools; if enough newer discoveries push it out,
+its last reading ages until its freshness expires and its figures are no longer
+shown. With the lane plan every discovered pool is NEW and asked in every run
+for 72 hours, and a pool that answers is HOT and stays asked in every run while it
+keeps answering. Putting it on the list is a new export, made deliberately (the
+list holds 1,355 of the 1,500 it may).
+
+With the lane plan the list no longer decides which pools a run asks about, nor
+ranks them in the GeckoTerminal fallback (the full plan still does both): the
+lanes are chosen by what a pool has answered. The file and its validators stay as
+the identity provenance of its pools, a listed pool the state did not hold is still
+added to the state at the first run (its `firstSeen` is the list's export time, so
+it waits in COLD until it answers), and `counts.priorityPools` still says how many
+listed pools the plan took and how many were measured.
 
 ## Fixtures and offline mode
 
@@ -707,9 +1317,96 @@ test that reaches for a provider fails instead of calling it):
   refusing a request that would start late, the 225 s and 270 s burst limits with a
   stalled `Retry-After`, and the registry: live, cached with its original time, no
   copy, Frontier optional, the saved copy's round trip through `state/registry.json`.
+  It also pins the lane plan's constants and holds the environment switches to the
+  contract: exactly eight `COLLECTOR_*` variables are read (an eighth fails the test until
+  it is added with its direction), none can raise a limit, shorten a gap or weaken a gate,
+  `COLLECTOR_DAILY_MAX_REQUESTS` can only lower the 7D and 30D step's 20 requests,
+  `COLLECTOR_RETRY_MAX_BATCHES` can only lower the retry's 8 batches (and `0` switches it off),
+  `COLLECTOR_FULL_PLAN` can only return the run to the earlier, larger plan at its
+  contract size, and the contract text in `collector/config.mjs` says so.
 - `collector-fullsize`: one run at the size the job really has (above), asserting the
   request count, the minimum gap per provider, the equal share of lookups, that no
-  seeded pool is dropped, and the dynamic-fee tag of every deployment.
+  seeded pool is dropped, and the dynamic-fee tag of every deployment. Its state has no
+  saved time, so it runs the full plan: it is the test that the way back (`COLLECTOR_FULL_PLAN`)
+  still fits the 399-request budget at the size it was designed for.
+- `collector-lanes`: the lane plan. The classification table; a pool measured in the last
+  good run is HOT for every `lastSeen` age under a day and every gap, the anchor's clamp
+  included, tied to `nextPools`' own stamp; the wheels (the phase, windows that follow
+  each other leaving no due time out); simulated runs with random gaps up to ten hours
+  and the saved time trailing the plan time by the burst (a pool is asked again by the
+  first run a period after its last ask, at least once in two periods when the runs are no
+  further apart than the period, in every run when they are, and the overlap is what
+  keeps it so); a refused run covered by the next; determinism whatever the order of the
+  pools; lane-major batches; the batch counts at gaps of 1, 3.7, 6 and 9 hours on the live
+  state's proportions; the ceiling's trim order and that HOT and NEW are never cut; the NEW
+  cap and the discovery cap not applying; the safeguard (no saved time, saved time in the
+  future, no history, the relative floor); runs with fake providers (lane counts agree with
+  the requests and the state's stamps, ten days without a run, `COLLECTOR_FULL_PLAN`,
+  `--full-plan`, `--max-pools`, the fall back to the full plan and its loud report, the
+  ceiling's notice and the snapshot's note); a steady-state state at a tenth of its size,
+  where the ceiling binds in ordinary runs and a COLD pool waits more than two periods,
+  and with no ceiling does not (the guarantee is the plan's); the offline replay using
+  the full plan; and the plan dry run (no request, no file, bad arguments).
+- `collector-heavy`: the heaviest run end to end, which no other file runs: the lane plan (a
+  state with a saved time and a history point), discovery on all 20 networks, DEX Screener
+  batches that fail once and are asked again, the tiered GeckoTerminal fallback and the 7D
+  and 30D step on one fake clock, and four variants (DEX Screener at its real pace of 0.76 s a
+  batch, GeckoTerminal stopped by its first answer, a 90 s cooldown inside discovery, and
+  `COLLECTOR_FULL_PLAN` with the same failures), then Ethereum going down (199 HOT pools),
+  which the guard refuses. It asserts 399 requests at most, the status counts equal to the
+  fake's own count in every part, every daily read after every other request and after the
+  snapshot time, every fallback request starting inside 200 s of the burst, the snapshot time
+  inside five minutes of the burst, the gaps, and each pool in the snapshot carrying its own
+  provider's figures.
+- `collector-lane-guard`: the lane plan's refusal of a network DEX Screener did not answer
+  for (the boundaries: 50 HOT pools judged and 49 not, 80% answered passes and 79% does
+  not; only a network the burst found down is judged; the full plan is not judged; the
+  gate's own checks untouched) and, run end to end with a fake DEX Screener, a network of
+  120, 60 and two batches that goes down is refused although the gate's own shares pass,
+  one of 30 HOT pools is published and listed, a 400 and failures that are not five in a
+  row are not outages, and the daily step does not spend its requests on a refused run;
+  what the burst counts as a network that is down; HOT and NEW that alone need more than 220
+  batches are the full plan (`above-ceiling`); a planner that throws is the full plan
+  (`planner-error`) and a status that cannot be described does not fail the run; the
+  order of the GeckoTerminal fallback in the lane plan (the priority list does not rank
+  it); the snapshot's DEX Screener note when the ceiling bound.
+- `collector-gt-fallback`: the GeckoTerminal fallback. Pools of a network the DEX Screener
+  plan did not include are asked about, measured and counted (the network has its row with
+  `checkedPools` and `measuredPools`, its `attemptedPools` stays DEX Screener's, the gate's
+  `requestedPools` and `answeredPools` do not move, and removing the row's creation makes the
+  test fail); a network GeckoTerminal was asked about and did not answer still has its row;
+  the full plan
+  takes only the plan's own pools; an error that is not a provider's answer is counted in
+  `counts.geckoterminal.errors` and the next request goes on, a provider's failure is counted
+  by its reason, and a request that was never sent is neither; the 200 s start rule, a
+  rate-limit cooldown included; the tiers and the rotation: the constants and the split of the
+  requests (a third are the rotation's, none reserved below three requests), what carried
+  means (the 72-hour edge to the minute, `via` without an answer, an answer without `via`),
+  tier 0 before the rotation and its cap at six and twelve requests with the overflow joining
+  the rotation, a tier 0 request filled up from its network's rotation, half of each kind and
+  the shortage rule, the rotation going round (every pool once before any twice, resuming at
+  the bookmark, a bad bookmark ignored, a new pool reached in its turn), the network choice
+  (overdue first, never visited longest, the product, one request each within a run), the same
+  requests for the same state in any order, every network visited within a day at hourly runs
+  and larger ones more often, tier 0 ordered by the size of a network's block (seven networks,
+  145 carried pools, the largest 76 asked whole in every draw), a provider's answer told from a
+  defect by what was thrown (a Node system error is a defect, `shape` is an answer), a failed
+  request moving no bookmark and later ones not skipping it, the lanes (a carried pool is WARM and not HOT, the safeguard counts it, the dry run says
+  so), and two runs end to end: the first writes the bookmarks into the header of
+  `pools.json` and the pools GeckoTerminal priced are carried by the second.
+- `collector-retry`: the DEX Screener retry. What is retryable (a network error, a timeout, an answer
+  that is not JSON or not of the right shape, an HTTP 5xx or a 408) and what is not (a 429, a
+  403, any 400 or other 4xx, an answer too large or naming a pool twice, a defect); a 500 that
+  recovers, every retryable kind of failure recovering, one that fails again and is recorded, a
+  second reason reported; a 429, a 403, a first-answer 400, a later 400 and a 404 never asked
+  again; a network DEX Screener does not index (a first-answer 400) not counted among the batches
+  that failed, not in the note, with the retry's counts at 0, and a real failure beside it
+  counted and named alone; `COLLECTOR_RETRY_MAX_BATCHES` lowering the retry and switching it off
+  in a whole run; at most eight a run and the others counted with the reason; HOT batches first; no retry
+  without requests beyond the fallback's and Frontier's, none after 150 s or when the wait would
+  end after it, none once DEX Screener is stopped; a network that was down stays down; the pools
+  counted once as requested and the answer as an answer; a defect in the step counted and not
+  fatal; and a run end to end: status, the source note, and a clean run saying nothing.
 - `collector-discovery-env`: `COLLECTOR_MAX_DISCOVERY` (a whole number from 0 to
   999,999; anything else changes nothing; it can only lower discovery; the
   command line wins), a run with discovery off passing the quality gate on the small
@@ -956,8 +1653,19 @@ on test data.
   passed with 2,506 current pools (351 requests, collection from 00:05:40 to
   00:14:11 UTC). A later full run the same day passed with 2,210 current pools
   (370 requests, collection from 15:49:31 to 16:03:40 UTC, one GeckoTerminal
-  rate-limit wait of 30 s). No run has yet been made from GitHub-hosted runner
-  addresses, so what those addresses are allowed to do is not yet known.
+  rate-limit wait of 30 s). The Snapshot workflow has also run on GitHub-hosted
+  runners: on 12 November 2026 the repository's public run list (the Actions tab)
+  held seven runs, four started by hand and three by the schedule, from 18:03 UTC
+  on 10 November to 21:42 UTC on 11 November, each taking 8 to 11 minutes and each
+  ending green. A run also ends green when the quality gate refuses it and the last
+  snapshot is kept, so the list shows that the job ran, not which runs
+  published: what a run published is in its `status.json` and in the state commit
+  it made. These runs were mostly of the workflow as first published, which had
+  one job on a three-hour schedule and no "Is a new snapshot due" gate job: that
+  job was added in a commit made at 20:53 UTC on 11 November, six of the seven runs
+  had published their state before it, and the last one (started 21:42 UTC)
+  published its state at 21:51 UTC on top of it. So the list says nothing about the
+  gate job except through that last run.
 
 ## For the workflow and packaging
 
@@ -982,5 +1690,5 @@ on test data.
   (Node 24 type stripping), so the same Node version is needed to run it.
 - Re-seeding replaces `state/pools.json` and `state/census.json` from a live
   Hook Radar app and discards the pools discovery added since (and their
-  `dynamicFee` evidence): do it deliberately. `state/priority.json` is separate;
+  `dynamicFee` evidence, and any `cursors` in the header): do it deliberately. `state/priority.json` is separate;
   the collector never writes it.

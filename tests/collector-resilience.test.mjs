@@ -767,10 +767,16 @@ test("only a 400 means the network is not indexed: other errors are failed batch
     const dexCalls = fetchImpl.calls.filter((call) =>
       call.url.startsWith(dexHost),
     );
-    assert.equal(dexCalls.length, 3, `HTTP ${status}: the other batches go on`);
+    // A 5xx is asked again once (and answers the second time); a 404 is not.
+    const asksAgain = status >= 500;
+    assert.equal(
+      dexCalls.length,
+      asksAgain ? 4 : 3,
+      `HTTP ${status}: the other batches go on`,
+    );
     assert.deepEqual(burst.unsupportedNetworks, []);
     assert.equal(burst.networks[0].failedBatches, 1);
-    assert.equal(burst.measured.size, 60);
+    assert.equal(burst.measured.size, asksAgain ? 90 : 60);
     // It counted toward the breaker like any failure.
     assert.equal(client.stats().dexscreener.failed, 1);
   }
@@ -873,11 +879,14 @@ test("the retry after a 429 is still tolerant of a 400: an unindexed network is 
     [...others, "ethereum"],
     "Ethereum is the smallest, so it is reached after the four failures",
   );
+  // The first pass is what this test pins; the four failed batches would be asked
+  // again once by the retry (collector-retry).
   const burst = await runBurst({
     client,
     plan,
     now: clock.now,
     fallbackRequests: 0,
+    retryBatches: 0,
   });
   const dexCalls = fetchImpl.calls.filter((call) =>
     call.url.startsWith(dexHost),

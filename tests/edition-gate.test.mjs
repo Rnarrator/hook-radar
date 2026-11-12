@@ -117,6 +117,18 @@ test("collect waits for the gate, checks out the branch tip and deploy still nee
   assert.equal(collectStep.run, "node collector/run.mjs");
   assert.deepEqual(collectStep.env, {
     COLLECTOR_MAX_DISCOVERY: "${{ needs.gate.outputs.max_discovery }}",
+    // The way back to the plan that asks about every known pool: a repository
+    // variable the owner can set without editing the workflow. Unset it is empty
+    // and changes nothing.
+    COLLECTOR_FULL_PLAN: "${{ vars.COLLECTOR_FULL_PLAN }}",
+    // The way back from the retry of a failed DEX Screener batch: a repository
+    // variable that can only lower the 8 (0 switches the retry off). Unset it is
+    // empty and changes nothing.
+    COLLECTOR_RETRY_MAX_BATCHES: "${{ vars.COLLECTOR_RETRY_MAX_BATCHES }}",
+    // The way back from the 7D and 30D step: a repository variable that can only
+    // lower its 20 requests (0 switches the step off). Unset it is empty and changes
+    // nothing.
+    COLLECTOR_DAILY_MAX_REQUESTS: "${{ vars.COLLECTOR_DAILY_MAX_REQUESTS }}",
   });
 });
 
