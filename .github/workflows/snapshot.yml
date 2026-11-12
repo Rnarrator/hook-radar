@@ -255,7 +255,7 @@ jobs:
       # Fails early, before any data provider is contacted, when GitHub Pages
       # has not been switched on (Settings, Pages, Source: GitHub Actions).
       - name: Check that GitHub Pages is switched on
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Work out where the site will be served
         id: site
