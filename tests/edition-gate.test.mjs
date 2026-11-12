@@ -137,6 +137,27 @@ test("the minimum age and the failure back-off are the ones the plan names", () 
   );
 });
 
+test("the inputs of a run started by hand say what an unticked force means", () => {
+  const { inputs } = workflow.on.workflow_dispatch;
+  assert.deepEqual(Object.keys(inputs).sort(), ["discover", "force"]);
+  // Defaults unchanged: the Run workflow button collects at once and looks only
+  // at the pools already known. An external timer must send both as "false".
+  assert.equal(inputs.force.type, "boolean");
+  assert.equal(inputs.force.default, true);
+  assert.match(
+    inputs.force.description,
+    /^Collect now even if the last snapshot is under 45 minutes old\. Untick it to be treated like a scheduled run/,
+  );
+  assert.equal(inputs.discover.type, "boolean");
+  assert.equal(inputs.discover.default, false);
+  assert.match(inputs.discover.description, /^Also look for new pools/);
+  assert.match(inputs.discover.description, /three-hour rule/);
+  // The comments that open the workflow name the external timer and its guide.
+  const text = read(".github/workflows/snapshot.yml");
+  assert.match(text, /GitHub's own schedule is best effort/);
+  assert.match(text, /docs\/EXTERNAL-TRIGGER\.md/);
+});
+
 // ---- running the script -----------------------------------------------------
 
 function findBash() {
@@ -777,37 +798,33 @@ test(
 );
 
 test(
-  "a run started by hand looks for new pools only when discover is ticked",
+  "a run started by hand with force ticked looks for new pools only when discover is ticked",
   { skip },
   () => {
-    // An old snapshot in an earlier block: a scheduled run would discover; a
-    // manual run does not unless asked.
+    // An old snapshot in an earlier block: a scheduled run would look for new
+    // pools; a run started by hand with force ticked does not unless asked.
     const state = savedAt(ageOf(400));
-    for (const force of [true, false]) {
-      const plain = runGate({ state, event: "workflow_dispatch", force });
-      assert.equal(plain.outputs.due, "true");
-      assert.equal(plain.outputs.max_discovery, "0", `force ${force}`);
-      const asked = runGate({
-        state,
-        event: "workflow_dispatch",
-        force,
-        discover: true,
-      });
-      assert.equal(asked.outputs.due, "true");
-      assert.equal(
-        asked.outputs.max_discovery,
-        "",
-        `force ${force}, discover ticked`,
-      );
-    }
-    // A saved time that cannot be read changes nothing for a manual run.
+    const plain = runGate({ state, event: "workflow_dispatch", force: true });
+    assert.equal(plain.outputs.due, "true");
+    assert.equal(plain.outputs.max_discovery, "0");
+    assert.match(plain.summary, /This run measures the pools already known\./);
+    const asked = runGate({
+      state,
+      event: "workflow_dispatch",
+      force: true,
+      discover: true,
+    });
+    assert.equal(asked.outputs.due, "true");
+    assert.equal(asked.outputs.max_discovery, "");
+    assert.match(asked.summary, /This run also looks for new pools\./);
+    // A saved time that cannot be read changes nothing for force ticked.
     const unreadable = runGate({
       state: savedAt(null),
       event: "workflow_dispatch",
       force: true,
     });
     assert.equal(unreadable.outputs.max_discovery, "0");
-    // The rule of the age still applies to an unforced manual run that asks for discovery.
+    // The rule of the age still applies to an unforced run that asks for discovery.
     const fresh = runGate({
       state: savedAt(ageOf(10)),
       event: "workflow_dispatch",
@@ -815,5 +832,271 @@ test(
       discover: true,
     });
     assert.equal(fresh.outputs.due, "false");
+  },
+);
+
+// ---- an external timer: a call with force unticked is a scheduled run -------
+//
+// The recommended way to keep the rhythm (docs/EXTERNAL-TRIGGER.md) is a free
+// timer outside GitHub that calls the workflow_dispatch API every 20 minutes with
+// force and discover both "false". Such a run must behave exactly like a
+// scheduled one: the same 45 minutes, the same 90 minutes after a failure, the
+// same three-hour block rule for new pools, and a collection when the saved time
+// cannot be read. A call with force ticked or with discover ticked keeps its
+// meaning (the tests above).
+
+const byTimer = { event: "workflow_dispatch", force: false, discover: false };
+
+test(
+  "a call with force unticked at under 45 minutes: nothing to do, and GitHub is not asked",
+  { skip },
+  () => {
+    for (const [minutes, seconds] of [
+      [10, 0],
+      [44, 59],
+    ]) {
+      const result = runGate({
+        ...byTimer,
+        state: savedAt(ageOf(minutes, seconds)),
+      });
+      assert.equal(result.outputs.due, "false", `${minutes} min ${seconds} s`);
+      assert.match(
+        result.summary,
+        new RegExp(
+          `^Nothing to do: the last snapshot is ${minutes} minutes old \\(a new one is collected from 45 minutes\\)`,
+        ),
+      );
+      assert.deepEqual(result.ghCalls, []);
+    }
+  },
+);
+
+test(
+  "a call with force unticked from 45 minutes on collects, and is not described as started by hand",
+  { skip },
+  () => {
+    for (const minutes of [45, 50, 8 * 60 + 28]) {
+      const result = runGate({ ...byTimer, state: savedAt(ageOf(minutes)) });
+      assert.equal(result.outputs.due, "true", `${minutes} min`);
+      assert.match(
+        result.summary,
+        new RegExp(`^Collecting: the last snapshot is ${minutes} minutes old`),
+      );
+      assert.doesNotMatch(result.summary, /started by hand/);
+    }
+  },
+);
+
+test(
+  "a call with force unticked is held back for 90 minutes after a failed run",
+  { skip },
+  () => {
+    const state = savedAt(ageOf(300));
+    for (const minutes of [30, 89]) {
+      const waiting = runGate({
+        ...byTimer,
+        state,
+        failure: NOW - minutes * MIN,
+      });
+      assert.equal(waiting.outputs.due, "false", `failed ${minutes} min ago`);
+      assert.match(
+        waiting.summary,
+        new RegExp(
+          `^Nothing to do: the last run failed ${minutes} minutes ago`,
+        ),
+      );
+      assert.equal(waiting.ghCalls.length, 2, "both outcomes are asked about");
+    }
+    const retry = runGate({ ...byTimer, state, failure: NOW - 90 * MIN });
+    assert.equal(retry.outputs.due, "true");
+    assert.match(
+      retry.summary,
+      /^Collecting: the last snapshot is 300 minutes old/,
+    );
+    const stalled = runGate({ ...byTimer, state, timedOut: NOW - 20 * MIN });
+    assert.equal(stalled.outputs.due, "false");
+    assert.match(stalled.summary, /failed 20 minutes ago/);
+    // A failure that a later snapshot has followed no longer counts.
+    const followed = runGate({
+      ...byTimer,
+      state: savedAt(ageOf(50)),
+      failure: NOW - 80 * MIN,
+    });
+    assert.equal(followed.outputs.due, "true");
+    // Force ticked ignores the back-off, as it always did.
+    const forced = runGate({
+      ...byTimer,
+      force: true,
+      state,
+      failure: NOW - 30 * MIN,
+    });
+    assert.equal(forced.outputs.due, "true");
+    assert.deepEqual(forced.ghCalls, []);
+  },
+);
+
+test(
+  "a call with force unticked looks for new pools by the three-hour block rule, with discover unticked",
+  { skip },
+  () => {
+    const cases = [
+      // [now, saved, looks for new pools, why]
+      [
+        "2026-11-11T03:50:00Z",
+        "2026-11-11T02:59:59Z",
+        true,
+        "saved one second before the block began",
+      ],
+      [
+        "2026-11-11T04:07:00Z",
+        "2026-11-11T03:12:00Z",
+        false,
+        "the second run of a block",
+      ],
+      [
+        "2026-11-11T05:59:59Z",
+        "2026-11-11T05:10:00Z",
+        false,
+        "the last second of a block, saved in the same block",
+      ],
+      [
+        "2026-11-11T06:00:00Z",
+        "2026-11-11T05:10:00Z",
+        true,
+        "the first second of the next block",
+      ],
+      [
+        "2026-11-11T11:50:00Z",
+        "2026-11-11T09:10:00Z",
+        false,
+        "saved in the same block, hours before",
+      ],
+      [
+        "2026-11-11T14:07:00Z",
+        "2026-11-11T02:20:00Z",
+        true,
+        "several blocks have passed",
+      ],
+      ["2026-11-12T00:20:00Z", "2026-11-11T23:10:00Z", true, "across midnight"],
+    ];
+    for (const [nowText, savedText, expected, label] of cases) {
+      const result = runGate({
+        ...byTimer,
+        now: Date.parse(nowText),
+        state: savedAt(iso(Date.parse(savedText))),
+      });
+      assert.equal(
+        discovers(result),
+        expected,
+        `${label}: now ${nowText}, saved ${savedText}`,
+      );
+      // The words a scheduled run uses, when the run collects.
+      if (result.outputs.due === "true")
+        assert.match(
+          result.summary,
+          expected
+            ? /This run also looks for new pools\./
+            : /This run measures the pools already known\./,
+          label,
+        );
+    }
+  },
+);
+
+test(
+  "a call with discover ticked looks for new pools whatever the block rule says, and still obeys the age",
+  { skip },
+  () => {
+    // 50 minutes old and saved in the same block as now (13:30 and 14:20): the
+    // block rule alone would not look for new pools.
+    const state = savedAt(ageOf(50));
+    const plain = runGate({ ...byTimer, state });
+    assert.equal(plain.outputs.due, "true");
+    assert.equal(plain.outputs.max_discovery, "0");
+    const asked = runGate({ ...byTimer, discover: true, state });
+    assert.equal(asked.outputs.due, "true");
+    assert.equal(asked.outputs.max_discovery, "");
+    assert.match(
+      asked.summary,
+      /^Collecting: the last snapshot is 50 minutes old/,
+    );
+    const fresh = runGate({
+      ...byTimer,
+      discover: true,
+      state: savedAt(ageOf(10)),
+    });
+    assert.equal(fresh.outputs.due, "false");
+    const both = runGate({
+      ...byTimer,
+      force: true,
+      discover: true,
+      state: savedAt(ageOf(10)),
+    });
+    assert.equal(both.outputs.due, "true");
+    assert.equal(both.outputs.max_discovery, "");
+  },
+);
+
+test(
+  "a call with force unticked collects when the saved time cannot be read, and also looks for new pools",
+  { skip },
+  () => {
+    for (const state of [
+      undefined,
+      savedAt(null),
+      savedAt(iso(NOW + HOUR)),
+      "x",
+    ]) {
+      const result = runGate({ ...byTimer, state });
+      assert.equal(result.outputs.due, "true");
+      assert.equal(discovers(result), true);
+      assert.match(
+        result.summary,
+        /^Collecting: the saved time of the last snapshot/,
+      );
+      assert.match(result.summary, /This run also looks for new pools\./);
+    }
+    // The back-off holds here too.
+    const waiting = runGate({
+      ...byTimer,
+      state: savedAt(null),
+      failure: NOW - 30 * MIN,
+    });
+    assert.equal(waiting.outputs.due, "false");
+  },
+);
+
+test(
+  "a call with force unticked is in every case exactly a scheduled run: the same decision, words, outputs and GitHub calls",
+  { skip },
+  () => {
+    const noon = Date.parse("2026-11-11T12:20:00.000Z");
+    const scenarios = {
+      "10 minutes old": { state: savedAt(ageOf(10)) },
+      "50 minutes old, saved in the same block": {
+        state: savedAt(ageOf(50)),
+      },
+      "50 minutes old, saved in the block before": {
+        now: noon,
+        state: savedAt(iso(noon - 50 * MIN)),
+      },
+      "300 minutes old after a failure 30 minutes ago": {
+        state: savedAt(ageOf(300)),
+        failure: NOW - 30 * MIN,
+      },
+      "300 minutes old after a failure 100 minutes ago": {
+        state: savedAt(ageOf(300)),
+        failure: NOW - 100 * MIN,
+      },
+      "GitHub cannot be asked": { state: savedAt(ageOf(120)), gh: "error" },
+      "an unreadable saved time": { state: savedAt("yesterday") },
+    };
+    for (const [label, scenario] of Object.entries(scenarios)) {
+      const scheduled = runGate({ ...scenario, event: "schedule" });
+      const timer = runGate({ ...scenario, ...byTimer });
+      assert.deepEqual(timer.outputs, scheduled.outputs, `${label}: outputs`);
+      assert.equal(timer.summary, scheduled.summary, `${label}: summary`);
+      assert.deepEqual(timer.ghCalls, scheduled.ghCalls, `${label}: GitHub`);
+    }
   },
 );

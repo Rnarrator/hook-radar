@@ -728,19 +728,47 @@ and runs it under bash the way the runner does, with a stand-in clock, a
 stand-in for `gh` (the list of earlier runs) and state files written for each
 case: 44 and 45 minutes, an unreadable, null, empty, impossible or future saved
 time, a state file with Windows line ends, pretty-printed, with the time last or
-with a pool named updatedAt, a run started by hand with and without force and
-discover, a failed run 30 and 100 minutes ago, GitHub not answering, and the
-three-hour block rule for new pools. It needs bash and GNU date (skipped
+with a pool named updatedAt, a run started by hand with force ticked (it always
+collects, and looks for new pools only when discover is ticked), a failed run 30
+and 100 minutes ago, GitHub not answering, and the three-hour block rule for new
+pools. A run started with force unticked and discover unticked, which is what the
+external timer of `docs/EXTERNAL-TRIGGER.md` sends every 20 minutes, is run beside
+a scheduled run in seven situations (10 minutes old, 50 minutes old in the same
+and in the block before, a failure 30 and 100 minutes ago, GitHub not answering, an
+unreadable time) and must give the same decision, summary, outputs and calls to
+GitHub; with discover ticked it still looks for new pools. It needs bash and GNU
+date (skipped
 without them). It also pins the workflow's shape: three triggers an hour, a
 gate that contacts no data provider, `collect` waiting for it and `deploy`
-needing only `collect`. This is the only proof the gate has had: it has not
-yet run on GitHub. Prove it there with one **Run workflow** with "force" unticked
-right after a publication (the run should end green with "Nothing to do" and no
-Pages deployment) and one with "discover" ticked.
+needing only `collect`. This was the only proof the gate had until 12 November
+2026, when two scheduled runs of the repository (runs 9 and 10, started at
+02:48 and 03:08 UTC) were seen on GitHub ending at the gate: "Is a new snapshot due"
+green after a few seconds, "Collect and build" and "Publish to GitHub Pages" skipped.
+A run started by hand with "force" unticked has not yet run on GitHub. Prove it there
+with one **Run workflow** with "force" unticked right after a publication (the run
+should end green with "Nothing to do" and no Pages deployment) and one with "discover"
+ticked.
 
 A run that takes more than about 15 minutes from its start to saving its state (one that
 looks for new pools can) makes the next collection wait for the trigger 20 minutes later:
 the rhythm is then 80 minutes, not 60.
+
+**How runs start.** GitHub's own schedule is best effort: its documentation says a
+scheduled run can be delayed or dropped when it is busy, and from 17:07 UTC on 11
+November to 02:32 UTC on 12 November 2026 none was started (9 hours 25 minutes; the
+only run in between, at 21:42, was started by hand). What makes the rhythm dependable is
+an optional external timer (`docs/EXTERNAL-TRIGGER.md`, script
+`docs/trigger-worker.js`, tested by `tests/edition-trigger.test.mjs`) that calls
+the `workflow_dispatch` API of GitHub every 20 minutes with `force` and `discover`
+set to `"false"`. The gate treats such a call exactly like a scheduled run, so
+nearly every call ends green in seconds with "Nothing to do". With the timer the
+starts of an hour (the three scheduled ones at 7, 27 and 47 past and the timer's
+three at 00, 20 and 40 past, UTC) are alternately 7 and 13 minutes apart instead of
+20, so after the 45 minutes a collection waits at most 13 minutes, not 20. The
+timer adds no request to a data service: a new snapshot is still never taken less
+than 45 minutes after the last one was saved, except by a person pressing **Run
+workflow** with force ticked. The behaviour for a call with force unticked has been
+shown only by the test above, not yet on GitHub.
 
 `node --test tests/edition-collector-truth.test.mjs` (a few seconds, no network) pins what the published data may claim: the strict family rule against the
 recorded hooklist (and that the live default is unchanged), the pricing rows and
@@ -933,9 +961,14 @@ on test data.
 
 ## For the workflow and packaging
 
-- The Snapshot workflow is started three times an hour; its first job ("Is a new
-  snapshot due") lets one start an hour collect and ends the others with a green
-  tick (see `tests/edition-gate.test.mjs`).
+- The Snapshot workflow is started three times an hour by GitHub's schedule (best
+  effort: runs can be delayed or dropped) and, if the owner has set up the optional
+  external timer of `docs/EXTERNAL-TRIGGER.md`, three more times an hour by a call
+  to GitHub's API; its first job ("Is a new snapshot due") lets one start an hour
+  collect and ends the others with a green tick (see `tests/edition-gate.test.mjs`).
+  A call with `force` unticked is treated like a scheduled run, so the timer must
+  send `"force":"false"` and `"discover":"false"`: left out, `force` defaults to
+  true and every call would collect.
 - The job that collects runs `node collector/run.mjs` with `GITHUB_REPOSITORY` set,
   treats exit code 1 as "keep the last good snapshot" (skip the build and deploy
   of new data), and commits `state/` only after a passing run.

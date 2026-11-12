@@ -267,14 +267,28 @@ test("the wait after a failed run and the four hours after which the page calls 
 
 // ---- what the gate has and has not been shown to do -------------------------
 
-test("the notes say the gate has not yet run on GitHub, and no document says it has been proven there", () => {
-  // The only proof the gate has is a test that runs its script under bash with
-  // a stand-in clock. When the gate has been seen to work on GitHub, change this
-  // sentence of COLLECTOR-NOTES and this test together, with the date.
+test("the notes say what the gate has been seen to do on GitHub and what it has not, and no document says it has been proven there", () => {
+  // The proof the gate had was a test that runs its script under bash with a
+  // stand-in clock. On 12 November 2026 the public run list of the repository
+  // showed two scheduled runs (runs 9 and 10, started 02:48 and 03:08 UTC, 11 and
+  // 9 seconds long) in which the job "Is a new snapshot due" was green and
+  // "Collect and build" and "Publish to GitHub Pages" were skipped. A run started
+  // by hand with force unticked, which is what the external timer sends, has not
+  // been seen there. When it has, change this sentence of COLLECTOR-NOTES and this
+  // test together, with the date.
   const notes = need("COLLECTOR-NOTES.md");
   assert.match(
     notes,
-    /This is the only proof the gate has had: it has not\s+yet run on GitHub\. Prove it there with one \*\*Run workflow\*\* with "force" unticked/,
+    /This was the only proof the gate had until 12 November\s+2026, when two scheduled runs of the repository \(runs 9 and 10, started at\s+02:48 and 03:08 UTC\) were seen on GitHub ending at the gate: "Is a new snapshot due"\s+green after a few seconds, "Collect and build" and "Publish to GitHub Pages" skipped\.\s+A run started by hand with "force" unticked has not yet run on GitHub\. Prove it there\s+with one \*\*Run workflow\*\* with "force" unticked/,
+  );
+  assert.match(
+    notes,
+    /The behaviour for a call with force unticked has been\s+shown only by the test above, not yet on GitHub\./,
+  );
+  assert.doesNotMatch(
+    notes,
+    /it has not\s+yet run on GitHub|Like the rest of the gate/,
+    "the claim that no part of the gate had run on GitHub is gone",
   );
   for (const name of [
     "README-START-HERE.md",

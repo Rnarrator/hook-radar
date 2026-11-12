@@ -9,13 +9,26 @@
 # before any data provider is contacted, when that was under 45 minutes ago, or
 # when a run failed under 90 minutes ago (a refused run is not repeated at once).
 # A saved time that cannot be read, or is in the future, means collect.
-# Pressing "Run workflow" always collects (untick "force" to apply the rule).
+# Pressing "Run workflow" collects at once, because "force" is ticked by
+# default. With "force" unticked a run started by hand, or by a call to GitHub's
+# API, is treated exactly like a scheduled run: the same 45 minutes, the same 90
+# minutes after a failure, the same rule for new pools.
+#
+# GitHub's own schedule is best effort (its documentation says a scheduled run can
+# be delayed or dropped under load; from 17:07 UTC on 11 Nov to 02:32 UTC on 12 Nov
+# 2026 none was started, 9 h 25 min). That is why an external timer is
+# recommended: it asks GitHub for a run every 20 minutes with force and discover
+# both set to "false", and this gate decides. Nearly every such call ends green
+# in seconds with "Nothing to do". The timer only asks;
+# docs/EXTERNAL-TRIGGER.md explains how to set it up.
 #
 # Looking for new pools reads the slow providers, so a scheduled run does it
 # only when the last snapshot was saved in an earlier three-hour block of the
 # UTC day than the present one (the blocks the collector rotates its discovery
 # pages by); every other run measures the pools already known. A run started
-# by hand looks for new pools only when "discover" is ticked.
+# by hand with "force" ticked looks for new pools only when "discover" is
+# ticked. With "force" unticked it follows the block rule like a scheduled run,
+# and a ticked "discover" still makes it look.
 #
 # The last step of a collecting run reads, at most twice a day per pool, the daily
 # volume of the largest pools (7D and 30D) from GeckoTerminal: up to 20 requests,
@@ -41,11 +54,11 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: "Collect now even if the last snapshot is under 45 minutes old"
+        description: "Collect now even if the last snapshot is under 45 minutes old. Untick it to be treated like a scheduled run (the 45 minute and 90 minute rules apply)"
         type: boolean
         default: true
       discover:
-        description: "Also look for new pools (about 60 extra requests to the v4.xyz indexer)"
+        description: "Also look for new pools (about 60 extra requests to the v4.xyz indexer). Left unticked with force ticked, only known pools are measured. Left unticked with force unticked, the three-hour rule decides"
         type: boolean
         default: false
 
@@ -130,11 +143,16 @@ jobs:
           # run that starts in one block and ends in the next leaves that next block
           # without a search); the blocks are the ones the collector
           # rotates its discovery pages by (RUN_SLOT_MS in collector/run.mjs). A
-          # run started by hand does it only when asked. Every other run measures
-          # the pools already known.
+          # run started by hand does it when "discover" is ticked, and, with
+          # "force" ticked, only then. With "force" unticked (what the external
+          # timer sends, with "discover" unticked too) it follows the same block
+          # rule as a scheduled run. Every other run measures the pools already
+          # known.
           block=10800
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            if [ "${DISCOVER}" = "true" ]; then discover=true; else discover=false; fi
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ "${DISCOVER}" = "true" ]; then
+            discover=true
+          elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ "${FORCE}" = "true" ]; then
+            discover=false
           elif [ -n "${last}" ] && [ "${last}" -le "${now}" ] && [ $((last / block)) -eq $((now / block)) ]; then
             discover=false
           else
