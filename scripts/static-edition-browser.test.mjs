@@ -1696,6 +1696,33 @@ test("keyboard and a screen reader can use a pool match and the empty state's bu
   s.verify();
 });
 
+test("every page's footer ends with the maker's line, a safe link to their X profile", async (t) => {
+  for (const size of [DESKTOP, PHONE]) {
+    const s = await site(t, { size });
+    for (const query of ["", "?view=analytics", "?view=chains", "?view=learn"]) {
+      await s.goto(query);
+      const line = s.page.locator("footer.footer .footer-byline");
+      await expect(line.first()).toBeVisible({ timeout: 30000 });
+      await expect(line.first()).toHaveText("Built by @0x_narrator");
+      const link = line.first().getByRole("link", { name: "@0x_narrator" });
+      await expect(link).toHaveAttribute("href", "https://x.com/0x_narrator");
+      await expect(link).toHaveAttribute("target", "_blank");
+      await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      // It sits below the footer's other items and is never wider than the page.
+      const [byline, version] = await Promise.all([
+        line.first().boundingBox(),
+        s.page.locator("footer.footer .footer-version").first().boundingBox(),
+      ]);
+      assert.ok(byline.y > version.y, `${query || "Discover"}: the maker's line is the last row`);
+      assert.ok(
+        await s.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        `${query || "Discover"} at ${size.width}px: no sideways scroll`,
+      );
+    }
+    s.verify();
+  }
+});
+
 test("the controls of every view work without ever asking a service", async (t) => {
   const s = await site(t, {
     storage: { "hook-radar-watchlist-v1": JSON.stringify(["alpha", "gamma"]) },

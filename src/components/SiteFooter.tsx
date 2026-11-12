@@ -56,6 +56,19 @@ export function SiteFooter({
           Suggest a hook
         </External>
       </div>
+      {/* The maker's line: a span, not a paragraph (the footer's plain items are
+          pinned), and not part of the provider credits, so it stays whatever
+          the credits switch says. */}
+      <span className="footer-byline">
+        Built by{" "}
+        <a
+          href="https://x.com/0x_narrator"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          @0x_narrator
+        </a>
+      </span>
       {FOOTER_CREDITS && <SourceCredit sources={sources} />}
       {FOOTER_CREDITS && (
         <p

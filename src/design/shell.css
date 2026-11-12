@@ -407,6 +407,29 @@ body:has(.compare-tray) .toast {
   color: var(--ink-faint);
 }
 
+/* The maker's line: small and quiet on a row of its own at the bottom. */
+.footer > .footer-byline {
+  display: block;
+  flex: 1 1 100%;
+  color: var(--ink-faint);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-body);
+}
+
+.footer .footer-byline a {
+  display: inline;
+  min-height: 0;
+  color: var(--ink-muted);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.footer .footer-byline a:hover {
+  color: var(--signal);
+}
+
 /* ── Loading screen ──────────────────────────────────────────────────────── */
 .loading-screen {
   display: grid;
