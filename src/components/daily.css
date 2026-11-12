@@ -39,15 +39,33 @@
 /* The line beside the switch: a scope label of the figures, real text. */
 .title-controls .daily-caption {
   flex: 1 1 100%;
+  /* The text never widens the controls: where they hang from the page's right
+     edge (wide and short windows) a longer line would stretch them leftwards
+     over the census text and move the switch. */
+  contain: inline-size;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--s-2);
   margin: 0;
+  /* The line is laid out before a span is chosen (hidden, see below), so
+     choosing 7D or 30D adds no row and moves nothing. */
+  min-height: calc(var(--fs-small) * var(--lh-snug));
   color: var(--ink-soft);
   font-size: var(--fs-small);
   line-height: var(--lh-snug);
+}
+
+.title-controls .daily-caption:not([data-shown]) {
+  visibility: hidden;
+}
+
+/* On the narrowest phones the line takes two rows: leave both. */
+@media (max-width: 21rem) {
+  .title-controls .daily-caption {
+    min-height: calc(var(--fs-small) * var(--lh-snug) * 2);
+  }
 }
 
 .title-controls .daily-caption button {

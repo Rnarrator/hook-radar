@@ -4279,30 +4279,39 @@ export default function App() {
                               : ""}
                     </span>
                   )}
-                  {dailyOffered &&
-                    dailyViewSupported(view) &&
-                    (dailyGone ||
-                      (activeSpan &&
-                        (dailyLens || dailyState.status === "error"))) && (
-                      <p className="daily-caption" data-testid="daily-caption">
-                        {dailyGone ? (
-                          <span>{DAILY_UNAVAILABLE}</span>
-                        ) : dailyLens ? (
-                          <span>{dailyCaption(dailyLens)}</span>
-                        ) : (
-                          <>
-                            <span>{DAILY_ERROR}</span>
-                            <button
-                              type="button"
-                              className="control"
-                              onClick={() => setDailyRetry((n) => n + 1)}
-                            >
-                              Try again
-                            </button>
-                          </>
-                        )}
-                      </p>
-                    )}
+                  {/* The line is always laid out while the switch offers 7D and
+                      30D (hidden until a span is chosen), so choosing a span
+                      moves nothing: no row appears, no control shifts. */}
+                  {dailyOffered && dailyViewSupported(view) && (
+                    <p
+                      className="daily-caption"
+                      data-testid="daily-caption"
+                      data-shown={
+                        dailyGone ||
+                        (activeSpan &&
+                          (dailyLens || dailyState.status === "error"))
+                          ? "true"
+                          : undefined
+                      }
+                    >
+                      {dailyGone ? (
+                        <span>{DAILY_UNAVAILABLE}</span>
+                      ) : activeSpan && dailyLens ? (
+                        <span>{dailyCaption(dailyLens)}</span>
+                      ) : activeSpan && dailyState.status === "error" ? (
+                        <>
+                          <span>{DAILY_ERROR}</span>
+                          <button
+                            type="button"
+                            className="control"
+                            onClick={() => setDailyRetry((n) => n + 1)}
+                          >
+                            Try again
+                          </button>
+                        </>
+                      ) : null}
+                    </p>
+                  )}
                 </>
               )}
             </div>

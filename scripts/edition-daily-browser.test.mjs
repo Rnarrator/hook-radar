@@ -126,6 +126,50 @@ const pickSpan = async (page, key) => {
   await expect(page.getByTestId("daily-caption")).toBeVisible({ timeout: 15000 });
 };
 
+test("choosing 7D or 30D moves nothing: the switch and the page below keep their place at every width", async (t) => {
+  // Wide and short windows hang the controls from the page's right edge; a line
+  // that appeared under the switch once stretched them leftwards over the census
+  // text and moved the switch. Now the line is always laid out.
+  const sizes = [
+    DESKTOP,
+    { width: 1440, height: 900 },
+    { width: 1280, height: 800 },
+    { width: 1100, height: 800 },
+    { width: 768, height: 900 },
+    PHONE,
+    SMALL_PHONE,
+    { width: 320, height: 700 },
+  ];
+  for (const size of sizes) {
+    const where = `${size.width}x${size.height}`;
+    const s = await site(t, { size });
+    await s.goto();
+    await ready(s.page, { phone: size.width <= 832 });
+    const places = () =>
+      s.page.evaluate(() => {
+        const box = (selector) => {
+          const r = document.querySelector(selector)?.getBoundingClientRect();
+          return r && [r.x, r.y, r.width, r.height].map((n) => Math.round(n * 2) / 2);
+        };
+        return {
+          switch: box(".masthead .window-switch"),
+          controls: box(".masthead .title-controls"),
+          strip: box(".coverage-strip"),
+        };
+      });
+    const before = await places();
+    assert.ok(before.switch && before.strip, `${where}: the switch and the status strip exist`);
+    for (const key of ["d30", "d7"]) {
+      await pickSpan(s.page, key);
+      assert.deepEqual(await places(), before, `${where}: choosing ${key} moved something`);
+    }
+    await s.page.locator(".window-switch button", { hasText: "24H" }).click();
+    await expect(s.page.getByTestId("daily-caption")).toBeHidden();
+    assert.deepEqual(await places(), before, `${where}: going back to 24H moved something`);
+    s.verify();
+  }
+});
+
 test("without the source row there are no buttons, nothing is requested, a window=d7 link is dropped, and the list is as it was", async (t) => {
   const plain = await site(t, { daily: false });
   await plain.goto();
@@ -209,7 +253,9 @@ test("7D: one request for the file, the figures with their marks, dashes, a real
   await expect(s.page.getByTestId("daily-status")).toHaveText("Showing 30D volume through 27 Oct");
   // The plain windows come back, and the file is not read again.
   await s.page.locator('.window-switch button', { hasText: "24H" }).click();
-  await expect(s.page.getByTestId("daily-caption")).toHaveCount(0);
+  // The line stays laid out (so nothing moves) but is hidden and empty.
+  await expect(s.page.getByTestId("daily-caption")).toBeHidden();
+  await expect(s.page.getByTestId("daily-caption")).toHaveText("");
   assert.deepEqual(await pressed(s.page), ["24H"]);
   assert.equal(new URL(s.page.url()).search, "");
   await expect(s.page.locator("thead th.numeric").nth(1)).toContainText("24H VOLUME");
