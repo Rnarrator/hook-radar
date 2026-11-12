@@ -1,7 +1,7 @@
 import { categories } from "./model.ts";
 import { DAILY_SPAN_KEYS } from "../shared/daily-volume.ts";
 import type { DailySpan } from "../shared/daily-volume.ts";
-import { STATIC_EDITION } from "./edition.ts";
+import { SPAN_VIEWS, STATIC_EDITION } from "./edition.ts";
 import type { Filters, PropertyFilter, SortKey, View } from "./model";
 import type { WindowKey } from "../shared/types";
 import type { ActivityWindow } from "../shared/activity";
@@ -56,8 +56,19 @@ export const chainRoleKeys = [
 ] as const;
 export type ChainRoleFilter = (typeof chainRoleKeys)[number];
 /** The views that can show 7D and 30D (edition only); every other view shows
- * the plain windows, and a link to one drops the span. */
-export const SPAN_VIEWS: readonly View[] = ["overview", "watchlist", "chains"];
+ * the plain windows, and a link to one drops the span. Defined once, in
+ * edition.ts. */
+export { SPAN_VIEWS };
+
+/** How the Projects page (edition only) orders its list. */
+export const projectSortKeys = ["volume", "reserves", "pools", "name"] as const;
+export type ProjectsSort = (typeof projectSortKeys)[number];
+
+/** The Projects search as the address keeps it: no control characters, at most
+ * 300 characters (the same bound as the other searches). */
+export function projectsQuery(value: string | null | undefined): string {
+  return (value || "").replace(/[\u0000-\u001f\u007f-\u009f]/g, "").slice(0, 300);
+}
 
 export interface NavigationState {
   view: View;
@@ -80,6 +91,13 @@ export interface NavigationState {
   chainNetwork?: string;
   chainSearch?: string;
   chainRole?: ChainRoleFilter;
+  /** Edition: the Projects page's own scope (projects_network, projects_q,
+   * projects_use, projects_sort). The prefix keeps them apart from `project`,
+   * the open drawer. */
+  projectsNetwork?: string;
+  projectsSearch?: string;
+  projectsUse?: ChainRoleFilter;
+  projectsSort?: ProjectsSort;
 }
 
 export function parseNavigation(
@@ -115,6 +133,9 @@ export function parseNavigation(
       "watchlist",
       "compare",
       "activity",
+      // Only the edition has the Projects page; elsewhere the link lands on
+      // Discover.
+      ...(edition ? ["projects"] : []),
     ].includes(query.get("view") || "")
       ? (query.get("view") as View)
       : "overview",
@@ -172,6 +193,22 @@ export function parseNavigation(
     )
       ? (query.get("chain_role") as ChainRoleFilter)
       : "all",
+    projectsNetwork: /^[a-z0-9-]{1,50}$/.test(
+      query.get("projects_network") || "",
+    )
+      ? query.get("projects_network")!
+      : "all",
+    projectsSearch: projectsQuery(query.get("projects_q")),
+    projectsUse: chainRoleKeys.includes(
+      query.get("projects_use") as ChainRoleFilter,
+    )
+      ? (query.get("projects_use") as ChainRoleFilter)
+      : "all",
+    projectsSort: projectSortKeys.includes(
+      query.get("projects_sort") as ProjectsSort,
+    )
+      ? (query.get("projects_sort") as ProjectsSort)
+      : "volume",
     activitySelection: {
       chain: /^[a-z0-9-]{1,50}$/.test(query.get("activity_chain") || "")
         ? query.get("activity_chain")!
@@ -273,6 +310,28 @@ export function navigationSearch(
       chainRoleKeys.includes(state.chainRole)
     )
       query.set("chain_role", state.chainRole);
+  }
+  if (edition && state.view === "projects") {
+    if (
+      state.projectsNetwork &&
+      state.projectsNetwork !== "all" &&
+      /^[a-z0-9-]{1,50}$/.test(state.projectsNetwork)
+    )
+      query.set("projects_network", state.projectsNetwork);
+    const search = projectsQuery(state.projectsSearch);
+    if (search) query.set("projects_q", search);
+    if (
+      state.projectsUse &&
+      state.projectsUse !== "all" &&
+      chainRoleKeys.includes(state.projectsUse)
+    )
+      query.set("projects_use", state.projectsUse);
+    if (
+      state.projectsSort &&
+      state.projectsSort !== "volume" &&
+      projectSortKeys.includes(state.projectsSort)
+    )
+      query.set("projects_sort", state.projectsSort);
   }
   if (state.filters.search) query.set("q", state.filters.search);
   if (state.filters.chain !== "all") query.set("chain", state.filters.chain);

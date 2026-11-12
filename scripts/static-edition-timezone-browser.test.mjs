@@ -529,6 +529,7 @@ const pages = [
     "Launchpads",
     (page, s) => opened(page, "?view=chains&chain_role=launchpads", s),
   ],
+  ["Projects", (page, s) => opened(page, "?view=projects", s)],
   ["By use case", (page, s) => opened(page, "?view=map", s)],
   [
     "Learn",

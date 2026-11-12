@@ -40,6 +40,7 @@ import {
   Download,
   Filter,
   Info,
+  LayoutGrid,
   Logo,
   Layers,
   Network,
@@ -89,8 +90,10 @@ import type {
   ChainRoleFilter,
   DetailTab,
   ExtensionSelection,
+  ProjectsSort,
   SortOrder,
 } from "./navigation";
+import { unlistedCount } from "./projects-directory";
 import { selectProjects } from "./scope";
 import {
   createDailyLens,
@@ -298,6 +301,11 @@ const ChainExplorer = lazy(() =>
     default: module.ChainExplorer,
   })),
 );
+const ProjectsDirectory = lazy(() =>
+  import("./components/ProjectsDirectory").then((module) => ({
+    default: module.ProjectsDirectory,
+  })),
+);
 const MarketCoverage = lazy(() =>
   import("./components/MarketCoverage").then((module) => ({
     default: module.MarketCoverage,
@@ -446,6 +454,7 @@ function NavIcon({ view }: { view: View }) {
   const icons: Record<View, typeof Compass> = {
     overview: Compass,
     analytics: ChartLine,
+    projects: LayoutGrid,
     chains: Network,
     map: Orbit,
     learn: BookOpen,
@@ -527,6 +536,19 @@ export default function App() {
   const [chainRole, setChainRole] = useState<ChainRoleFilter>(
     initial.chainRole || "all",
   );
+  // Edition: the Projects page's own scope (see navigation.ts).
+  const [projectsNetwork, setProjectsNetwork] = useState(
+    initial.projectsNetwork || "all",
+  );
+  const [projectsSearch, setProjectsSearch] = useState(
+    initial.projectsSearch || "",
+  );
+  const [projectsUse, setProjectsUse] = useState<ChainRoleFilter>(
+    initial.projectsUse || "all",
+  );
+  const [projectsSort, setProjectsSort] = useState<ProjectsSort>(
+    initial.projectsSort || "volume",
+  );
   const [filters, setFilters] = useState<Filters>(initial.filters);
   const [windowKey, setWindow] = useState<WindowKey>(initial.window);
   const [sort, setSort] = useState<SortOrder>(initial.sort);
@@ -536,45 +558,24 @@ export default function App() {
   // is read only once a span is picked (and is one request for both spans).
   const [span, setSpan] = useState<DailySpan | null>(initial.span ?? null);
   const [dailyRetry, setDailyRetry] = useState(0);
-  const dailyOffered = STATIC_EDITION && offersDaily(sourceSnapshot);
-  const dailyWanted = dailyOffered && span !== null && dailyViewSupported(view);
-  const dailyState = useDailyVolume({
-    run: dailyOffered ? (sourceSnapshot?.generatedAt ?? null) : null,
-    wanted: dailyWanted,
-    retry: dailyRetry,
-  });
-  // The file is missing, not valid or too old for this snapshot: the buttons go
-  // and the plain windows are shown.
-  const dailyGone = dailyOffered && dailyState.status === "unavailable";
-  const activeSpan = dailyWanted && !dailyGone ? span : null;
-  const dailyLens = useMemo(
+  // (The daily file's state is read below, after the overview, which is one of
+  // the two files that can say the file exists.)
+  // Edition: how many named rows the Projects page leaves to Discover, said in
+  // its subtitle. The model is the one the page itself reads (one cache entry).
+  const projectsUnlisted = useMemo(
     () =>
-      activeSpan && dailyState.status === "ready"
-        ? createDailyLens(dailyState.file, activeSpan)
+      STATIC_EDITION && view === "projects" && snapshot
+        ? unlistedCount(
+            buildChains(snapshot, {
+              chain: "all",
+              windowKey,
+              now,
+              hookOverlap: true,
+            }).protocols,
+          )
         : null,
-    [activeSpan, dailyState],
+    [view, snapshot, windowKey, now],
   );
-  const dailyContext = useMemo<DailyView>(
-    () => ({
-      span: activeSpan,
-      lens: dailyLens,
-      phase: !activeSpan
-        ? "off"
-        : dailyLens
-          ? "ready"
-          : dailyState.status === "error"
-            ? "error"
-            : "loading",
-    }),
-    [activeSpan, dailyLens, dailyState.status],
-  );
-  useEffect(() => {
-    // A span a link names is dropped when the snapshot offers none, when the
-    // file turns out to be unavailable, and on a page that shows no spans.
-    if (span === null) return;
-    if (!dailyViewSupported(view) || dailyGone || (sourceSnapshot && !dailyOffered))
-      setSpan(null);
-  }, [span, view, dailyGone, dailyOffered, sourceSnapshot]);
   const [selectedTab, setSelectedTab] = useState<DetailTab>(initial.detailTab);
   const [selectedExtension, setSelectedExtension] =
     useState<ExtensionSelection | null>(initial.extensionSelection || null);
@@ -689,6 +690,84 @@ export default function App() {
         : sourceSnapshot?.generatedAt,
       STATIC_EDITION && view !== "learn",
     );
+  // Edition: where the page learns that 7D and 30D exist, and which run they
+  // belong to. The host is the newest file the page holds that names the daily
+  // source: the snapshot, or the overview (only when it carries its ledger, which
+  // the Analytics page needs to place the daily pools). It is remembered across
+  // a network change, while the next overview is on its way, so the buttons do
+  // not vanish and return; only an equal or newer publication replaces it.
+  const dailyHostRef = useRef<{ at: string; offered: boolean } | null>(null);
+  if (STATIC_EDITION) {
+    const candidates = [
+      sourceSnapshot
+        ? {
+            at: sourceSnapshot.generatedAt,
+            offered: offersDaily(sourceSnapshot),
+          }
+        : null,
+      overview.data?.contributions
+        ? {
+            at: overview.data.publication.generatedAt,
+            offered: offersDaily(overview.data),
+          }
+        : null,
+    ];
+    for (const candidate of candidates)
+      if (candidate && !isOlderPublication(candidate.at, dailyHostRef.current?.at))
+        dailyHostRef.current = candidate;
+  }
+  const dailyHost = STATIC_EDITION ? dailyHostRef.current : null;
+  // A response with no ledger cannot be split by network or use case without
+  // inventing values: the span is unsupported there.
+  const analyticsNoLedger =
+    STATIC_EDITION && analyticsLite && !!overview.data && !overview.data.contributions;
+  const dailyOffered =
+    STATIC_EDITION && !!dailyHost?.offered && !analyticsNoLedger;
+  const dailyWanted = dailyOffered && span !== null && dailyViewSupported(view);
+  const dailyState = useDailyVolume({
+    run: dailyOffered ? (dailyHost?.at ?? null) : null,
+    wanted: dailyWanted,
+    retry: dailyRetry,
+  });
+  // The file is missing, not valid or too old for this snapshot: the buttons go
+  // and the plain windows are shown.
+  const dailyGone = dailyOffered && dailyState.status === "unavailable";
+  const activeSpan = dailyWanted && !dailyGone ? span : null;
+  const dailyLens = useMemo(
+    () =>
+      activeSpan && dailyState.status === "ready"
+        ? createDailyLens(dailyState.file, activeSpan)
+        : null,
+    [activeSpan, dailyState],
+  );
+  const dailyContext = useMemo<DailyView>(
+    () => ({
+      span: activeSpan,
+      lens: dailyLens,
+      phase: !activeSpan
+        ? "off"
+        : dailyLens
+          ? "ready"
+          : dailyState.status === "error"
+            ? "error"
+            : "loading",
+    }),
+    [activeSpan, dailyLens, dailyState.status],
+  );
+  const dailyHostKnown = dailyHost !== null || analyticsNoLedger;
+  useEffect(() => {
+    // A span a link names is dropped when a file the page holds says there is
+    // none, when the file turns out to be unavailable, and on a page that shows
+    // no spans. It is never dropped while no file has been read: a link whose
+    // first overview is still on its way (or has failed) keeps its span.
+    if (span === null) return;
+    if (
+      !dailyViewSupported(view) ||
+      dailyGone ||
+      (dailyHostKnown && !dailyOffered)
+    )
+      setSpan(null);
+  }, [span, view, dailyGone, dailyOffered, dailyHostKnown]);
   function retryOverview() {
     setOverviewRunWanted(null);
     setAnalyticsRetry((n) => n + 1);
@@ -1162,6 +1241,12 @@ export default function App() {
       role: chainRole,
     },
     extensionScope = nextProject === selectedId ? selectedExtension : null,
+    projectsScope = {
+      network: projectsNetwork,
+      search: projectsSearch,
+      use: projectsUse,
+      sort: projectsSort,
+    },
   ) {
     return (
       location.pathname +
@@ -1183,6 +1268,10 @@ export default function App() {
         chainNetwork: chainScope.network,
         chainSearch: chainScope.search,
         chainRole: chainScope.role,
+        projectsNetwork: projectsScope.network,
+        projectsSearch: projectsScope.search,
+        projectsUse: projectsScope.use,
+        projectsSort: projectsScope.sort,
       }) +
       location.hash
     );
@@ -1212,6 +1301,45 @@ export default function App() {
       }),
     );
     setChainRole(role);
+  }
+  // Edition: a Projects filter or sort is a step Back can undo; typing in the
+  // search is not (the address follows it by replacement).
+  function changeProjects(patch: {
+    network?: string;
+    use?: ChainRoleFilter;
+    sort?: ProjectsSort;
+    search?: string;
+  }) {
+    const next = {
+      network: patch.network ?? projectsNetwork,
+      use: patch.use ?? projectsUse,
+      sort: patch.sort ?? projectsSort,
+      search: patch.search ?? projectsSearch,
+    };
+    if (
+      next.network === projectsNetwork &&
+      next.use === projectsUse &&
+      next.sort === projectsSort &&
+      next.search === projectsSearch
+    )
+      return;
+    history.pushState(
+      { radar: true },
+      "",
+      navigationUrl(
+        view,
+        selectedId,
+        selectedTab,
+        undefined,
+        undefined,
+        undefined,
+        next,
+      ),
+    );
+    setProjectsNetwork(next.network);
+    setProjectsUse(next.use);
+    setProjectsSort(next.sort);
+    setProjectsSearch(next.search);
   }
   function openChainAnalytics(chain: string) {
     pendingViewFocus.current = "analytics";
@@ -2019,6 +2147,10 @@ export default function App() {
     chainNetwork,
     chainSearch,
     chainRole,
+    projectsNetwork,
+    projectsSearch,
+    projectsUse,
+    projectsSort,
   ]);
   useEffect(() => {
     const listener = () => {
@@ -2056,6 +2188,12 @@ export default function App() {
         setChainNetwork(state.chainNetwork || "all");
         setChainSearch(state.chainSearch || "");
         setChainRole(state.chainRole || "all");
+      }
+      if (!closingOverlay || state.view === "projects") {
+        setProjectsNetwork(state.projectsNetwork || "all");
+        setProjectsSearch(state.projectsSearch || "");
+        setProjectsUse(state.projectsUse || "all");
+        setProjectsSort(state.projectsSort || "volume");
       }
     };
     window.addEventListener("popstate", listener);
@@ -3893,6 +4031,7 @@ export default function App() {
     view !== "activity" &&
     view !== "analytics" &&
     view !== "chains" &&
+    view !== "projects" &&
     !(view === "watchlist" && watchlist.length === 0);
 
   const statusLabel = STATIC_EDITION
@@ -3967,6 +4106,7 @@ export default function App() {
                 "overview",
                 "learn",
                 "analytics",
+                "projects",
                 "chains",
                 "map",
                 "activity",
@@ -3986,6 +4126,8 @@ export default function App() {
                   "Discover"
                 ) : item === "analytics" ? (
                   "Analytics"
+                ) : item === "projects" ? (
+                  "Projects"
                 ) : item === "learn" ? (
                   "Learn"
                 ) : item === "activity" ? (
@@ -4052,7 +4194,7 @@ export default function App() {
         </header>
         <main id="main" tabIndex={-1}>
           <section
-            className={`titlebar${view === "overview" ? " masthead" : ""}`}
+            className={`titlebar${view === "overview" ? " masthead" : ""}${view === "projects" ? " projects-titlebar" : ""}`}
           >
             <div className="titlebar-copy">
               {view === "overview" && (
@@ -4069,6 +4211,8 @@ export default function App() {
                         ? "Compare hooks"
                         : view === "analytics"
                           ? "Hook analytics"
+                          : view === "projects"
+                            ? "Projects on v4"
                           : view === "chains"
                             ? chainRole === "launchpads"
                               ? "Launchpads on Uniswap v4"
@@ -4085,6 +4229,8 @@ export default function App() {
                       ? "Put hooks side by side: what they can do, where they run and how they trade."
                       : view === "analytics"
                         ? "How much the tracked hooks trade and hold, by network and by use case."
+                        : view === "projects"
+                          ? `Who is building with v4 hooks: what each project does, where it runs and how much it trades.${projectsUnlisted === null ? "" : ` Hooks with no public project behind them are in Discover (${count(projectsUnlisted)} in this snapshot).`}`
                         : view === "chains"
                           ? chainRole === "launchpads"
                             ? "What each launch platform offers, where it runs, and the hooks and pools it builds on."
@@ -4247,6 +4393,7 @@ export default function App() {
                     view === "compare" ||
                     view === "activity" ||
                     view === "analytics" ||
+                    view === "projects" ||
                     view === "chains"
                       ? "Share view"
                       : "Share & export"}
@@ -4254,6 +4401,7 @@ export default function App() {
                     view === "compare" ||
                     view === "activity" ||
                     view === "analytics" ||
+                    view === "projects" ||
                     view === "chains" ? (
                       <Copy size={15} />
                     ) : (
@@ -4629,6 +4777,8 @@ export default function App() {
                       : "Checking saved data"
                   : view === "analytics"
                     ? "Loading analytics"
+                    : view === "projects"
+                      ? "Loading projects"
                     : view === "chains"
                       ? "Loading chain explorer"
                       : "Loading hook directory"}
@@ -4798,7 +4948,35 @@ export default function App() {
                     {collectionProgressCopy(collectionProgress)}
                   </p>
                 )}
-              {view === "chains" ? (
+              {view === "projects" ? (
+                <WorkspaceBoundary key="projects" label="Projects" page>
+                  <ProjectsDirectory
+                    snapshot={snapshot}
+                    windowKey={windowKey}
+                    now={now}
+                    network={projectsNetwork}
+                    setNetwork={(network) => changeProjects({ network })}
+                    search={projectsSearch}
+                    setSearch={setProjectsSearch}
+                    use={projectsUse}
+                    setUse={(use) => changeProjects({ use })}
+                    sort={projectsSort}
+                    setSort={(sort) => changeProjects({ sort })}
+                    clearFilters={() =>
+                      changeProjects({ network: "all", use: "all", search: "" })
+                    }
+                    openProject={setSelectedId}
+                    browseHooks={() => {
+                      setFilters({ ...defaultFilters, market: "all" });
+                      setView("overview");
+                    }}
+                    searchDiscover={(query) =>
+                      runPaletteCommand({ type: "search", query })
+                    }
+                    disabled={serviceStarting}
+                  />
+                </WorkspaceBoundary>
+              ) : view === "chains" ? (
                 <WorkspaceBoundary key="chains" label="Chains" page>
                   <ChainExplorer
                     snapshot={snapshot}
@@ -5282,7 +5460,13 @@ export default function App() {
                 )}
                 snapshot={selectedContext}
                 platformAvailability={platformAvailabilityFor(selected)}
-                initialChain={view === "chains" ? chainNetwork : "all"}
+                initialChain={
+                  view === "chains"
+                    ? chainNetwork
+                    : view === "projects"
+                      ? projectsNetwork
+                      : "all"
+                }
                 checkingHistory={serviceStarting}
                 savedContext={
                   serviceStarting ||
@@ -5429,9 +5613,11 @@ export default function App() {
                     initialNetwork={
                       view === "chains"
                         ? chainNetwork
-                        : view === "overview"
-                          ? filters.chain
-                          : "all"
+                        : view === "projects"
+                          ? projectsNetwork
+                          : view === "overview"
+                            ? filters.chain
+                            : "all"
                     }
                     savedData={
                       serviceStarting || Boolean(error) || status === "offline"
@@ -5633,6 +5819,7 @@ export default function App() {
             view === "compare" ||
             view === "activity" ||
             view === "analytics" ||
+            view === "projects" ||
             view === "chains"
               ? "Share view"
               : "Share & export"
@@ -5647,7 +5834,11 @@ export default function App() {
                 : view === "activity"
                   ? "Share the selected project, event window and pool filters. Event data can be exported from the activity report."
                   : view === "analytics"
-                    ? "Share the selected network, volume window and history range. Export the measured dataset from the analytics view."
+                    ? dailyOffered
+                      ? "Share the selected network, volume window (1H, 6H, 24H, 7D or 30D) and history range. Export the measured dataset from the analytics view."
+                      : "Share the selected network, volume window and history range. Export the measured dataset from the analytics view."
+                    : view === "projects"
+                      ? "Share this list: its search, use case, network, order and time window."
                     : view === "chains"
                       ? "Share this network, protocol category and search."
                       : "Share the current filters and project, or download CSV and JSON data."}
@@ -5687,6 +5878,7 @@ export default function App() {
               {view !== "compare" &&
                 view !== "activity" &&
                 view !== "analytics" &&
+                view !== "projects" &&
                 view !== "chains" && (
                   <>
                     <button
@@ -5823,6 +6015,7 @@ export default function App() {
             {view !== "compare" &&
               view !== "activity" &&
               view !== "analytics" &&
+              view !== "projects" &&
               view !== "chains" && (
                 <div className="notice">
                   <Info size={16} />

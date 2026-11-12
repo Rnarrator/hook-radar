@@ -1,0 +1,652 @@
+/* Projects · Observatory. A card directory of the projects that build with v4
+   hooks. Colours, type, spacing and depth are the design tokens; nothing here
+   is new. Every control and every line that can change is laid out in advance
+   (the toolbar, the line above the list, the figure lines of a card), so
+   pressing a control moves nothing. */
+
+.projects-page {
+  display: grid;
+  /* One track that may shrink to the window. An automatic track is as wide as
+     the widest line that cannot break (a pasted address in the empty state's
+     sentence), and the toolbar above would widen with it. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.projects-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 12.5rem 11rem 13rem;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.projects-search,
+.projects-toolbar .select-control {
+  box-sizing: border-box;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  min-width: 0;
+}
+
+.projects-search {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding-left: var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  color: var(--ink-muted);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.projects-search:hover {
+  border-color: var(--rule-focus);
+}
+
+.projects-search:focus-within {
+  border-color: var(--signal-line);
+  background: var(--surface-2);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 3px var(--signal-wash);
+}
+
+.projects-search > svg {
+  flex: none;
+}
+
+.projects-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: max(1rem, 16px);
+  appearance: none;
+}
+
+.projects-search input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.projects-search > button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--r-2);
+  color: var(--ink-muted);
+}
+
+.projects-search > button:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.projects-toolbar .select-control select {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  font-size: var(--fs-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Up to the dock: the search takes a row, the three selects share the next. */
+@media (max-width: 60rem) {
+  .projects-toolbar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .projects-search {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Phone: use case and network side by side, the sort on its own row. */
+@media (max-width: 40rem) {
+  .projects-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .projects-sort {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ── The line above the list ─────────────────────────────────────────────── */
+.projects-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  height: 2.5rem;
+  min-width: 0;
+}
+
+/* The paragraph is the row's whole height whatever its text, so a text of one
+   line or two leaves the row and the list under it where they were. */
+.projects-meta p {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  align-self: stretch;
+  min-width: 0;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.projects-meta p > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects-clear {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: var(--s-1);
+  min-height: 2.5rem;
+  padding: 0;
+  color: var(--signal);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.projects-clear:hover:not(:disabled) {
+  color: var(--signal-hover);
+}
+
+.projects-clear[data-idle="true"] {
+  visibility: hidden;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  /* The cards of a row end on one line. Each card still holds the room its own
+     content needs (every line that can change is reserved), so what a row
+     adds is only the difference between its cards, and it is the same in every
+     window; the links sit at the bottom of the card (below). */
+  align-items: stretch;
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.projects-item {
+  min-width: 0;
+}
+
+.projects-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  /* The item is stretched to the row, and the card fills it. */
+  height: 100%;
+  min-width: 0;
+  padding: var(--s-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-3);
+  background: var(--surface-1);
+  box-shadow: var(--elev-1);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.projects-card:hover {
+  border-color: var(--rule-focus);
+  background: var(--surface-2);
+}
+
+.projects-card:has(.projects-card-name:focus-visible) {
+  border-color: var(--signal-line);
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+.projects-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+/* The logo box is fixed, so a file that loads late changes nothing. */
+.projects-card-head .protocol-logo {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 11px;
+}
+
+.projects-card-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.projects-card-brand {
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-family: var(--font-data);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The name is the one button of the card, and it stretches over the card, so the
+   whole card is one large target. Website and Docs sit above it as links of
+   their own: a card has up to three tab stops, in that order. */
+.projects-card-name {
+  min-height: 1.75rem;
+  padding: 0;
+  color: var(--ink);
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: var(--lh-snug);
+  text-align: left;
+  overflow-wrap: anywhere;
+  transition: color var(--dur-1) var(--ease-out);
+}
+
+.projects-card-name::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.projects-card:hover .projects-card-name {
+  color: var(--signal);
+}
+
+@supports selector(:has(*)) {
+  .projects-card-name:focus-visible {
+    outline: none;
+  }
+}
+
+.projects-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.projects-card-chips > li {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0 var(--s-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.projects-card-chips > li[data-reviewed="true"] {
+  border-color: var(--rule-focus);
+  color: var(--ink-soft);
+}
+
+/* The reviewed operating status of a launch platform: a word, never colour
+   alone (the dot is decoration beside it). */
+.projects-card-chips > .projects-card-status {
+  gap: var(--s-1);
+  font-family: var(--font-data);
+  letter-spacing: 0.04em;
+}
+
+.projects-card-chips > .projects-card-status:not([data-status="unverified"]) {
+  border-style: solid;
+}
+
+.projects-card-chips > .projects-card-status[data-status="unverified"] {
+  border-style: dashed;
+  border-color: var(--rule-focus);
+}
+
+.projects-card-chips
+  > .projects-card-status:not([data-status="unverified"])::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.projects-card-chips > .projects-card-status[data-status="live"] {
+  border-color: color-mix(in srgb, var(--lagoon) 45%, transparent);
+  color: var(--lagoon);
+}
+
+.projects-card-chips > .projects-card-status[data-status="restricted"] {
+  border-color: color-mix(in srgb, var(--brass) 45%, transparent);
+  color: var(--brass);
+}
+
+.projects-card-chips > .projects-card-status[data-status="deprecated"] {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  color: var(--danger);
+}
+
+.projects-card-chips > .projects-card-status[data-status="planned"] {
+  border-color: color-mix(in srgb, var(--iris) 45%, transparent);
+  color: var(--iris);
+}
+
+.projects-card-description {
+  display: -webkit-box;
+  /* Three lines are kept (two on a phone), so a short text leaves the cards of
+     a row alike. */
+  min-height: calc(var(--fs-small) * var(--lh-snug) * 3);
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.projects-card-networks {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+}
+
+.projects-card-networks > svg {
+  flex: none;
+}
+
+.projects-card-network-names {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-data);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects-card-hooks {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ── Figures ─────────────────────────────────────────────────────────────── */
+.projects-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+  margin: 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+}
+
+.projects-figures > div {
+  display: grid;
+  align-content: start;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.projects-figures dt {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-snug);
+  /* Two lines are kept for the label at every width, so a longer label wraps
+     into space that is already there. */
+  min-height: calc(var(--fs-micro) * var(--lh-snug) * 2);
+}
+
+/* A figure never wraps: a 7D sum can be longer than a 24H one ("≥$101.29M"), and a
+   figure that broke onto a second line would make its card taller when the window
+   changes. Up to nine characters fit a cell at every phone width (below). */
+.projects-figures dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--lh-snug);
+  white-space: nowrap;
+}
+
+@media (max-width: 21.5rem) {
+  .projects-figures dd {
+    font-size: var(--fs-small);
+  }
+}
+
+.projects-figures .daily-figure {
+  align-items: flex-start;
+}
+
+/* One line for the day a 7D or 30D figure runs to; empty in the other windows. */
+.projects-figures-note {
+  min-height: calc(var(--fs-micro) * var(--lh-snug));
+  margin: calc(var(--s-1) * -1) 0 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-snug);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projects-card-unmeasured {
+  margin: 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.projects-card-note {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-snug);
+}
+
+/* ── Links ───────────────────────────────────────────────────────────────── */
+.projects-card-links {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--s-4);
+}
+
+/* The row is kept when a project has no link, so the cards of a row are alike,
+   and it takes the room a shorter card leaves, so the links of a row line up. */
+.projects-card-links {
+  min-height: 2rem;
+  margin-top: auto;
+}
+
+.projects-card-links > .external {
+  min-height: 2rem;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.projects-card-links > .external:hover {
+  color: var(--ink);
+}
+
+/* ── The rest of the page ────────────────────────────────────────────────── */
+/* What a visitor typed is shown back in the empty state, in its sentence and on
+   the button that carries it to Discover. It may be an address or a hash with no
+   place to break, so both wrap anywhere and stay inside the window. */
+.projects-page .empty-state {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.projects-page .empty-state p {
+  max-width: min(46ch, 100%);
+  overflow-wrap: anywhere;
+}
+
+.projects-empty-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-2);
+  max-width: 100%;
+}
+
+.projects-empty-actions > button {
+  max-width: 100%;
+  padding-block: var(--s-2);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
+}
+
+.projects-limit {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+.projects-discover {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--s-3);
+  margin: var(--s-3) 0 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.projects-text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 2.5rem;
+  padding: 0;
+  color: var(--signal);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.projects-text-button:hover:not(:disabled) {
+  color: var(--signal-hover);
+}
+
+.projects-method {
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+}
+
+.projects-method > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 2.75rem;
+  color: var(--ink-soft);
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+}
+
+.projects-method > summary::-webkit-details-marker {
+  display: none;
+}
+
+.projects-method > summary:hover {
+  color: var(--ink);
+}
+
+.projects-method > summary svg:last-child {
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.projects-method[open] > summary svg:last-child {
+  transform: rotate(180deg);
+}
+
+.projects-method-body {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-3);
+  max-width: 80ch;
+  padding: var(--s-1) 0 var(--s-4) var(--s-5);
+  border-left: 1px solid var(--rule-strong);
+}
+
+.projects-method-body p {
+  margin: 0;
+}
+
+/* ── Phone ───────────────────────────────────────────────────────────────── */
+@media (max-width: 40rem) {
+  .projects-card {
+    gap: var(--s-2);
+    padding: var(--s-3) var(--s-4);
+  }
+
+  .projects-card-description {
+    min-height: calc(var(--fs-small) * var(--lh-snug) * 2);
+    -webkit-line-clamp: 2;
+  }
+
+  .projects-grid {
+    gap: var(--s-3);
+  }
+
+  /* The line above the list may take two lines here; the row keeps room for both. */
+  .projects-meta p > span {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+@media (forced-colors: active) {
+  .projects-card {
+    border: 1px solid CanvasText;
+  }
+
+  .projects-card:has(.projects-card-name:focus-visible) {
+    outline: 2px solid Highlight;
+  }
+}

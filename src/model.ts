@@ -27,6 +27,7 @@ export const categories = [
 export type View =
   | "overview"
   | "analytics"
+  | "projects"
   | "chains"
   | "map"
   | "learn"

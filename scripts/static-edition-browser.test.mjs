@@ -433,6 +433,7 @@ test("no age is shown relative to now: every one is a UTC time", async (t) => {
     ["Discover", ""],
     ["By use case", "?view=map"],
     ["Networks", "?view=chains"],
+    ["Projects", "?view=projects"],
     ["One network", "?view=chains&chain_network=base"],
     ["Analytics overview", "?view=analytics"],
     ["Analytics evidence", "?view=analytics&analytics_chain=base"],
@@ -496,6 +497,7 @@ test("Activity, Refresh and every other control of the live service are gone", a
     [
       "Discover",
       "Analytics",
+      "Projects",
       "Networks",
       "By use case",
       "Compare",
@@ -1699,7 +1701,13 @@ test("keyboard and a screen reader can use a pool match and the empty state's bu
 test("every page's footer ends with the maker's line, a safe link to their X profile", async (t) => {
   for (const size of [DESKTOP, PHONE]) {
     const s = await site(t, { size });
-    for (const query of ["", "?view=analytics", "?view=chains", "?view=learn"]) {
+    for (const query of [
+      "",
+      "?view=analytics",
+      "?view=chains",
+      "?view=projects",
+      "?view=learn",
+    ]) {
       await s.goto(query);
       const line = s.page.locator("footer.footer .footer-byline");
       await expect(line.first()).toBeVisible({ timeout: 30000 });
@@ -1876,6 +1884,7 @@ test("no serious accessibility violation on the pages the edition adds to or cha
     const pages = [
       ["Discover", ""],
       ["Networks", "?view=chains"],
+      ["Projects", "?view=projects"],
       ["By use case", "?view=map"],
       ["Compare", "?view=compare&compare=alpha,gamma"],
       ["Watchlist", "?view=watchlist"],

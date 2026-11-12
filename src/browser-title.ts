@@ -3,6 +3,7 @@ import type { View } from "./model";
 const workspaceTitles: Record<View, string> = {
   overview: "Uniswap v4 hooks",
   analytics: "Hook analytics",
+  projects: "Uniswap v4 projects",
   activity: "Hook activity",
   compare: "Compare hooks",
   chains: "Networks & protocols",

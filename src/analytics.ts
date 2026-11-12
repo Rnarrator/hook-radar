@@ -466,6 +466,27 @@ export interface AnalyticsCsvOptions {
   /** inventory.generatedAt: when the census behind the indexed_* columns was
    * made. Written as it was published. */
   censusAsOf?: string | null;
+  /** Edition: 7D or 30D of the largest pools. Five more columns are written at
+   * the end of every row (span_window, span_through, span_volume_usd,
+   * span_basis, span_covered_pools); without it the header is exactly as before. */
+  span?: AnalyticsCsvSpan;
+}
+
+/** What the span columns read: which span, the day it runs to, and the lens. A
+ * pool's figure is exact for its complete days; a total over pools is "at_least"
+ * (only the largest pools have one). No figure is a blank, never a zero. */
+export interface AnalyticsCsvSpan {
+  /** "7D" or "30D". */
+  label: string;
+  /** The last complete UTC day, YYYY-MM-DD. */
+  through: string;
+  lens: {
+    pool(pool: Pick<Pool, "id" | "chain" | "address">): { usd: number } | null;
+    sum(pools: readonly Pick<Pool, "id" | "chain" | "address">[]): {
+      usd: number | null;
+      covered: number;
+    };
+  };
 }
 
 /** A self-describing current-observation export. Missing values are blank;
@@ -511,7 +532,45 @@ export function analyticsCsv(
     "volume_latest_observation_at",
     "liquidity_oldest_observation_at",
     "liquidity_latest_observation_at",
+    ...(options.span
+      ? [
+          "span_window",
+          "span_through",
+          "span_volume_usd",
+          "span_basis",
+          "span_covered_pools",
+        ]
+      : []),
   ];
+  const span = options.span ?? null;
+  /** The span columns of a row over a set of pools (a total: at least) or over
+   * one pool (exact). Blank where there is no figure. */
+  const spanCells = (
+    pools: readonly AnalyticsPool[],
+    single = false,
+  ): unknown[] => {
+    if (!span) return [];
+    if (single) {
+      const figure = span.lens.pool(pools[0].pool);
+      return [
+        span.label,
+        span.through,
+        figure ? roundExactUsd(figure.usd) : null,
+        figure ? "exact" : null,
+        figure ? 1 : 0,
+      ];
+    }
+    const sum = span.lens.sum(
+      pools.filter((row) => row.volumeUsd !== null).map((row) => row.pool),
+    );
+    return [
+      span.label,
+      span.through,
+      sum.usd === null ? null : roundExactUsd(sum.usd),
+      sum.usd === null ? null : "at_least",
+      sum.covered,
+    ];
+  };
   const common = [
     report.chain,
     report.windowKey,
@@ -588,6 +647,7 @@ export function analyticsCsv(
         null,
       ),
       ...times(report.totals),
+      ...spanCells(report.pools),
     ],
   ];
   for (const network of report.networks)
@@ -607,6 +667,7 @@ export function analyticsCsv(
         network,
       ),
       ...times(network),
+      ...spanCells(report.pools.filter((row) => row.pool.chain === network.chain)),
     ]);
   for (const project of report.projects)
     rows.push([
@@ -621,6 +682,9 @@ export function analyticsCsv(
       ...metrics(project),
       ...census(null, null, null),
       ...times(project),
+      ...spanCells(
+        report.pools.filter((row) => row.project?.id === project.project.id),
+      ),
     ]);
   for (const pool of report.pools) {
     const observation = pool.pool.metricUpdatedAt ?? null;
@@ -645,6 +709,7 @@ export function analyticsCsv(
       pool.volumeUsd === null ? null : observation,
       pool.liquidityUsd === null ? null : observation,
       pool.liquidityUsd === null ? null : observation,
+      ...spanCells([pool], true),
     ]);
   }
   return (

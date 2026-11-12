@@ -78,6 +78,19 @@ function fitAll(figures: HTMLElement[]) {
   });
 }
 
+/** The running pass, so a screen that changes a figure's text can fit it before
+ * the browser paints (see fitFiguresNow). Null until startFigureFit has run. */
+let runNow: (() => void) | null = null;
+
+/** Fit every figure now, in this call, instead of on the next animation frame.
+ * A tile whose figure changes when a control is pressed ("$313.24M" to
+ * "≥$2.31B") calls it from a layout effect: otherwise the longer figure is drawn
+ * once at full size, wrapped, and only then shrunk, which moves the tile and
+ * everything under it for a moment. */
+export function fitFiguresNow(): void {
+  runNow?.();
+}
+
 export function startFigureFit(): () => void {
   if (
     typeof window === "undefined" ||
@@ -122,6 +135,13 @@ export function startFigureFit(): () => void {
         frame = requestAnimationFrame(run);
       }, wait);
   }
+  runNow = () => {
+    if (frame) cancelAnimationFrame(frame);
+    if (timer) clearTimeout(timer);
+    frame = 0;
+    timer = 0;
+    run();
+  };
   // Only content changes matter: attribute writes made here must not retrigger.
   const mutations = new MutationObserver(schedule);
   mutations.observe(document.body, {
@@ -135,6 +155,7 @@ export function startFigureFit(): () => void {
   document.fonts?.addEventListener("loadingdone", schedule);
   schedule();
   return () => {
+    runNow = null;
     mutations.disconnect();
     resized.disconnect();
     window.removeEventListener("resize", schedule);

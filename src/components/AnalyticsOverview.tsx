@@ -16,6 +16,20 @@ import {
 } from "../analytics-focus";
 import type { AnalyticsFocus, AnalyticsMetric } from "../analytics-focus";
 import {
+  buildSpanModel,
+  ledgerSpanRows,
+  spanDetailNote,
+  spanFocusBreakdown,
+  spanMethodNote,
+  spanScopeLine,
+  spanSummaryLine,
+  spanTileCaption,
+  spanTileSpoken,
+  spanTileTitle,
+} from "../analytics-span";
+import { spanLabel as spanName } from "../daily";
+import { useDailyView } from "../daily-view";
+import {
   RatioMeter,
   formatSince,
   formatCount,
@@ -32,11 +46,17 @@ import {
   AnalyticsContributors,
   AnalyticsControlBar,
   AnalyticsEvidence,
+  AnalyticsMethodSummary,
   AnalyticsReadouts,
   formatMetric,
   formatMetricExact,
+  valueFormat,
 } from "./AnalyticsCharts";
-import type { ContributorsModel, FocusSummary } from "./AnalyticsCharts";
+import type {
+  ContributorsModel,
+  FocusSummary,
+  SpanPending,
+} from "./AnalyticsCharts";
 import { AnalyticsHistory } from "./AnalyticsHistory";
 import { ArrowRight, ChevronDown, Info, RefreshCw } from "./Icons";
 import "./analytics.css";
@@ -137,10 +157,56 @@ export function AnalyticsOverview({
     (totals.volumePools === 0 || volumeCurrent) &&
     (totals.liquidityPools === 0 || reservesCurrent) &&
     (volumeCurrent || reservesCurrent);
-  const copy = metricCopy(metric, request.window);
   const networkNames = useMemo(
     () => new Map(envelope.networks.map((n) => [n.slug, n.name])),
     [envelope.networks],
+  );
+  // Edition: 7D or 30D of the largest pools. The overview's own ledger places
+  // every measured pool (network, use case, 24H volume); data/daily.json gives
+  // the daily figures of the largest. Null where this response has no ledger.
+  const daily = useDailyView();
+  const spanChosen = STATIC_EDITION && daily.span !== null;
+  const spanRows = useMemo(
+    () => (spanChosen ? ledgerSpanRows(publishedEnvelope, now) : null),
+    [spanChosen, publishedEnvelope, now],
+  );
+  const spanSupported = spanChosen && spanRows !== null;
+  const spanText = spanSupported && daily.span ? spanName(daily.span) : null;
+  const spanModel = useMemo(
+    () =>
+      spanSupported && daily.lens && spanRows
+        ? buildSpanModel({
+            rows: spanRows,
+            lens: daily.lens,
+            chain: request.chain,
+            networkNames,
+            hostAt: envelope.publication.generatedAt,
+          })
+        : null,
+    [
+      spanSupported,
+      daily.lens,
+      spanRows,
+      request.chain,
+      networkNames,
+      envelope.publication.generatedAt,
+    ],
+  );
+  const spanScope = spanModel?.span ?? null;
+  // The span speaks for the volume metric only; reserves and pools with trading
+  // keep their 24H models and words.
+  const spanVolume = spanSupported && metric === "volume";
+  const spanPending: SpanPending | null =
+    spanVolume && !spanModel && spanText
+      ? {
+          phase: daily.phase === "error" ? "error" : "loading",
+          label: spanText,
+        }
+      : null;
+  const copy = metricCopy(
+    metric,
+    request.window,
+    spanVolume ? spanScope : null,
   );
   const scopeName =
     request.chain === "all"
@@ -190,33 +256,62 @@ export function AnalyticsOverview({
     }),
     [envelope, now, request, totals, volumeCurrent, reservesCurrent, tradingSlices],
   );
+  // Under a span the volume metric is drawn from the span's own model; the
+  // others keep this 24H one.
+  const shownModel: ContributorsModel =
+    spanVolume && spanModel ? spanModel : model;
   const breakdown = useMemo(
     () =>
-      focus
-        ? overviewFocusBreakdown(publishedEnvelope, now, metric, focus)
-        : null,
-    [focus, publishedEnvelope, now, metric],
+      !focus
+        ? null
+        : spanVolume
+          ? spanModel && daily.lens && spanRows
+            ? spanFocusBreakdown(spanRows, daily.lens, focus)
+            : null
+          : overviewFocusBreakdown(publishedEnvelope, now, metric, focus),
+    [
+      focus,
+      publishedEnvelope,
+      now,
+      metric,
+      spanVolume,
+      spanModel,
+      daily.lens,
+      spanRows,
+    ],
   );
   const focusLabel = !focus
     ? null
     : focus.kind === "network"
       ? networkNames.get(focus.id) || focus.id
       : focus.id;
-  const scopeTotal = metricValue(model.totals, metric);
+  const scopeTotal = metricValue(shownModel.totals, metric);
+  const fmt = valueFormat(metric, spanVolume ? spanScope : null);
   const focusSummary: FocusSummary | null =
     focus && focusLabel
       ? {
           kind: focus.kind === "network" ? "Network" : "Use case",
           label: focusLabel,
-          detail: breakdown ? (
-            <>
-              {formatMetric(metric, breakdown.total.value)} of{" "}
-              {formatMetric(metric, scopeTotal)} {copy.measure.toLowerCase()}{" "}
-              · {formatPercent(metricShare(breakdown.total.value, scopeTotal))}
-            </>
-          ) : (
-            "Focused portions need the pool-level ledger"
-          ),
+          detail:
+            spanVolume && spanScope ? (
+              breakdown && breakdown.total.value !== null ? (
+                <>
+                  {fmt.compact(breakdown.total.value)} of{" "}
+                  {fmt.compact(scopeTotal)} covered {spanScope.label} volume ·{" "}
+                  {formatPercent(metricShare(breakdown.total.value, scopeTotal))}
+                </>
+              ) : (
+                `No ${spanScope.label} volume: none of its pools is among the largest`
+              )
+            ) : spanPending ? null : breakdown ? (
+              <>
+                {formatMetric(metric, breakdown.total.value)} of{" "}
+                {formatMetric(metric, scopeTotal)} {copy.measure.toLowerCase()}{" "}
+                · {formatPercent(metricShare(breakdown.total.value, scopeTotal))}
+              </>
+            ) : (
+              "Focused portions need the pool-level ledger"
+            ),
           actions:
             focus.kind === "network" && request.chain === "all" ? (
               <button
@@ -274,6 +369,12 @@ export function AnalyticsOverview({
     />
   );
 
+  // Edition: what the ribbons and the Data notes' summary show apart from the
+  // span, so each keeps the height of the tallest span shown (useHeldHeight).
+  const heldKey = STATIC_EDITION
+    ? `${request.chain}|${request.window}|${metric}|${envelope.publication.generatedAt}`
+    : null;
+
   return (
     <section
       className="analytics-workspace analytics-overview"
@@ -293,8 +394,9 @@ export function AnalyticsOverview({
         chain={request.chain}
         setChain={setChain}
         networks={envelope.networks}
-        windowLabel={`${windows[request.window]} window`}
+        windowLabel={`${spanVolume && spanText ? spanText : windows[request.window]} window`}
         focus={focusSummary}
+        focusHold={spanVolume}
         clearFocus={() => setFocus(null)}
         disabled={disabled}
         actions={
@@ -321,6 +423,8 @@ export function AnalyticsOverview({
       />
       <AnalyticsReadouts
         kicker="01 · At a glance"
+        scopeHold={spanSupported}
+        scopeHoldWidth={spanSupported && !spanScope}
         status={
           refreshing ? (
             <>
@@ -338,29 +442,69 @@ export function AnalyticsOverview({
               Partial coverage · Not total Uniswap volume
             </span>
             <span>
-              Hook pools Radar can price · {scopeName} ·{" "}
-              {windows[request.window]} window ·{" "}
-              {STATIC_EDITION
-                ? "measured within 5 minutes of the snapshot"
-                : "measured within the last 5 minutes"}
+              {spanSupported && spanText
+                ? spanScope
+                  ? spanScopeLine(spanScope, scopeName)
+                  : `Largest hook pools only · ${scopeName} · ${spanText}`
+                : `Hook pools Radar can price · ${scopeName} · ${windows[request.window]} window · ${
+                    STATIC_EDITION
+                      ? "measured within 5 minutes of the snapshot"
+                      : "measured within the last 5 minutes"
+                  }`}
             </span>
           </>
         }
         items={[
-          {
-            key: "volume",
-            primary: true,
-            label: <>Trading volume · {windows[request.window]}</>,
-            value: formatMoneyCompact(model.totals.volumeUsd),
-            exact: formatMetricExact("volume", model.totals.volumeUsd),
-            testId: "analytics-volume",
-            caption: (
-              <Measurement
-                proof={totals.freshness.volume[request.window]}
-                now={now}
-              />
-            ),
-          },
+          spanSupported && spanText
+            ? spanScope
+              ? {
+                  key: "volume",
+                  primary: true,
+                  hold: true,
+                  label: <>Trading volume · {spanText}</>,
+                  value: valueFormat("volume", spanScope).compact(spanScope.usd),
+                  exact: spanTileTitle(spanScope),
+                  spoken:
+                    spanScope.usd === null
+                      ? undefined
+                      : spanTileSpoken(spanScope),
+                  testId: "analytics-volume",
+                  caption: (
+                    <span className="analytics-metric-caption">
+                      <span className="analytics-dot" aria-hidden="true" />
+                      {spanTileCaption(spanScope)}
+                    </span>
+                  ),
+                }
+              : {
+                  key: "volume",
+                  primary: true,
+                  hold: true,
+                  label: <>Trading volume · {spanText}</>,
+                  value: daily.phase === "error" ? "—" : "…",
+                  testId: "analytics-volume",
+                  caption: (
+                    <span className="analytics-metric-caption">
+                      {daily.phase === "error"
+                        ? "Not loaded"
+                        : `Loading ${spanText} volume`}
+                    </span>
+                  ),
+                }
+            : {
+                key: "volume",
+                primary: true,
+                label: <>Trading volume · {windows[request.window]}</>,
+                value: formatMoneyCompact(model.totals.volumeUsd),
+                exact: formatMetricExact("volume", model.totals.volumeUsd),
+                testId: "analytics-volume",
+                caption: (
+                  <Measurement
+                    proof={totals.freshness.volume[request.window]}
+                    now={now}
+                  />
+                ),
+              },
           {
             key: "reserves",
             label: "Reserves held in pools",
@@ -371,7 +515,11 @@ export function AnalyticsOverview({
           },
           {
             key: "trading",
-            label: "Pools with trading",
+            // The edition names the window in every state, so the label never
+            // changes when a span is chosen.
+            label: STATIC_EDITION
+              ? `Pools with trading · ${windows[request.window]}`
+              : "Pools with trading",
             value: volumeCurrent ? formatCount(totals.activePools) : "—",
             testId: "analytics-active-pools",
             caption: (
@@ -410,23 +558,27 @@ export function AnalyticsOverview({
         ]}
         composition={
           <AnalyticsComposition
-            model={model}
+            model={shownModel}
             metric={metric}
             focus={focus}
             setFocus={setFocus}
+            pending={spanPending}
             disabled={disabled}
+            heldKey={heldKey}
           />
         }
         method={
           <details className="analytics-method">
-            <summary>
+            <AnalyticsMethodSummary heldKey={heldKey}>
               <span
                 className={`status-led ${volumeCurrent || reservesCurrent ? "green" : "amber"}`}
               />
               <span>
                 {volumeCurrent || reservesCurrent
                   ? STATIC_EDITION
-                    ? "All figures are current as of the snapshot"
+                    ? spanScope
+                      ? spanSummaryLine(spanScope)
+                      : "All figures are current as of the snapshot"
                     : "All figures are current"
                   : STATIC_EDITION
                     ? request.chain === "all"
@@ -438,7 +590,7 @@ export function AnalyticsOverview({
                 How these numbers are measured
               </span>
               <ChevronDown size={14} />
-            </summary>
+            </AnalyticsMethodSummary>
             <div className="analytics-method-body">
               <p>
                 Volume includes only tracked v4 pools with hooks and current
@@ -453,6 +605,7 @@ export function AnalyticsOverview({
                 percentage of all hook trading volume is covered.
               </p>
               <p>
+                {spanScope && STATIC_EDITION ? "24H and reserve figures: " : ""}
                 {STATIC_EDITION
                   ? "A measurement counts only if it was less than five minutes old when the snapshot was taken; older ones are left out of the totals and shares. Newer measurements appear in the next snapshot. "
                   : envelope.contributions
@@ -461,6 +614,12 @@ export function AnalyticsOverview({
                 Reported reserves exclude unmeasured assets and are not
                 executable liquidity or protocol TVL.
               </p>
+              {spanScope && <p>{spanMethodNote(spanScope)}</p>}
+              {spanScope && spanDetailNote(spanScope) && (
+                <p data-testid="analytics-span-detail">
+                  {spanDetailNote(spanScope)}
+                </p>
+              )}
               {STATIC_EDITION ? (
                 <p>
                   Publication:{" "}
@@ -486,7 +645,7 @@ export function AnalyticsOverview({
       {historyFirst && historyPanel}
       <AnalyticsContributors
         kicker={historyFirst ? "03 · Who contributed" : "02 · Who contributed"}
-        model={model}
+        model={shownModel}
         metric={metric}
         focus={focus}
         setFocus={setFocus}
@@ -499,9 +658,11 @@ export function AnalyticsOverview({
             : totals.freshness.volume[request.window]
         }
         now={now}
+        pending={spanPending}
         disabled={disabled}
       />
       <AnalyticsEvidence
+        spanLabel={spanText}
         kicker={historyFirst ? "04 · Evidence" : "03 · Evidence"}
         windowKey={request.window}
         metric={metric}

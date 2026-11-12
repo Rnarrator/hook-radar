@@ -189,3 +189,14 @@ main .titlebar-copy .masthead-census {
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
 }
+
+/* The headline figure of an Analytics tile under 7D or 30D starts with "≥". The
+   pixel face draws that sign so small it reads as a "2" ("2$11.54B"): the sign
+   alone is set in the data face, a little smaller, so it reads as "at least". */
+.analytics-metric strong .analytics-bound-sign {
+  font-family: var(--font-data);
+  font-size: 0.78em;
+  font-weight: 500;
+  letter-spacing: 0;
+  margin-right: 0.1em;
+}

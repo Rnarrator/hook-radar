@@ -28,6 +28,9 @@ import {
 } from "../charts/index";
 import { shortAddress, windows } from "../model";
 import { STATIC_EDITION } from "../edition";
+import { spanLabel } from "../daily";
+import { useDailyView } from "../daily-view";
+import { DailyAmount } from "./DailyAmount";
 import { ProtocolLogo } from "./ProtocolLogo";
 import { External } from "./Primitives";
 import {
@@ -87,14 +90,34 @@ export function AnalyticsPoolExplorer({
 }: Props) {
   const chartId = useId().replace(/:/g, "");
   const tableId = useId();
+  // Edition: 7D or 30D of the largest pools, as one more column. The window
+  // beneath is always 24H, so the 24H column, the scatter and the readouts stay
+  // as they are and say 24H.
+  const daily = useDailyView();
+  const spanKey = STATIC_EDITION && windowKey === "h24" ? daily.span : null;
+  const spanText = spanKey ? spanLabel(spanKey) : null;
+  const lens = spanKey ? daily.lens : null;
   const searchRef = useRef<HTMLInputElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<PoolScale>("log");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<PoolSort>("volume");
+  const [sort, setSort] = useState<PoolSort>(spanKey ? "span" : "volume");
   const [ascending, setAscending] = useState(false);
   const [page, setPage] = useState(0);
+  // The pools are ordered by the figure the page leads with: the span's while one
+  // is chosen, the 24H volume when it is not.
+  useEffect(() => {
+    if (spanKey && sort === "volume") {
+      setSort("span");
+      setAscending(false);
+    } else if (!spanKey && sort === "span") {
+      setSort("volume");
+      setAscending(false);
+    }
+    // Only a change of span moves the order; the visitor's own choice stays.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spanKey]);
   useEffect(() => {
     setPage(0);
     setSelectedKey(null);
@@ -110,8 +133,8 @@ export function AnalyticsPoolExplorer({
   );
   const cohort = useMemo(() => poolScatterCohort(scoped), [scoped]);
   const rows = useMemo(
-    () => sortAnalyticsPools(scoped, sort, ascending, query, names),
-    [scoped, sort, ascending, query, names],
+    () => sortAnalyticsPools(scoped, sort, ascending, query, names, lens),
+    [scoped, sort, ascending, query, names, lens],
   );
   const pageCount = Math.max(1, Math.ceil(rows.length / POOL_PAGE_SIZE));
   const activePage = Math.min(page, pageCount - 1);
@@ -644,7 +667,11 @@ export function AnalyticsPoolExplorer({
           role="region"
           aria-label="Pool markets table, scroll horizontally for more columns"
         >
-          <table className="analytics-pool-table" id={tableId}>
+          <table
+            className="analytics-pool-table"
+            id={tableId}
+            data-span={spanText ? "true" : undefined}
+          >
             <thead>
               <tr>
                 <th
@@ -660,6 +687,20 @@ export function AnalyticsPoolExplorer({
                   {sortButton("name", "Pool / project")}
                 </th>
                 <th scope="col">Network</th>
+                {spanText && (
+                  <th
+                    scope="col"
+                    aria-sort={
+                      sort === "span"
+                        ? ascending
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
+                  >
+                    {sortButton("span", `${spanText} volume`)}
+                  </th>
+                )}
                 <th
                   scope="col"
                   aria-sort={
@@ -746,6 +787,11 @@ export function AnalyticsPoolExplorer({
                     <td className="pool-table-network" data-label="Network">
                       {names.get(row.pool.chain) || row.pool.chain}
                     </td>
+                    {spanText && (
+                      <td className="pool-table-volume" data-label={`${spanText} volume`}>
+                        <DailyAmount pool={lens ? lens.pool(row.pool) : null} />
+                      </td>
+                    )}
                     <td
                       title={exactMoney(row.volumeUsd)}
                       className="pool-table-volume"

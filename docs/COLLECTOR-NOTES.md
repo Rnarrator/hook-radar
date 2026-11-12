@@ -291,7 +291,8 @@ which is not part of this repository; the numbers are in
    - **What it writes.** `state/daily.json` (below) when the records changed, and
      `data/daily.json` with one source row, `geckoterminal-daily`, in
      `snapshot.json`: the row is how the already-loaded page knows to offer 7D and
-     30D without a request of its own. `status.json` has `counts.daily`
+     30D without a request of its own (every overview file carries the same row, so
+     the Analytics page offers them too). `status.json` has `counts.daily`
      (`selected`, `due`, `requested`, `read`, `noData`, `missing`,
      `unreadable`, `failed`, `revisedDays`, `through`, `published`,
      `covered`, `readyShare`, and why it `stopped` or was `skipped`).
@@ -1508,9 +1509,12 @@ request, the snapshot time and `state/pools.json` time identical with the step o
 off, idempotence, a failing step, a refused run that spends nothing, the heaviest
 run at the cap); the data gate on folders (another run's file, a day in progress, a
 7D above a 30D, a source row without a file or the reverse); the page's reading, lens,
-address, sort, CSV and Networks model; and what these documents say.
+address, sort, CSV and Networks model; the Analytics page's join of the overview's
+ledger and the daily file (`tests/edition-analytics-span.test.mjs`, and its markup in
+`tests/edition-analytics-span-render.test.mjs`); and what these documents say.
 `scripts/edition-daily-browser.test.mjs` shows the screens at 1440, 390 and 360 px
-on test data.
+on test data, and `scripts/edition-analytics-span-browser.test.mjs` the Analytics
+page, with a measured check that choosing a span moves no control or tile.
 
 ## Choices to know about
 

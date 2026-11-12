@@ -97,6 +97,24 @@ test("the other documents say the same, in plain words", () => {
   assert.match(truth, /a pool that has no daily figure shows a dash with the reason/);
   assert.match(truth, /the five-minute rule is not applied to it and not changed for the other windows/);
   assert.match(truth, /every total of those figures is marked "at least" \(≥\)/);
+  // The Analytics page: shares of the covered total, and the 24H coverage figure
+  // as a fact about the covered pools.
+  assert.match(truth, /the shares of a 7D or 30D total are shares of the covered total, never of the tracked total/);
+  assert.match(truth, /is a fact about the covered pools, not an estimate of the rest/);
+  assert.match(how, /\*\*On the Analytics page\.\*\*/);
+  assert.match(how, /every overview file carries a ledger of the measured pools/);
+  assert.match(how, /No snapshot is downloaded for it, and `data\/daily\.json` is asked for only when a span is chosen/);
+  assert.match(how, /left out and counted in the first tile's tooltip/);
+  assert.match(how, /`span_window`, `span_through`, `span_volume_usd`, `span_basis`/);
+  assert.match(how, /a span is `window=d7` or `window=d30`/);
+  assert.match(how, /rounded to the nearest unit the way every figure on the page is/);
+  // Nothing moves when a span is pressed, and what can still move is said.
+  assert.match(how, /Pressing a span does not move the page\. The ribbons and the summary line of the Data notes keep the height of the tallest span shown/);
+  assert.match(how, /Three things can still move\./);
+  assert.match(how, /a phone has no tooltip, so the second paragraph of the Data notes says the same/);
+  assert.match(how, /\*\*What else the Analytics span changed\.\*\*/);
+  assert.match(how, /"Pools with trading · 24H"/);
+  assert.match(how, /on the narrowest phone \(320 px\) Discover, Networks and the Watchlist are 8 px taller than before/);
   const terms = flat("PROVIDER-TERMS.md");
   assert.match(terms, /at most 20 requests a run and about 125 a day/);
   assert.match(terms, /The attribution question above is still open and covers these figures too/);
@@ -109,6 +127,9 @@ test("the other documents say the same, in plain words", () => {
     assert.match(design, /which is not `analytics_range`/);
   }
   assert.match(flat("README-START-HERE.md"), /the daily volume of the largest pools/);
+  assert.match(flat("README-START-HERE.md"), /\(Discover, the Watchlist, Networks and Analytics\) offers 7D and 30D/);
+  assert.match(flat("COLLECTOR-NOTES.md"), /every overview file carries the same row, so the Analytics page offers them too/);
+  assert.match(flat("COLLECTOR-NOTES.md"), /tests\/edition-analytics-span\.test\.mjs/);
 });
 
 test("the pages avoid the engineering words for what visitors read", () => {

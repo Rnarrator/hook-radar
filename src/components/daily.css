@@ -61,10 +61,11 @@
   visibility: hidden;
 }
 
-/* On the narrowest phones the line takes two rows: leave both. */
+/* On the narrowest phones the line takes two rows (the failure text, and the
+   Try again button under it, with the gap between them): leave both. */
 @media (max-width: 21rem) {
   .title-controls .daily-caption {
-    min-height: calc(var(--fs-small) * var(--lh-snug) * 2);
+    min-height: calc(var(--fs-small) * var(--lh-snug) * 2 + var(--s-2));
   }
 }
 
@@ -91,4 +92,11 @@
   .window-switch button[data-span] {
     min-width: 0;
   }
+}
+
+/* "Try again" is a 32 px target in a line that is 17 px tall: it hangs over the
+   line's space instead of making the line taller, so a failure that arrives
+   after a span was chosen does not move the switch and the controls above it. */
+.title-controls .daily-caption button {
+  margin-block: calc((var(--fs-small) * var(--lh-snug) - 2rem) / 2);
 }

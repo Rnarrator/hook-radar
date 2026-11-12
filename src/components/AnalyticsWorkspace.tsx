@@ -17,6 +17,21 @@ import {
 } from "../analytics-focus";
 import type { AnalyticsFocus, AnalyticsMetric } from "../analytics-focus";
 import {
+  buildSpanModel,
+  spanDetailNote,
+  spanFocusBreakdown,
+  spanMethodNote,
+  spanRowPools,
+  spanScopeLine,
+  spanSummaryLine,
+  spanTileCaption,
+  spanTileSpoken,
+  spanTileTitle,
+  workspaceSpanRows,
+} from "../analytics-span";
+import { spanLabel as spanName } from "../daily";
+import { useDailyView } from "../daily-view";
+import {
   BarTrack,
   RatioMeter,
   formatSince,
@@ -43,11 +58,17 @@ import {
   AnalyticsContributors,
   AnalyticsControlBar,
   AnalyticsEvidence,
+  AnalyticsMethodSummary,
   AnalyticsReadouts,
   formatMetric,
   formatMetricExact,
+  valueFormat,
 } from "./AnalyticsCharts";
-import type { ContributorsModel, FocusSummary } from "./AnalyticsCharts";
+import type {
+  ContributorsModel,
+  FocusSummary,
+  SpanPending,
+} from "./AnalyticsCharts";
 import { AnalyticsPoolExplorer } from "./AnalyticsPoolExplorer";
 import {
   ArrowRight,
@@ -162,7 +183,6 @@ export function AnalyticsWorkspace({
     [result.history, range, now],
   );
   const totals = result.totals;
-  const copy = metricCopy(metric, windowKey);
   const networkOptions = useMemo(() => {
     const options = new Map(
       snapshot.chains.map((network) => [network.slug, network.name]),
@@ -202,9 +222,53 @@ export function AnalyticsWorkspace({
     }),
     [result, chain, windowKey, totals],
   );
+  // Edition: 7D or 30D of the largest pools. The snapshot's pool rows place every
+  // measured pool (network, use case, project, 24H volume); data/daily.json gives
+  // the daily figures of the largest. The window beneath a span is 24H.
+  const daily = useDailyView();
+  const spanChosen = STATIC_EDITION && daily.span !== null && windowKey === "h24";
+  const spanText = spanChosen && daily.span ? spanName(daily.span) : null;
+  const spanRows = useMemo(
+    () => (spanChosen ? workspaceSpanRows(result.pools) : null),
+    [spanChosen, result.pools],
+  );
+  const spanModel = useMemo(
+    () =>
+      spanChosen && daily.lens && spanRows
+        ? buildSpanModel({
+            rows: spanRows,
+            lens: daily.lens,
+            chain,
+            networkNames: names,
+            hostAt: snapshot.generatedAt,
+          })
+        : null,
+    [spanChosen, daily.lens, spanRows, chain, names, snapshot.generatedAt],
+  );
+  const spanScope = spanModel?.span ?? null;
+  // The span speaks for the volume metric only; reserves and pools with trading
+  // keep their 24H models and words.
+  const spanVolume = spanChosen && metric === "volume";
+  const spanPending: SpanPending | null =
+    spanVolume && !spanModel && spanText
+      ? {
+          phase: daily.phase === "error" ? "error" : "loading",
+          label: spanText,
+        }
+      : null;
+  const copy = metricCopy(metric, windowKey, spanVolume ? spanScope : null);
+  const shownModel: ContributorsModel =
+    spanVolume && spanModel ? spanModel : model;
   const breakdown = useMemo(
-    () => (focus ? workspaceFocusBreakdown(result.pools, metric, focus) : null),
-    [focus, metric, result.pools],
+    () =>
+      !focus
+        ? null
+        : spanVolume
+          ? spanModel && daily.lens && spanRows
+            ? spanFocusBreakdown(spanRows, daily.lens, focus)
+            : null
+          : workspaceFocusBreakdown(result.pools, metric, focus),
+    [focus, metric, result.pools, spanVolume, spanModel, daily.lens, spanRows],
   );
   const projectsById = useMemo(
     () => new Map(result.projects.map((row) => [row.project.id, row])),
@@ -217,7 +281,8 @@ export function AnalyticsWorkspace({
       : focus.kind === "category"
         ? focus.id
         : projectsById.get(focus.id)?.project.name || focus.id;
-  const scopeTotal = metricValue(totals, metric);
+  const scopeTotal = metricValue(shownModel.totals, metric);
+  const fmt = valueFormat(metric, spanVolume ? spanScope : null);
   const focusSummary: FocusSummary | null =
     focus && focusLabel
       ? {
@@ -228,16 +293,29 @@ export function AnalyticsWorkspace({
                 ? "Use case"
                 : "Project",
           label: focusLabel,
-          detail: breakdown ? (
-            <>
-              {formatMetric(metric, breakdown.total.value)} of{" "}
-              {formatMetric(metric, scopeTotal)}{" "}
-              {copy.measure.toLowerCase()} ·{" "}
-              {formatPercent(metricShare(breakdown.total.value, scopeTotal))} ·{" "}
-              {formatCount(breakdown.total.pools)} measured{" "}
-              {breakdown.total.pools === 1 ? "pool" : "pools"}
-            </>
-          ) : null,
+          detail:
+            spanVolume && spanScope ? (
+              breakdown && breakdown.total.value !== null ? (
+                <>
+                  {fmt.compact(breakdown.total.value)} of{" "}
+                  {fmt.compact(scopeTotal)} covered {spanScope.label} volume ·{" "}
+                  {formatPercent(metricShare(breakdown.total.value, scopeTotal))}{" "}
+                  · {formatCount(breakdown.total.pools)} covered{" "}
+                  {breakdown.total.pools === 1 ? "pool" : "pools"}
+                </>
+              ) : (
+                `No ${spanScope.label} volume: none of its pools is among the largest`
+              )
+            ) : spanPending ? null : breakdown ? (
+              <>
+                {formatMetric(metric, breakdown.total.value)} of{" "}
+                {formatMetric(metric, scopeTotal)}{" "}
+                {copy.measure.toLowerCase()} ·{" "}
+                {formatPercent(metricShare(breakdown.total.value, scopeTotal))} ·{" "}
+                {formatCount(breakdown.total.pools)} measured{" "}
+                {breakdown.total.pools === 1 ? "pool" : "pools"}
+              </>
+            ) : null,
           actions:
             focus.kind === "network" && chain === "all" ? (
               <button
@@ -284,7 +362,22 @@ export function AnalyticsWorkspace({
 
   // Leading hooks: ranked projects, cross-filtered by the active focus.
   const rankMetric = METRIC_FOR[projectOrder];
-  const rankTotal = metricValue(totals, rankMetric);
+  // Ranked by volume under a span, a project's figure is the sum of its covered
+  // pools (at least); a project with none has a dash and sorts last. While the
+  // figures load, the ranking stays the 24H one and says so.
+  const rankSpan = spanChosen && rankMetric === "volume" ? spanScope : null;
+  const rankFmt = valueFormat(rankMetric, rankSpan);
+  const rankTotal = metricValue(
+    rankSpan && spanModel ? spanModel.totals : totals,
+    rankMetric,
+  );
+  const rankSpanBreakdown = useMemo(
+    () =>
+      rankSpan && focus && focus.kind === "network" && daily.lens && spanRows
+        ? spanFocusBreakdown(spanRows, daily.lens, focus)
+        : null,
+    [rankSpan, focus, daily.lens, spanRows],
+  );
   const rankBreakdown = useMemo(
     () =>
       focus && focus.kind === "network"
@@ -304,9 +397,13 @@ export function AnalyticsWorkspace({
   const rankedProjects = useMemo(() => {
     const query = projectQuery.trim().toLocaleLowerCase();
     const rankValue = (row: AnalyticsProject) =>
-      rankBreakdown
-        ? (rankBreakdown.projects.get(row.project.id)?.value ?? null)
-        : metricValue(row, rankMetric);
+      rankSpan
+        ? rankSpanBreakdown
+          ? (rankSpanBreakdown.projects.get(row.project.id)?.value ?? null)
+          : (rankSpan.projects.get(row.project.id)?.usd ?? null)
+        : rankBreakdown
+          ? (rankBreakdown.projects.get(row.project.id)?.value ?? null)
+          : metricValue(row, rankMetric);
     return result.projects
       .filter(
         (row) =>
@@ -330,7 +427,15 @@ export function AnalyticsWorkspace({
           (b.value ?? -1) - (a.value ?? -1) ||
           a.row.project.name.localeCompare(b.row.project.name),
       );
-  }, [result.projects, projectQuery, rankMetric, rankBreakdown, focus]);
+  }, [
+    result.projects,
+    projectQuery,
+    rankMetric,
+    rankBreakdown,
+    rankSpan,
+    rankSpanBreakdown,
+    focus,
+  ]);
   const projectLimit = allProjects ? 30 : 8;
   const shownProjects = rankedProjects.slice(0, projectLimit);
   const missingVolume = totals.unattributedVolumeUsd;
@@ -359,6 +464,17 @@ export function AnalyticsWorkspace({
               ? {
                   edition: true,
                   censusAsOf: snapshot.inventory?.generatedAt ?? null,
+                  // The 7D or 30D figures of the largest pools, as five more
+                  // columns, while a span is chosen and its figures are loaded.
+                  ...(spanChosen && spanText && daily.lens
+                    ? {
+                        span: {
+                          label: spanText,
+                          through: daily.lens.through,
+                          lens: daily.lens,
+                        },
+                      }
+                    : {}),
                 }
               : undefined,
           ),
@@ -370,7 +486,9 @@ export function AnalyticsWorkspace({
       link.href = url;
       // The edition's `now` is the snapshot's time: the file is dated the day it
       // is made (live, `now` is today, so the name is the same as before).
-      link.download = `hook-radar-analytics-${chain}-${windowKey}-${historyExportTimes(now).exportedAt.slice(0, 10)}.csv`;
+      // A file with the span's columns says which span in its name (d7, d30).
+      const spanSuffix = spanChosen && daily.lens ? `-${daily.lens.span}` : "";
+      link.download = `hook-radar-analytics-${chain}-${windowKey}${spanSuffix}-${historyExportTimes(now).exportedAt.slice(0, 10)}.csv`;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setExportNotice("CSV downloaded");
@@ -405,7 +523,7 @@ export function AnalyticsWorkspace({
     />
   );
 
-  const rankCopy = metricCopy(rankMetric, windowKey);
+  const rankCopy = metricCopy(rankMetric, windowKey, rankSpan);
   const leadingHooks = (
     <section
       className="analytics-hooks-plate plate"
@@ -557,6 +675,8 @@ export function AnalyticsWorkspace({
                             {onNetwork.pools === 1 ? "pool" : "pools"} on{" "}
                             {focusLabel}
                           </>
+                        ) : rankSpan?.projects.get(row.project.id) ? (
+                          spanRowPools(rankSpan.projects.get(row.project.id)!)
                         ) : (
                           <>
                             {formatCount(row.volumePools)}{" "}
@@ -577,11 +697,11 @@ export function AnalyticsWorkspace({
                         selected ? null : { kind: "project", id: row.project.id },
                       )
                     }
-                    aria-label={`${row.project.name}: ${formatMetricExact(rankMetric, value)}${share === null ? "" : `, ${formatPercent(share)} ${rankCopy.denominator}`}. Focus project.`}
+                    aria-label={`${row.project.name}: ${rankFmt.spoken(value)}${share === null ? "" : `, ${formatPercent(share)} ${rankCopy.denominator}`}. Focus project.`}
                     title="Focus this project across charts and tables"
                   >
                     <span className="analytics-project-value">
-                      <strong>{formatMetric(rankMetric, value)}</strong>
+                      <strong>{rankFmt.compact(value)}</strong>
                       <small>{formatPercent(share)}</small>
                     </span>
                     <BarTrack
@@ -681,7 +801,9 @@ export function AnalyticsWorkspace({
       <p className="analytics-panel-footnote">
         {rankMetric === "trading"
           ? "Pools with trading counts pools with positive current volume; a pool without a current volume measurement is not counted. "
-          : "Pool counts under each hook do not indicate trading. "}
+          : rankSpan
+            ? "A dash means none of the hook's pools is among the largest. Pool counts under each hook do not indicate trading. "
+            : "Pool counts under each hook do not indicate trading. "}
         Shares are {rankCopy.denominator} in{" "}
         {chain === "all" ? "this view" : networkName}, not ecosystem market
         share. Bar colour is the hook’s use case.
@@ -898,6 +1020,12 @@ export function AnalyticsWorkspace({
     };
   }, [snapshot.marketCoverage, snapshot.inventory, chain, census]);
 
+  // Edition: what the ribbons and the Data notes' summary show apart from the
+  // span, so each keeps the height of the tallest span shown (useHeldHeight).
+  const heldKey = STATIC_EDITION
+    ? `${chain}|${windowKey}|${metric}|${snapshot.generatedAt}`
+    : null;
+
   return (
     <section className="analytics-workspace" aria-label="Hook analytics">
       <AnalyticsControlBar
@@ -916,8 +1044,9 @@ export function AnalyticsWorkspace({
         setChain={setChain}
         networks={networkOptions}
         unknownChain={!knownChain}
-        windowLabel={`${windows[windowKey]} window`}
+        windowLabel={`${spanVolume && spanText ? spanText : windows[windowKey]} window`}
         focus={focusSummary}
+        focusHold={spanVolume}
         clearFocus={() => setFocus(null)}
         disabled={disabled}
         actions={
@@ -937,7 +1066,11 @@ export function AnalyticsWorkspace({
               onClick={download}
               disabled={disabled}
               aria-label="Export analytics CSV"
-              title="Export current market measurements and network inventory (original measurement clocks)"
+              title={
+                spanChosen && daily.lens && spanText
+                  ? `Export current market measurements and network inventory (original measurement clocks), and the ${spanText} figures of the largest pools`
+                  : "Export current market measurements and network inventory (original measurement clocks)"
+              }
             >
               {exportNotice === "CSV downloaded" ? (
                 <Check size={14} />
@@ -972,6 +1105,8 @@ export function AnalyticsWorkspace({
 
       <AnalyticsReadouts
         kicker="01 · At a glance"
+        scopeHold={spanChosen}
+        scopeHoldWidth={spanChosen && !spanScope}
         metric={metric}
         setMetric={setMetric}
         disabled={disabled}
@@ -981,26 +1116,72 @@ export function AnalyticsWorkspace({
               Partial coverage · Not total Uniswap volume
             </span>
             <span>
-              Hook pools Radar can price · {chain === "all" ? "All networks" : networkName}{" "}
-              · {windows[windowKey]} window ·{" "}
-              {STATIC_EDITION
-                ? "measured within 5 minutes of the snapshot"
-                : "measured within the last 5 minutes"}
+              {spanChosen && spanText
+                ? spanScope
+                  ? spanScopeLine(
+                      spanScope,
+                      chain === "all" ? "All networks" : networkName,
+                    )
+                  : `Largest hook pools only · ${chain === "all" ? "All networks" : networkName} · ${spanText}`
+                : `Hook pools Radar can price · ${chain === "all" ? "All networks" : networkName} · ${windows[windowKey]} window · ${
+                    STATIC_EDITION
+                      ? "measured within 5 minutes of the snapshot"
+                      : "measured within the last 5 minutes"
+                  }`}
             </span>
           </>
         }
         items={[
-          {
-            key: "volume",
-            primary: true,
-            label: <>Trading volume · {windows[windowKey]}</>,
-            value: formatMoneyCompact(totals.volumeUsd),
-            exact: formatMetricExact("volume", totals.volumeUsd),
-            testId: "analytics-volume",
-            caption: (
-              <Measurement freshness={totals.freshness.volume[windowKey]} now={now} />
-            ),
-          },
+          spanChosen && spanText
+            ? spanScope
+              ? {
+                  key: "volume",
+                  primary: true,
+                  hold: true,
+                  label: <>Trading volume · {spanText}</>,
+                  value: valueFormat("volume", spanScope).compact(spanScope.usd),
+                  exact: spanTileTitle(spanScope),
+                  spoken:
+                    spanScope.usd === null
+                      ? undefined
+                      : spanTileSpoken(spanScope),
+                  testId: "analytics-volume",
+                  caption: (
+                    <span className="analytics-metric-caption">
+                      <span className="analytics-dot" aria-hidden="true" />
+                      {spanTileCaption(spanScope)}
+                    </span>
+                  ),
+                }
+              : {
+                  key: "volume",
+                  primary: true,
+                  hold: true,
+                  label: <>Trading volume · {spanText}</>,
+                  value: daily.phase === "error" ? "—" : "…",
+                  testId: "analytics-volume",
+                  caption: (
+                    <span className="analytics-metric-caption">
+                      {daily.phase === "error"
+                        ? "Not loaded"
+                        : `Loading ${spanText} volume`}
+                    </span>
+                  ),
+                }
+            : {
+                key: "volume",
+                primary: true,
+                label: <>Trading volume · {windows[windowKey]}</>,
+                value: formatMoneyCompact(totals.volumeUsd),
+                exact: formatMetricExact("volume", totals.volumeUsd),
+                testId: "analytics-volume",
+                caption: (
+                  <Measurement
+                    freshness={totals.freshness.volume[windowKey]}
+                    now={now}
+                  />
+                ),
+              },
           {
             key: "reserves",
             label: "Reserves held in pools",
@@ -1013,7 +1194,11 @@ export function AnalyticsWorkspace({
           },
           {
             key: "trading",
-            label: "Pools with trading",
+            // The edition names the window in every state, so the label never
+            // changes when a span is chosen.
+            label: STATIC_EDITION
+              ? `Pools with trading · ${windows[windowKey]}`
+              : "Pools with trading",
             value: totals.volumePools ? formatCount(totals.activePools) : "—",
             testId: "analytics-active-pools",
             caption: (
@@ -1050,21 +1235,25 @@ export function AnalyticsWorkspace({
         ]}
         composition={
           <AnalyticsComposition
-            model={model}
+            model={shownModel}
             metric={metric}
             focus={focus}
             setFocus={setFocus}
+            pending={spanPending}
             disabled={disabled}
+            heldKey={heldKey}
           />
         }
         method={
           <details className="analytics-method">
-            <summary>
+            <AnalyticsMethodSummary heldKey={heldKey}>
               <span className={`status-led ${hasCurrent ? "green" : "amber"}`} />
               <span>
                 {hasCurrent
                   ? STATIC_EDITION
-                    ? "All figures are current as of the snapshot"
+                    ? spanScope
+                      ? spanSummaryLine(spanScope)
+                      : "All figures are current as of the snapshot"
                     : "All figures are current"
                   : STATIC_EDITION
                     ? chain === "all"
@@ -1076,9 +1265,10 @@ export function AnalyticsWorkspace({
                 How these numbers are measured
               </span>
               <ChevronDown size={14} />
-            </summary>
+            </AnalyticsMethodSummary>
             <div className="analytics-method-body">
               <p>
+                {spanScope && STATIC_EDITION ? "24H and reserve figures: " : ""}
                 Volume and reserve totals include only tracked v4 pools with
                 hooks and measurements less than five minutes old
                 {STATIC_EDITION ? " when the snapshot was taken" : ""}. Each
@@ -1094,6 +1284,12 @@ export function AnalyticsWorkspace({
                 not verified. Reserves are provider valuations, not executable
                 liquidity or protocol TVL.
               </p>
+              {spanScope && <p>{spanMethodNote(spanScope)}</p>}
+              {spanScope && spanDetailNote(spanScope) && (
+                <p data-testid="analytics-span-detail">
+                  {spanDetailNote(spanScope)}
+                </p>
+              )}
               {(volumeFreshness.stalePools > 0 ||
                 volumeFreshness.unknownPools > 0) && (
                 <p>
@@ -1130,7 +1326,7 @@ export function AnalyticsWorkspace({
       <AnalyticsContributors
         kicker={historyFirst ? "03 · Who contributed" : "02 · Who contributed"}
         title="Networks, use cases and hooks behind the total"
-        model={model}
+        model={shownModel}
         metric={metric}
         focus={focus}
         setFocus={setFocus}
@@ -1143,12 +1339,14 @@ export function AnalyticsWorkspace({
             : totals.freshness.volume[windowKey]
         }
         now={now}
+        pending={spanPending}
         disabled={disabled}
       >
         {leadingHooks}
       </AnalyticsContributors>
 
       <AnalyticsEvidence
+        spanLabel={spanText}
         kicker={historyFirst ? "04 · Evidence" : "03 · Evidence"}
         windowKey={windowKey}
         metric={metric}

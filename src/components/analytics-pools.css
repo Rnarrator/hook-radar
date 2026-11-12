@@ -580,3 +580,14 @@
     width: 100%;
   }
 }
+
+/* Edition: the 7D or 30D column is one more column of the table. */
+.analytics-pool-table[data-span] {
+  min-width: 1060px;
+}
+
+@media (max-width: 40rem) {
+  .analytics-pool-table[data-span] {
+    min-width: 0;
+  }
+}

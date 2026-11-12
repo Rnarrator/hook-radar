@@ -20,6 +20,8 @@ import {
   DAILY_SOURCE_ID,
   validateDailyShape,
 } from "../../../shared/daily-volume.ts";
+import { analyticsOverviewAsync } from "../../../server/analytics-overview.mjs";
+import { GENERATED_AT } from "./generate.mjs";
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), "data");
 export const FIXTURE_THROUGH = "2026-10-27";
@@ -35,15 +37,20 @@ const FIGURES = {
   "00c": { v7: 100, v30: 400 },
 };
 
-export function dailyVariant() {
+export function dailyVariant({
+  figures = FIGURES,
+  patch = (pool) => pool,
+  omit = () => false,
+} = {}) {
   const snapshot = JSON.parse(
     readFileSync(join(DATA, "snapshot.json"), "utf8"),
   );
+  snapshot.pools = snapshot.pools.map(patch);
   const pools = snapshot.pools
-    .filter((pool) => FIGURES[pool.address.slice(-3)])
+    .filter((pool) => figures[pool.address.slice(-3)] && !omit(pool))
     .map((pool, index) => ({
       id: `${pool.chain}:${pool.address.toLowerCase()}`,
-      ...FIGURES[pool.address.slice(-3)],
+      ...figures[pool.address.slice(-3)],
       // Each answer is read after 27 October ended, and before the snapshot.
       at: `2026-10-28T00:${String(10 + index).padStart(2, "0")}:00.000Z`,
     }))
@@ -70,4 +77,61 @@ export function dailyVariant() {
     daily,
     source,
   };
+}
+
+// ── The Analytics page ─────────────────────────────────────────────────────
+//
+// The Analytics page reads the overview files, not the snapshot: each carries a
+// ledger of the measured pools (network, use case, the 24H volume). Its 7D and
+// 30D figures are the daily figures joined to that ledger. This variant builds
+// the overview files from the variant snapshot with the repository's own
+// builder (so the ledger reconciles to the totals), and tunes the pools so that
+// every state the page can show is there:
+//
+//   frontier   its one pool is made current (the plain fixture leaves it 7.5
+//              minutes old, so no overview lists it) and is ONE day old, and its
+//              24H volume (300) is more than its 7D (250): the 24H window
+//              reaches into the day in progress, the 7D figure does not
+//   loose1     a covered pool no project owns: the use case is Unattributed
+//   gamma2     its 24H reading is stale: not in the ledger, not covered
+//   delta      measured, no daily figure: its use case has no covered pool
+//
+// A file for another variant: `omit` leaves pools out of daily.json (for
+// instance every Ethereum pool, so that Ethereum has volume and no figure).
+const ANALYTICS_FIGURES = {
+  ...FIGURES,
+  "007": { v7: 250, v30: 250, n7: 1, n30: 1 },
+};
+const frontierCurrent = (pool) =>
+  pool.address.endsWith("007")
+    ? { ...pool, metricUpdatedAt: "2026-10-28T14:04:20.000Z" }
+    : pool;
+
+const OVERVIEWS = [
+  ["all", "h1"],
+  ["all", "h6"],
+  ["all", "h24"],
+  ["base", "h24"],
+  ["ethereum", "h24"],
+  ["robinhood", "h24"],
+];
+
+export async function analyticsSpanVariant(options = {}) {
+  const variant = dailyVariant({
+    figures: ANALYTICS_FIGURES,
+    patch: frontierCurrent,
+    ...options,
+  });
+  const overviews = {};
+  for (const [chain, window] of OVERVIEWS) {
+    const envelope = await analyticsOverviewAsync(
+      variant.snapshot,
+      { chain, window },
+      { now: Date.parse(GENERATED_AT), contributions: true },
+    );
+    // The publication id is random per process; a fixed one keeps files stable.
+    envelope.publication.id = "fixture-publication";
+    overviews[`overview-${chain}-${window}.json`] = envelope;
+  }
+  return { ...variant, overviews };
 }

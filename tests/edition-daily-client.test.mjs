@@ -37,9 +37,14 @@ import { projectCsv } from "../src/export.ts";
 import { projectComparator } from "../src/model.ts";
 import {
   editionNavigation,
+  SPAN_VIEWS as EDITION_SPAN_VIEWS,
   STATIC_EDITION,
 } from "../src/edition.ts";
-import { navigationSearch, parseNavigation } from "../src/navigation.ts";
+import {
+  navigationSearch,
+  parseNavigation,
+  SPAN_VIEWS,
+} from "../src/navigation.ts";
 import { orderedPools } from "../src/project-presentation.ts";
 import {
   DAILY_FILE_MAX_POOLS,
@@ -130,8 +135,31 @@ test("the buttons exist only when the snapshot names the daily file as a live so
     false,
   );
   assert.equal(offersDaily(null), false);
-  for (const view of ["overview", "watchlist", "chains"]) assert.equal(dailyView(view), true, view);
-  for (const view of ["analytics", "map", "compare", "activity", "learn"]) assert.equal(dailyView(view), false, view);
+  for (const view of ["overview", "watchlist", "chains", "analytics", "projects"]) assert.equal(dailyView(view), true, view);
+  for (const view of ["map", "compare", "activity", "learn"]) assert.equal(dailyView(view), false, view);
+});
+
+test("one list says which pages show a span: the switch, the address and the landing rule read the same constant", () => {
+  // Three lists were once kept by hand (daily.ts, navigation.ts and
+  // editionNavigation); a page added to one only dropped the span silently.
+  assert.deepEqual([...EDITION_SPAN_VIEWS], ["overview", "watchlist", "chains", "analytics", "projects"]);
+  assert.equal(SPAN_VIEWS, EDITION_SPAN_VIEWS, "navigation.ts re-exports the edition's list");
+  for (const view of [
+    "overview", "analytics", "chains", "projects", "map", "learn", "watchlist", "compare", "activity",
+  ]) {
+    const shows = EDITION_SPAN_VIEWS.includes(view);
+    assert.equal(dailyView(view), shows, `switch: ${view}`);
+    assert.equal(
+      editionNavigation({ view, span: "d7" }, true).span === "d7",
+      view === "activity" ? false : shows,
+      `landing: ${view}`,
+    );
+    assert.equal(
+      /window=d7/.test(navigationSearch({ ...base, view, span: "d7" }, true)),
+      shows,
+      `address: ${view}`,
+    );
+  }
 });
 
 /* ── The lens ────────────────────────────────────────────────────────────── */
@@ -262,9 +290,9 @@ test("window=d7 and window=d30 are read as a span in the edition only; the windo
 });
 
 test("the span is written to the address on the views that show one, and only in the edition", () => {
-  for (const view of ["overview", "watchlist", "chains"])
+  for (const view of ["overview", "watchlist", "chains", "analytics"])
     assert.match(navigationSearch({ ...base, view, span: "d7" }, true), /window=d7/, view);
-  for (const view of ["analytics", "map", "compare", "activity", "learn"])
+  for (const view of ["map", "compare", "activity", "learn"])
     assert.doesNotMatch(navigationSearch({ ...base, view, span: "d30" }, true), /window=/, view);
   assert.equal(navigationSearch({ ...base, span: "d30" }, true), "?window=d30");
   // Never written by the live build, whatever the state holds.
@@ -286,7 +314,21 @@ test("window=d7 (the volume span) and analytics_range=d7 (the history range) are
   const analytics = { ...base, view: "analytics", analyticsRange: "d30", analyticsChain: "all", span: "d7" };
   const written = navigationSearch(analytics, true);
   assert.match(written, /analytics_range=d30/);
-  assert.doesNotMatch(written, /window=d7/, "Analytics shows no spans");
+  assert.match(written, /window=d7/, "Analytics shows 7D and 30D: both parameters are written");
+  assert.equal(
+    written,
+    "?view=analytics&analytics_range=d30&window=d7",
+    "the history range and the volume span stay two parameters",
+  );
+  const reloaded = parseNavigation(written, true);
+  assert.equal(reloaded.span, "d7");
+  assert.equal(reloaded.analyticsRange, "d30");
+  // The history range's default (d7) is not written, and is not a span.
+  assert.equal(
+    navigationSearch({ ...base, view: "analytics", analyticsRange: "d7", analyticsChain: "base", span: "d30" }, true),
+    "?view=analytics&analytics_chain=base&window=d30",
+  );
+  assert.equal(parseNavigation("?view=analytics&analytics_range=d7", true).span, null);
   const both = parseNavigation("?view=chains&window=d7&analytics_range=d30", true);
   assert.equal(both.span, "d7");
   assert.equal(both.analyticsRange, "d30");
@@ -297,15 +339,21 @@ test("window=d7 (the volume span) and analytics_range=d7 (the history range) are
 
 test("a link to a page that shows no spans drops the span; the pages that do keep it", () => {
   const link = (search) => editionNavigation(parseNavigation(search, true), true);
-  for (const view of ["analytics", "map", "compare", "learn"])
+  for (const view of ["map", "compare", "learn"])
     assert.equal(link(`?view=${view}&window=d7`).span, null, view);
   assert.equal(link("?view=activity&window=d7").view, "overview", "Activity lands on Discover");
   assert.equal(link("?view=activity&window=d7").span, null);
-  for (const view of ["overview", "watchlist", "chains"])
+  for (const view of ["overview", "watchlist", "chains", "analytics"])
     assert.equal(link(`?view=${view}&window=d30`).span, "d30", view);
+  assert.equal(
+    link("?view=analytics&window=d30&analytics_chain=base").analyticsChain,
+    "base",
+    "a link to one network on a span keeps both",
+  );
+  assert.equal(link("?view=projects&window=d30").span, "d30", "projects");
   assert.equal(link("?window=d7").span, "d7");
   // Off in the live build: nothing changes.
-  const state = { view: "analytics", span: "d7" };
+  const state = { view: "map", span: "d7" };
   assert.equal(editionNavigation(state, false), state);
 });
 

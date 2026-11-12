@@ -1274,3 +1274,72 @@
 .analytics-workspace .analytics-metric[data-active] {
   background: linear-gradient(180deg, color-mix(in oklab, var(--signal) 7%, transparent), transparent 75%);
 }
+
+/* ── 7D and 30D (edition only) ───────────────────────────────────────────── */
+
+/* A tile's figure keeps the height of its unscaled line. fit-figures shrinks a
+   long figure by setting an inline font-size, which would shorten the line, so
+   "≥$2.31B" and "$313.24M" (or a dash) could give the tile two heights. The
+   minimum is taken from the unscaled size, which the inline style does not
+   touch. */
+:root[data-edition="snapshot"] .analytics-workspace .analytics-metric > strong {
+  --figure-size: var(--fs-stat);
+  font-size: var(--figure-size);
+  min-height: calc(var(--figure-size) * var(--lh-tight));
+}
+
+:root[data-edition="snapshot"] .analytics-workspace .analytics-metric-primary > strong {
+  --figure-size: clamp(2.5rem, 1.6rem + 2.6vw, 4.25rem);
+  font-size: var(--figure-size);
+}
+
+/* The caption beside the metric switch has the width of its longest form
+   ("30D window · USD", 16 characters), so choosing a span leaves everything
+   beside it where it was. */
+:root[data-edition="snapshot"] .analytics-scope-caption {
+  display: inline-block;
+  min-width: calc(16 * (1ch + 0.04em));
+}
+
+/* The span's figures are on their way, or did not come: one status line in the
+   place of the ribbons or the bars (which keep the height they had while
+   loading). */
+.analytics-span-pending {
+  align-content: start;
+}
+
+.analytics-span-pending > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+
+/* A scope line that is held at its earlier height (see useHeldHeight) keeps its
+   rows at the top: they are not spread over the extra room. */
+:root[data-edition="snapshot"] .analytics-scope-line {
+  align-content: flex-start;
+}
+
+/* The focus bar held at its earlier height keeps its rows at the top too. */
+:root[data-edition="snapshot"] .analytics-focus-bar {
+  align-content: flex-start;
+}
+
+/* The status line beside the scope line has nothing to say in this edition. It
+   stays in the page (a live region has to be there before it speaks) but takes
+   no room: as a flex item of no width it still wants the row's gap, and a scope
+   line that nearly fills its row (the 30D wording at some widths) pushed it onto
+   a row of its own and the tiles below down by 32px. */
+:root[data-edition="snapshot"] .analytics-refresh-status:empty {
+  position: absolute;
+  min-height: 0;
+  margin: 0;
+}
+
+/* The ribbons held at the height they had under another span (useHeldHeight)
+   keep their rows at the top: the extra room is at the bottom, not spread over
+   the gaps between the rows. */
+:root[data-edition="snapshot"] .analytics-composition {
+  align-content: start;
+}

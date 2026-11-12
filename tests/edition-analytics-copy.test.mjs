@@ -1000,7 +1000,12 @@ test("the workspace's export hands the edition the census date, and only the edi
   );
   assert.match(
     source,
-    /analyticsCsv\(\s*result,\s*STATIC_EDITION\s*\?\s*\{\s*edition: true,\s*censusAsOf: snapshot\.inventory\?\.generatedAt \?\? null,?\s*\}\s*:\s*undefined,?\s*\)/,
+    /analyticsCsv\(\s*result,\s*STATIC_EDITION\s*\?\s*\{\s*edition: true,\s*censusAsOf: snapshot\.inventory\?\.generatedAt \?\? null,[\s\S]*?\}\s*:\s*undefined,?\s*\)/,
+  );
+  // The span's columns are added only while a span is chosen and loaded.
+  assert.match(
+    source,
+    /\.\.\.\(spanChosen && spanText && daily\.lens\s*\?\s*\{\s*span: \{/,
   );
   assert.equal(
     source.match(/analyticsCsv\(/g).length,

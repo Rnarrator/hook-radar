@@ -1,8 +1,10 @@
 import type { AnalyticsPool } from "./analytics.ts";
+import type { DailyLens } from "./daily.ts";
 import { numericAxis, thinTicks } from "./charts/scales.ts";
 import type { NumericAxis } from "./charts/scales.ts";
 
-export type PoolSort = "volume" | "reserves" | "name";
+/** "span" (edition): the 7D or 30D figure of the largest pools. */
+export type PoolSort = "volume" | "reserves" | "name" | "span";
 export type PoolScale = "log" | "linear";
 export const POOL_SCATTER_LIMIT = 80;
 export const POOL_PAGE_SIZE = 10;
@@ -32,6 +34,9 @@ export function sortAnalyticsPools(
   ascending = false,
   query = "",
   names: ReadonlyMap<string, string> = new Map(),
+  /** Edition: the lens "span" sorts by. A pool it has no figure for sorts last,
+   * whichever way the column is ordered (unavailable, never zero). */
+  lens: Pick<DailyLens, "pool"> | null = null,
 ): AnalyticsPool[] {
   const normalized = query.trim().toLocaleLowerCase();
   return rows
@@ -53,11 +58,17 @@ export function sortAnalyticsPools(
       const primary =
         sort === "name"
           ? a.pool.name.localeCompare(b.pool.name) * (ascending ? 1 : -1)
-          : compareNumber(
-              sort === "volume" ? a.volumeUsd : a.liquidityUsd,
-              sort === "volume" ? b.volumeUsd : b.liquidityUsd,
-              ascending,
-            );
+          : sort === "span"
+            ? compareNumber(
+                lens?.pool(a.pool)?.usd ?? null,
+                lens?.pool(b.pool)?.usd ?? null,
+                ascending,
+              )
+            : compareNumber(
+                sort === "volume" ? a.volumeUsd : a.liquidityUsd,
+                sort === "volume" ? b.volumeUsd : b.liquidityUsd,
+                ascending,
+              );
       return primary || analyticsPoolKey(a).localeCompare(analyticsPoolKey(b));
     });
 }

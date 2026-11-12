@@ -793,3 +793,26 @@ body:has(.compare-tray) .toast {
     bottom: calc(11.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* Auto Snapshot edition only (the root carries data-edition, set by the build;
+   the live page never has it and keeps its 4.25rem tabs). The edition's dock
+   holds eight tabs, one more than the page had: with the tabs 3.5rem wide, as
+   wide as their labels need, the dock shows at least as many tabs as before at
+   every phone width, and the tab that is current is scrolled into view. A soft
+   pink edge says which side has more (the same cue a scrolling table has, see
+   compact.css): the covers are attached to the content, so each wash goes when
+   that end is reached and nothing shows when the tabs fit. */
+@media (max-width: 60rem) {
+  :root[data-edition="snapshot"] .topbar nav button {
+    flex: 1 0 3.5rem;
+  }
+
+  :root[data-edition="snapshot"] .topbar nav {
+    background:
+      linear-gradient(to right, var(--surface-1), var(--surface-1)) left center / 2rem 100% no-repeat local,
+      linear-gradient(to left, var(--surface-1), var(--surface-1)) right center / 2rem 100% no-repeat local,
+      linear-gradient(to right, rgba(255, 92, 169, 0.2), transparent) left center / 1.25rem 100% no-repeat scroll,
+      linear-gradient(to left, rgba(255, 92, 169, 0.2), transparent) right center / 1.25rem 100% no-repeat scroll,
+      var(--surface-1);
+  }
+}

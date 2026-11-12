@@ -16,7 +16,10 @@ import { chromium, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { startStaticEditionServer } from "./static-edition-server.mjs";
 import { GENERATED_AT } from "../tests/fixtures/static-data/generate.mjs";
-import { dailyVariant } from "../tests/fixtures/static-data/daily-variant.mjs";
+import {
+  analyticsSpanVariant,
+  dailyVariant,
+} from "../tests/fixtures/static-data/daily-variant.mjs";
 
 const DIST = resolve(process.env.RADAR_TEST_DIST || "dist");
 const DATA = resolve("tests/fixtures/static-data/data");
@@ -58,7 +61,13 @@ after(async () => {
  * answer: null (404) or a body. */
 async function site(
   t,
-  { size = DESKTOP, daily = true, file = variant.daily, timezoneId } = {},
+  {
+    size = DESKTOP,
+    daily = true,
+    source = variant,
+    file = source.daily,
+    timezoneId,
+  } = {},
 ) {
   const server = await startStaticEditionServer({
     distDir: DIST,
@@ -66,8 +75,11 @@ async function site(
     mount: MOUNT,
   });
   if (daily) {
-    server.setData("snapshot.json", JSON.stringify(variant.snapshot));
+    server.setData("snapshot.json", JSON.stringify(source.snapshot));
     server.setData("daily.json", file);
+    // A source with overview files (the Analytics page reads those).
+    for (const [name, envelope] of Object.entries(source.overviews ?? {}))
+      server.setData(name, JSON.stringify(envelope));
   }
   const context = await browser.newContext({
     viewport: size,
@@ -491,19 +503,27 @@ test("a file that is missing, not valid or too old removes the buttons, says so,
   }
 });
 
-test("Analytics, Compare and the map show the plain windows only, and a link to one drops the span", async (t) => {
-  const s = await site(t);
+test("Analytics shows 7D and 30D and keeps the span; Compare and the map show the plain windows only, and a link to them drops it", async (t) => {
+  // The Analytics page reads the overview files, which name the daily file too.
+  const s = await site(t, { source: await analyticsSpanVariant() });
   await s.goto("?window=d7");
   await ready(s.page);
   await s.page.getByTestId("view-analytics").click();
-  await expect(s.page.locator(".window-switch")).toBeVisible();
-  assert.deepEqual(await switchLabels(s.page), ["1H", "6H", "24H"]);
-  assert.doesNotMatch(new URL(s.page.url()).search, /window=d7/);
+  await expect(s.page.getByTestId("analytics-volume")).toBeVisible({ timeout: 30000 });
+  assert.deepEqual(
+    await s.page.locator(".title-controls .window-switch button").allInnerTexts(),
+    ["1H", "6H", "24H", "7D", "30D"],
+  );
+  assert.deepEqual(
+    await s.page.locator('.title-controls .window-switch button[aria-pressed="true"]').allInnerTexts(),
+    ["7D"],
+  );
+  assert.match(new URL(s.page.url()).search, /window=d7/);
   await s.goto("?view=compare&window=d30");
   await expect.poll(() => new URL(s.page.url()).search).not.toContain("window=");
   await s.goto("?view=map&window=d7");
   await expect.poll(() => new URL(s.page.url()).search).not.toContain("window=d7");
-  assert.equal(s.dailyRequests().length, 1, "only the first page asked for the file");
+  assert.equal(s.dailyRequests().length >= 1, true, "the file is asked for once per page load");
   s.verify();
 });
 

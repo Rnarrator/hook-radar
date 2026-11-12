@@ -230,6 +230,7 @@ const PAGES = [
     `?view=analytics&analytics_chain=${network.slug}&window=h1`,
     "snapshot",
   ],
+  ["Projects", "?view=projects", "snapshot"],
   ["Compare", `?view=compare&compare=${first.id},${second.id}`, "snapshot"],
   ["Watchlist, empty", "?view=watchlist", "snapshot"],
   ["Watchlist, saved", "?view=watchlist", "snapshot", [first.id]],
@@ -652,6 +653,7 @@ test(
 const TABS = [
   "Discover",
   "Analytics",
+  "Projects",
   "Networks",
   "By use case",
   "Compare",
@@ -692,6 +694,7 @@ for (const [sizeName, size] of Object.entries(SIZES))
       [
         "view-overview",
         "view-analytics",
+        "view-projects",
         "view-chains",
         "view-map",
         "view-compare",
@@ -707,7 +710,7 @@ for (const [sizeName, size] of Object.entries(SIZES))
     // Focus walks the tabs in that order, then reaches Jump.
     await s.page.evaluate(() => document.querySelector(".brand").focus());
     const walked = [];
-    for (let i = 0; i < 8; i += 1) {
+    for (let i = 0; i < 9; i += 1) {
       await s.page.keyboard.press("Tab");
       walked.push(
         await s.page.evaluate(
@@ -718,6 +721,7 @@ for (const [sizeName, size] of Object.entries(SIZES))
     assert.deepEqual(walked, [
       "view-overview",
       "view-analytics",
+      "view-projects",
       "view-chains",
       "view-map",
       "view-compare",
@@ -1037,5 +1041,19 @@ for (const [sizeName, size] of Object.entries(SIZES))
         pages,
         [...pages].sort((a, b) => a - b),
       );
+      // The Projects page is the edition's alone: no tab, no Jump entry, and a
+      // link to it lands on Discover.
+      assert.equal(
+        options.some((option) => option.startsWith("Projects")),
+        false,
+        options.join(" | "),
+      );
+      await s.page.keyboard.press("Escape");
+      await s.page.goto(`${s.server.url}?view=projects`);
+      await expect(s.page.getByRole("heading", { level: 1 })).toHaveText(
+        "Uniswap v4 hooks",
+        { timeout: 60000 },
+      );
+      await expect(s.page.getByTestId("view-projects")).toHaveCount(0);
     },
   );

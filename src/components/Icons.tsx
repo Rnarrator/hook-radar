@@ -32,6 +32,7 @@ import {
   BookOpen as BookOpenGlyph,
   Activity as ActivityGlyph,
   GitCompareArrows as GitCompareArrowsGlyph,
+  LayoutGrid as LayoutGridGlyph,
   Rocket as RocketGlyph,
   Command as CommandGlyph,
   Menu as MenuGlyph,
@@ -99,6 +100,7 @@ export const Orbit = utility(OrbitGlyph);
 export const BookOpen = utility(BookOpenGlyph);
 export const Activity = utility(ActivityGlyph);
 export const GitCompareArrows = utility(GitCompareArrowsGlyph);
+export const LayoutGrid = utility(LayoutGridGlyph);
 export const Rocket = utility(RocketGlyph);
 export const Command = utility(CommandGlyph);
 export const Menu = utility(MenuGlyph);

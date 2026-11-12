@@ -432,6 +432,18 @@ export const CENSUS_HOOKS_SCOPE =
 
 /* ── Navigation ────────────────────────────────────────────────────────── */
 
+/** The pages that can show 7D and 30D (edition only). Every other page shows the
+ * plain windows, and a link to one drops the span. The one list: the address
+ * parser (navigation.ts), the switch (daily.ts) and the landing rule below all
+ * read it. */
+export const SPAN_VIEWS: readonly string[] = [
+  "overview",
+  "watchlist",
+  "chains",
+  "analytics",
+  "projects",
+];
+
 /** Activity and Frontier's extension explorer need the live service. A link to
  * Activity lands on Discover; an extension selection in a link is ignored. */
 export function editionNavigation<
@@ -443,9 +455,9 @@ export function editionNavigation<
   },
 >(state: T, enabled: boolean = STATIC_EDITION): T {
   if (!enabled) return state;
-  // 7D and 30D are shown by Discover, the Watchlist and Networks only.
+  // 7D and 30D are shown by the pages in SPAN_VIEWS only.
   const stated =
-    state.span != null && !["overview", "watchlist", "chains"].includes(state.view)
+    state.span != null && !SPAN_VIEWS.includes(state.view)
       ? { ...state, span: null }
       : state;
   const withoutExtension =
@@ -471,14 +483,19 @@ export function editionCatchUpDue(
   );
 }
 
+/** Pages only the edition has. The live service does not offer them, and a link
+ * to one lands on Discover (parseNavigation with `edition` unset). */
+export const EDITION_ONLY_VIEWS: readonly string[] = ["projects"];
+
 /** The pages the edition offers, in navigation order. The guide ("learn") comes
  * last here, after the Watchlist; the live service keeps it second. The one
- * order serves the header tabs, the phone's bottom tab bar and the Jump list. */
+ * order serves the header tabs, the phone's bottom tab bar and the Jump list.
+ * A page only the edition has (the Projects page) is left out of the live list. */
 export function editionViews<T extends string>(
   views: readonly T[],
   enabled: boolean = STATIC_EDITION,
 ): T[] {
-  if (!enabled) return [...views];
+  if (!enabled) return views.filter((view) => !EDITION_ONLY_VIEWS.includes(view));
   const offered = views.filter((view) => view !== "activity");
   return [
     ...offered.filter((view) => view !== "learn"),

@@ -204,7 +204,12 @@ test("the CSV file name takes its date from the day it is made, and live is unch
   const workspace = read("src/components/AnalyticsWorkspace.tsx");
   assert.match(
     workspace,
-    /link\.download = `hook-radar-analytics-\$\{chain\}-\$\{windowKey\}-\$\{historyExportTimes\(now\)\.exportedAt\.slice\(0, 10\)\}\.csv`/,
+    /link\.download = `hook-radar-analytics-\$\{chain\}-\$\{windowKey\}\$\{spanSuffix\}-\$\{historyExportTimes\(now\)\.exportedAt\.slice\(0, 10\)\}\.csv`/,
+  );
+  // The suffix is empty without a span, so the name is what it was.
+  assert.match(
+    workspace,
+    /const spanSuffix = spanChosen && daily\.lens \? `-\$\{daily\.lens\.span\}` : "";/,
   );
   assert.doesNotMatch(workspace, /new Date\(now\)\.toISOString\(\)\.slice/);
 });

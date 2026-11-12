@@ -22,14 +22,19 @@ import {
   validateDailyShape,
 } from "../shared/daily-volume.ts";
 import type { DailyFile, DailySpan } from "../shared/daily-volume.ts";
-import { fullTimeLabel, utcDate, utcDayMonth } from "./edition.ts";
+import {
+  SPAN_VIEWS,
+  fullTimeLabel,
+  utcDate,
+  utcDayMonth,
+} from "./edition.ts";
 import { money } from "./model.ts";
 
 export type { DailyFile, DailySpan };
 export { DAILY_SOURCE_ID, DAILY_SPANS };
 
 /** The views that show a span. Others show the plain windows only. */
-export const DAILY_VIEWS: readonly string[] = ["overview", "watchlist", "chains"];
+export const DAILY_VIEWS: readonly string[] = SPAN_VIEWS;
 export const dailyView = (view: string): boolean => DAILY_VIEWS.includes(view);
 
 /** Whether a snapshot offers 7D and 30D: it names the daily file as a live source. */
@@ -91,6 +96,10 @@ export interface DailyLens {
   /** The last complete UTC day the figures cover, YYYY-MM-DD. */
   readonly through: string;
   readonly throughMs: number;
+  /** The snapshot run the file was collected with (its snapshotGeneratedAt). */
+  readonly runAt: string;
+  /** The ids of the pools the file lists, lowercase. */
+  readonly ids: readonly string[];
   pool(pool: Pick<Pool, "id" | "chain" | "address">): PoolDaily | null;
   sum(pools: readonly Pick<Pool, "id" | "chain" | "address">[]): DailySum;
 }
@@ -119,6 +128,8 @@ export function createDailyLens(file: DailyFile, span: DailySpan): DailyLens {
     width,
     through: file.through,
     throughMs: dayStartMs(through),
+    runAt: file.snapshotGeneratedAt,
+    ids: file.pools.map((row) => row.id.toLowerCase()),
     pool: lookup,
     sum(pools) {
       let usd: number | null = null;

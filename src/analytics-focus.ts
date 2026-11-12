@@ -73,9 +73,25 @@ export function metricShare(
   return Number.isFinite(share) ? share : null;
 }
 
-/** Plain-language metric names used by captions, headings and denominators. */
-export function metricCopy(metric: AnalyticsMetric, windowKey: WindowKey) {
+/** Plain-language metric names used by captions, headings and denominators.
+ * With `span` (edition: 7D or 30D of the largest pools) the volume copy says
+ * so: the figures are the daily volume of the largest pools only, and a share
+ * is of the covered volume, never of the tracked total. The other metrics have
+ * no span meaning and never change. */
+export function metricCopy(
+  metric: AnalyticsMetric,
+  windowKey: WindowKey,
+  span?: { label: string } | null,
+) {
   const window = windowKey === "h1" ? "1H" : windowKey === "h6" ? "6H" : "24H";
+  if (metric === "volume" && span)
+    return {
+      name: `${span.label} volume`,
+      measure: `Tracked ${span.label} hook-pool volume, largest pools only`,
+      denominator: `of covered ${span.label} volume`,
+      unit: "USD",
+      money: true,
+    };
   if (metric === "volume")
     return {
       name: "Volume",
@@ -240,7 +256,7 @@ type Contribution = NonNullable<
   AnalyticsOverviewEnvelope["contributions"]
 >["rows"][number];
 
-function ledgerCategory(
+export function ledgerCategory(
   envelope: AnalyticsOverviewEnvelope,
   row: Contribution,
 ): string {
