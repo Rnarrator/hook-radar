@@ -17,6 +17,12 @@
 # pages by); every other run measures the pools already known. A run started
 # by hand looks for new pools only when "discover" is ticked.
 #
+# The last step of a collecting run reads, at most twice a day per pool, the daily
+# volume of the largest pools (7D and 30D) from GeckoTerminal: up to 20 requests,
+# after everything else, on the same paced lane and inside the 399-request cap. It
+# never fails a run; COLLECTOR_DAILY_MAX_REQUESTS (set in
+# the Collect step's env) can lower it, and 0 switches it off.
+#
 # The safeguard that matters most: the deploy job needs the collect job. If the
 # collector refuses to publish (too few pools with a current volume, a provider
 # refused us, a validator failed) the collect job fails, nothing is deployed and

@@ -1,0 +1,76 @@
+/* 7D and 30D volume of the largest pools (edition only). The figure, the line
+   under it that says where it runs to, and the line beside the switch. The
+   colours and type are the design system's; nothing here is new. */
+
+.daily-figure {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 0;
+}
+
+.daily-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.daily-through {
+  display: block;
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.daily-none .daily-value,
+.daily-none > span[aria-hidden="true"],
+.daily-pending > span[aria-hidden="true"] {
+  color: var(--ink-muted);
+}
+
+/* The headline figure of a card or a drawer reads left to right. */
+.mobile-project-bottom .daily-figure,
+.daily-figure.is-start {
+  align-items: flex-start;
+}
+
+/* The line beside the switch: a scope label of the figures, real text. */
+.title-controls .daily-caption {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: var(--lh-snug);
+}
+
+.title-controls .daily-caption button {
+  min-height: 2rem;
+}
+
+@media (max-width: 60rem) {
+  .title-controls .daily-caption {
+    justify-content: flex-start;
+  }
+}
+
+/* A small note under a drawer's headline figure. */
+.daily-note {
+  margin: var(--s-2) 0 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  line-height: var(--lh-snug);
+}
+
+/* Five short buttons share the switch on a narrow phone. */
+@media (max-width: 40rem) {
+  .window-switch button[data-span] {
+    min-width: 0;
+  }
+}

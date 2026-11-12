@@ -10,7 +10,7 @@ This is enforced, not just promised. A replay of recorded fixtures (`--offline`)
 
 ## 2. Unknown is not zero
 
-If a provider does not know a pool, the pool is **unresolved**, not "0 volume". A missing value stays missing (`null`) all the way to the screen and shows as unavailable. A measured zero is a real number and is kept as zero. Never turn one into the other to make a table look tidy.
+If a provider does not know a pool, the pool is **unresolved**, not "0 volume". A missing value stays missing (`null`) all the way to the screen and shows as unavailable. A measured zero is a real number and is kept as zero. The same holds for 7D and 30D volume: a pool that has no daily figure shows a dash with the reason, and `$0` appears only for a pool whose complete days summed to nothing. Never turn one into the other to make a table look tidy.
 
 ## 3. Every figure keeps its own time and its source
 
@@ -18,11 +18,11 @@ Each measurement keeps the time it was taken and the provider it came from. Noth
 
 ## 4. The five-minute rule is applied honestly
 
-A measurement counts as current only if it was taken less than five minutes before the snapshot's time. Older ones are left out of totals. The five-minute limit is a constant of the project and is not loosened here. See [HOW-IT-WORKS.md](HOW-IT-WORKS.md) for how this edition applies it at collection time rather than at viewing time, and why the page shows absolute UTC times instead of "2 minutes ago".
+A measurement counts as current only if it was taken less than five minutes before the snapshot's time. Older ones are left out of totals. The five-minute limit is a constant of the project and is not loosened here. The 7D and 30D volume of the largest pools is a separate kind of figure: it is the sum of complete UTC days, which do not age, so the five-minute rule is not applied to it and not changed for the other windows. It is dated by the day it runs to (never the day in progress), shows the time each pool's answer was true, and is not shown once its end day is more than a day behind the snapshot's newest complete day. See [HOW-IT-WORKS.md](HOW-IT-WORKS.md) for how this edition applies it at collection time rather than at viewing time, and why the page shows absolute UTC times instead of "2 minutes ago".
 
 ## 5. Tracked is not total
 
-The figures describe **tracked hook pools**. They are not total Uniswap volume and not a market share. The scope label stays on every figure it belongs to ("Partial coverage · Not total Uniswap volume"). A project's sums are the sums of the pools measured in the snapshot, so where its pool count is marked as a lower bound ("≥") the dollar figures beside it are marked too. Frontier's figures count trades in its Uniswap v4 pools only; trades on a coin's bonding curve are not v4 volume and are never counted, so Frontier's own site, which adds them, shows more. Method notes belong in the collapsed Data notes and in these documents, not in banners.
+The figures describe **tracked hook pools**. They are not total Uniswap volume and not a market share. The scope label stays on every figure it belongs to ("Partial coverage · Not total Uniswap volume"). A project's sums are the sums of the pools measured in the snapshot, so where its pool count is marked as a lower bound ("≥") the dollar figures beside it are marked too. Because only the largest pools have 7D and 30D volume, every total of those figures is marked "at least" (≥) and says how many pools it covers; a pool without one is not counted as zero. Frontier's figures count trades in its Uniswap v4 pools only; trades on a coin's bonding curve are not v4 volume and are never counted, so Frontier's own site, which adds them, shows more. Method notes belong in the collapsed Data notes and in these documents, not in banners.
 
 ## 6. Ownership needs evidence
 

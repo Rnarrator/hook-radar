@@ -13,6 +13,7 @@ import { aggregateCurrentMarkets } from "../shared/market-freshness.ts";
 import { isPublishedPlatformProject } from "../shared/published-platform-hooks.ts";
 import { networkCaughtUp, networkHeadFresh } from "../shared/indexing.ts";
 import { buildAnalyticsSummary } from "./analytics.ts";
+import type { DailyLens, DailySum } from "./daily.ts";
 import type { AnalyticsSummary, AnalyticsTotals } from "./analytics.ts";
 import { isOfficialUniswapHookFamily } from "./protocol-logos.ts";
 import {
@@ -244,6 +245,10 @@ export interface ChainProtocol {
   volumePools: number;
   liquidityPools: number;
   freshness: MarketFreshness;
+  /** Edition: when the model was built over a 7D or 30D lens, `volumeUsd` and
+   * `volumePools` are the sum over this row's own pools that have daily
+   * figures, and this says how many of them did. Absent otherwise. */
+  daily?: DailySum;
   chainSlugs: string[];
   /** Reviewed launch platforms only: their figures cover the exact hooks the
    * platform's own sources publish, measured pool by pool (never the hooks of a
@@ -283,6 +288,8 @@ export interface ChainNetwork {
   volumePools: number;
   liquidityPools: number;
   freshness: MarketFreshness;
+  /** Edition: as on ChainProtocol, for the pools measured on this network. */
+  daily?: DailySum;
   caughtUp: boolean;
   headFresh: boolean;
 }
@@ -301,6 +308,9 @@ export interface ChainExplorerResult {
   hookCount: number;
   roles: { id: ChainRole | "all"; label: string; count: number }[];
   totals: AnalyticsTotals;
+  /** Edition: the 7D or 30D total over the pools measured in this scope, when
+   * the model was built over a lens. */
+  dailyTotals?: DailySum;
   inventory: {
     hookCount: number | null;
     hookPoolCount: number | null;
@@ -439,12 +449,14 @@ function buildChainBase(
     now = evaluationNow(),
     listings = true,
     hookOverlap = STATIC_EDITION,
+    daily = null,
   }: {
     chain?: string;
     windowKey?: WindowKey;
     now?: number;
     listings?: boolean;
     hookOverlap?: boolean;
+    daily?: DailyLens | null;
   } = {},
 ): ChainExplorerResult {
   const poolsByProject = new Map<string, Pool[]>();
@@ -553,11 +565,23 @@ function buildChainBase(
     ...[...chainsByProject.values()].flat(),
   ]);
   const empty = aggregateCurrentMarkets([], now);
+  // Edition: a network's 7D or 30D figure sums the pools measured on it that have
+  // daily figures; never the rows below, which can share pools.
+  const poolsByChain = new Map<string, Pool[]>();
+  if (daily)
+    for (const pool of analytics.observedPools) {
+      const rows = poolsByChain.get(pool.chain);
+      if (rows) rows.push(pool);
+      else poolsByChain.set(pool.chain, [pool]);
+    }
   const networks = [...networkSlugs]
     .map((slug): ChainNetwork => {
       const meta = metadata.get(slug);
       const inventory = inventoryByChain.get(slug) || null;
       const measurements = analyticsByChain.get(slug);
+      const networkDaily = daily
+        ? daily.sum(poolsByChain.get(slug) ?? [])
+        : null;
       const chainId =
         meta?.id ?? inventory?.chainId ?? deploymentChainIds.get(slug) ?? null;
       return {
@@ -574,11 +598,16 @@ function buildChainBase(
         protocolCount: listedByChain.get(slug)?.length || 0,
         hookCount: listedHooksByChain.get(slug)?.size || 0,
         observedPools: measurements?.samplePools || 0,
-        volumeUsd: measurements?.volumeUsd ?? null,
+        volumeUsd: networkDaily
+          ? networkDaily.usd
+          : (measurements?.volumeUsd ?? null),
         liquidityUsd: measurements?.liquidityUsd ?? null,
-        volumePools: measurements?.volumePools || 0,
+        volumePools: networkDaily
+          ? networkDaily.covered
+          : measurements?.volumePools || 0,
         liquidityPools: measurements?.liquidityPools || 0,
         freshness: measurements?.freshness || empty.freshness,
+        ...(networkDaily ? { daily: networkDaily } : {}),
         caughtUp: inventory ? networkCaughtUp(inventory) : false,
         headFresh: inventory ? networkHeadFresh(inventory, now) : false,
       };
@@ -636,6 +665,11 @@ function buildChainBase(
         })()
       : undefined;
     const aggregate = aggregateCurrentMarkets(pools, now);
+    // Edition: over a 7D or 30D lens the row's figure is the sum over its own
+    // pools (a reviewed launchpad's exact hooks' pools, or the project's) that
+    // have daily figures. A pool two rows share is in both rows' figures and
+    // once in a network's.
+    const rowDaily = daily ? daily.sum(pools) : null;
     const deployments = uniqueDeployments(
       project.deployments.filter(
         (deployment) => chain === "all" || deployment.chain === chain,
@@ -675,12 +709,15 @@ function buildChainBase(
         chainsByProject.get(project.id)!,
       ),
       ...chainProtocolRoles(project),
-      volumeUsd: aggregate.volumeUsd[windowKey],
+      volumeUsd: rowDaily ? rowDaily.usd : aggregate.volumeUsd[windowKey],
       liquidityUsd: aggregate.liquidityUsd,
       observedPools: pools.length,
-      volumePools: aggregate.freshness.volume[windowKey].currentPools,
+      volumePools: rowDaily
+        ? rowDaily.covered
+        : aggregate.freshness.volume[windowKey].currentPools,
       liquidityPools: aggregate.freshness.liquidity.currentPools,
       freshness: aggregate.freshness,
+      ...(rowDaily ? { daily: rowDaily } : {}),
       chainSlugs: chainsByProject.get(project.id)!,
       ...(attribution ? { attribution } : {}),
     };
@@ -745,6 +782,15 @@ function buildChainBase(
       chain === "all"
         ? analytics.totals
         : analyticsByChain.get(chain) || emptyTotals,
+    ...(daily
+      ? {
+          dailyTotals: daily.sum(
+            chain === "all"
+              ? analytics.observedPools
+              : (poolsByChain.get(chain) ?? []),
+          ),
+        }
+      : {}),
     inventory: {
       hookCount: inventoryNetworks.length
         ? inventoryNetworks.reduce((sum, network) => sum + network.hookCount, 0)
@@ -794,6 +840,7 @@ export function buildChains(
     now = evaluationNow(),
     listings = true,
     hookOverlap = STATIC_EDITION,
+    daily = null,
   }: {
     chain?: string;
     role?: ChainRole | "all";
@@ -804,6 +851,10 @@ export function buildChains(
     listings?: boolean;
     /** Edition: say which rows publish the same hook (see `sharedHookWith`). */
     hookOverlap?: boolean;
+    /** Edition: build the volume figures over 7D or 30D (src/daily.ts) instead
+     * of the window. The lens takes part in the cache key by its identity, so a
+     * model of one lens is never served for another or for none. */
+    daily?: DailyLens | null;
   } = {},
 ): ChainExplorerResult {
   let cache = chainCache.get(snapshot);
@@ -828,7 +879,7 @@ export function buildChains(
     };
     chainCache.set(snapshot, cache);
   }
-  const scopeKey = `${listings ? "listings" : "published"}:${hookOverlap ? "overlap" : "plain"}:${chain}`;
+  const scopeKey = `${listings ? "listings" : "published"}:${hookOverlap ? "overlap" : "plain"}:${chain}:${daily ? `lens${daily.id}` : "window"}`;
   let base = cache.scopes.get(scopeKey);
   if (!base) {
     base = buildChainBase(snapshot, cache.analytics, {
@@ -837,6 +888,7 @@ export function buildChains(
       now,
       listings,
       hookOverlap,
+      daily,
     });
     if (cache.scopes.size >= 32)
       cache.scopes.delete(cache.scopes.keys().next().value!);

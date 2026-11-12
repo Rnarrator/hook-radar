@@ -21,6 +21,7 @@ them directly (type stripping), so no build step is involved.
 - `server/providers.mjs`: `collectFrontierMetrics` and `getFrontierMarketObservation`, the live app's own code for Frontier's pool figures, run unchanged by `collector/providers/frontier.mjs`. The module is stateless and imports only `model.mjs` and `reserve-value.mjs`; its GeckoTerminal and Uniswap helpers are imported with it and never called by the collector.
 - `server/reserve-value.mjs`: `assessMarketLiquidity`, the reserve valuation rules.
 - `server/source-json.mjs`: JSON parsing that refuses a nonzero number rounded to zero.
+- `shared/daily-volume.ts`: the 7D and 30D file's shape and run rules (`validateDailyShape`, `dailyRunProblem`) and the UTC day arithmetic; the page and the data gate read the same module.
 - `shared/market-freshness.ts`: the five-minute qualification, `aggregateCurrentMarkets`, `marketMeasurementState`.
 - `shared/analytics-overview.ts`: the overview envelope validators.
 - `src/model.ts`: `isSnapshot`, the validator the client applies to a snapshot.
@@ -51,6 +52,7 @@ them directly (type stripping), so no build step is involved.
 - `src/analytics-chart-data.ts`: via `server/analytics-overview.mjs`.
 - `src/analytics.ts`: via `server/analytics-overview.mjs`.
 - `src/edition.ts`: via `src/model.ts` and `src/analytics.ts`; inert in Node (no bundler flag, the visitor clock is not read).
+- `src/pool-search.ts`: via `src/model.ts`; the page's search by token, pair and pool, plain text matching that the collector does not call.
 
 ## Used only by the tests
 

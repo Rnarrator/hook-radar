@@ -1,0 +1,13 @@
+{
+ "requestedAt": "2026-11-11T22:54:27.103Z",
+ "url": "https://api.geckoterminal.com/api/v2/networks/base/pools/0x11ae80233ca6d15171e9ec8d10d985b3c13c2c54508c88a960f6b272159eabb9/ohlcv/day?limit=33&currency=usd&include_empty_intervals=true",
+ "status": 200,
+ "headers": {
+  "cache-control": "max-age=30, public, must-revalidate, s-maxage=60",
+  "cf-cache-status": "MISS",
+  "content-type": "application/json; charset=utf-8",
+  "date": "Wed, 11 Nov 2026 22:54:27 GMT",
+  "vary": "Accept, Origin, accept-encoding"
+ },
+ "bodyText": "{\"data\":{\"id\":\"751ab544-13b5-4c8d-b550-f7dff816f01f\",\"type\":\"ohlcv_request_response\",\"attributes\":{\"ohlcv_list\":[[1794355200,2.05198485497235e-07,2.08162194117318e-06,2.05198485497235e-07,1.5756134551007599e-06,1180460.7430385493]]}},\"meta\":{\"base\":{\"name\":\"ni hao cat\",\"symbol\":\"mihao\",\"coingecko_coin_id\":null,\"address\":\"0xaaaa8f38c6e929e41990e8e95da263c860adbba3\"},\"quote\":{\"name\":\"Wrapped Ether\",\"symbol\":\"WETH\",\"coingecko_coin_id\":\"l2-standard-bridged-weth-base\",\"address\":\"0x4200000000000000000000000000000000000006\"}}}"
+}

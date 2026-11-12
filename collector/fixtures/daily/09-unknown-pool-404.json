@@ -1,0 +1,13 @@
+{
+ "requestedAt": "2026-11-11T22:57:47.135Z",
+ "url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x1111111111111111111111111111111111111111111111111111111111111111/ohlcv/day?limit=33&currency=usd&include_empty_intervals=true",
+ "status": 404,
+ "headers": {
+  "cache-control": "max-age=30, public, must-revalidate, s-maxage=60",
+  "cf-cache-status": "MISS",
+  "content-type": "application/json; charset=utf-8",
+  "date": "Wed, 11 Nov 2026 22:57:47 GMT",
+  "vary": "Accept, Origin, accept-encoding"
+ },
+ "bodyText": "{\"errors\":[{\"status\":\"404\",\"title\":\"Not Found\"}],\"meta\":{\"ref_id\":\"6c0b3943-38bf-4e70-ad4b-168b2e5fd34b\"}}"
+}

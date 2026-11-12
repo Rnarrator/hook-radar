@@ -36,6 +36,9 @@ import {
 import { ArrowRight, ChevronDown, ChevronLeft, Info, Network } from "./Icons";
 import { Empty, External } from "./Primitives";
 import { CensusNote } from "./EditionStatus";
+import { DailyAmount, NO_SUM } from "./DailyAmount";
+import { dailyNetworksLabel, dailyTileNote, spanLabel } from "../daily";
+import { useDailyView } from "../daily-view";
 import "./chains.css";
 
 interface Props {
@@ -186,6 +189,10 @@ export function ChainExplorer({
 }: Props) {
   const networkSelect = useRef<HTMLSelectElement>(null);
   const deferredSearch = useDeferredValue(search);
+  // Edition: with 7D or 30D chosen, every volume figure of this page is a sum
+  // over the pools that have daily figures (src/daily.ts), built into the model
+  // itself so that the rows, the networks and the sorting agree.
+  const daily = useDailyView();
   const result = useMemo(
     () =>
       buildChains(snapshot, {
@@ -194,8 +201,9 @@ export function ChainExplorer({
         role,
         windowKey,
         now,
+        daily: daily.lens,
       }),
-    [snapshot, chain, deferredSearch, role, windowKey, now],
+    [snapshot, chain, deferredSearch, role, windowKey, now, daily.lens],
   );
   const network = result.selectedNetwork;
   // Hook and pool counts are a dated export, not measured at the snapshot.
@@ -514,19 +522,39 @@ export function ChainExplorer({
           </small>
         </div>
         <div>
-          <span>Tracked {windows[windowKey]} volume</span>
-          <strong>{money(result.totals.volumeUsd)}</strong>
+          <span>
+            {daily.span
+              ? dailyNetworksLabel(daily.span)
+              : `Tracked ${windows[windowKey]} volume`}
+          </span>
+          <strong>
+            {daily.span ? (
+              <DailyAmount sum={result.dailyTotals ?? NO_SUM} compact />
+            ) : (
+              money(result.totals.volumeUsd)
+            )}
+          </strong>
           <small>
-            <Measurement
-              freshness={result.totals.freshness.volume[windowKey]}
-              now={now}
-            />
-            {result.totals.volumeUsd !== null && (
+            {daily.span ? (
+              daily.lens &&
+              result.dailyTotals && (
+                <span>{dailyTileNote(daily.lens, result.dailyTotals)}</span>
+              )
+            ) : (
+              <Measurement
+                freshness={result.totals.freshness.volume[windowKey]}
+                now={now}
+              />
+            )}
+            {(daily.span
+              ? result.dailyTotals?.usd != null
+              : result.totals.volumeUsd !== null) && (
               <span className="chains-coverage-flag">
                 Partial coverage · Not total Uniswap volume
               </span>
             )}
-            {result.totals.concentration &&
+            {!daily.span &&
+              result.totals.concentration &&
               result.totals.concentration.topThreePoolShare >= 0.5 && (
                 <span
                   className="chains-coverage-flag chains-concentration-flag"
@@ -635,7 +663,9 @@ export function ChainExplorer({
                   ? "Network not in this snapshot"
                   : "Network not in directory"}
           </span>
-          <span>{windows[windowKey]} window</span>
+          <span>
+            {daily.span ? spanLabel(daily.span) : windows[windowKey]} window
+          </span>
         </p>
         {openSources && (
           <button

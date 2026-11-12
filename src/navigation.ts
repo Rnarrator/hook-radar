@@ -1,4 +1,7 @@
 import { categories } from "./model.ts";
+import { DAILY_SPAN_KEYS } from "../shared/daily-volume.ts";
+import type { DailySpan } from "../shared/daily-volume.ts";
+import { STATIC_EDITION } from "./edition.ts";
 import type { Filters, PropertyFilter, SortKey, View } from "./model";
 import type { WindowKey } from "../shared/types";
 import type { ActivityWindow } from "../shared/activity";
@@ -52,10 +55,18 @@ export const chainRoleKeys = [
   "other",
 ] as const;
 export type ChainRoleFilter = (typeof chainRoleKeys)[number];
+/** The views that can show 7D and 30D (edition only); every other view shows
+ * the plain windows, and a link to one drops the span. */
+export const SPAN_VIEWS: readonly View[] = ["overview", "watchlist", "chains"];
+
 export interface NavigationState {
   view: View;
   filters: Filters;
   window: WindowKey;
+  /** Edition: 7D or 30D of the largest pools (the address says window=d7 or
+   * window=d30; the window beneath stays 24H). Never set by the live app. It is
+   * not analytics_range, which is the history chart's own range. */
+  span?: DailySpan | null;
   project: string | null;
   detailTab: DetailTab;
   extensionSelection?: ExtensionSelection | null;
@@ -71,8 +82,16 @@ export interface NavigationState {
   chainRole?: ChainRoleFilter;
 }
 
-export function parseNavigation(search: string): NavigationState {
+export function parseNavigation(
+  search: string,
+  edition: boolean = STATIC_EDITION,
+): NavigationState {
   const query = new URLSearchParams(search);
+  const spanParam = query.get("window") as DailySpan | null;
+  const span =
+    edition && spanParam && DAILY_SPAN_KEYS.includes(spanParam)
+      ? spanParam
+      : null;
   const [key, direction] = (query.get("sort") || "").split(":");
   const market =
     query.get("market") === "active"
@@ -117,6 +136,7 @@ export function parseNavigation(search: string): NavigationState {
     window: ["h1", "h6", "h24"].includes(query.get("window") || "")
       ? (query.get("window") as WindowKey)
       : "h24",
+    ...(edition ? { span } : {}),
     project: query.get("project"),
     comparison: [
       ...new Set(
@@ -182,7 +202,10 @@ export function parseNavigation(search: string): NavigationState {
   };
 }
 
-export function navigationSearch(state: NavigationState) {
+export function navigationSearch(
+  state: NavigationState,
+  edition: boolean = STATIC_EDITION,
+) {
   const query = new URLSearchParams();
   if (state.view !== "overview") query.set("view", state.view);
   if (state.comparison?.length)
@@ -260,7 +283,14 @@ export function navigationSearch(state: NavigationState) {
   const defaultMarket = state.view === "watchlist" ? "all" : "projects";
   if (state.filters.market && state.filters.market !== defaultMarket)
     query.set("market", state.filters.market);
-  if (state.window !== "h24") query.set("window", state.window);
+  if (
+    edition &&
+    state.span &&
+    DAILY_SPAN_KEYS.includes(state.span) &&
+    SPAN_VIEWS.includes(state.view)
+  )
+    query.set("window", state.span);
+  else if (state.window !== "h24") query.set("window", state.window);
   const defaultSort = "volume";
   if (state.sort.key !== defaultSort || state.sort.direction !== "desc")
     query.set("sort", `${state.sort.key}:${state.sort.direction}`);

@@ -39,7 +39,7 @@ import {
   useCaseColor,
 } from "../charts/index";
 import type { BarListRow, RibbonSegment } from "../charts/index";
-import { compositionParts } from "../analytics-composition";
+import { compositionParts, networkColors } from "../analytics-composition";
 import type { RibbonPart } from "../analytics-composition";
 import { ArrowRight, ChevronDown, Info, Network, X } from "./Icons";
 import "./analytics-charts.css";
@@ -265,11 +265,6 @@ export function AnalyticsReadouts({
   );
 }
 
-/** Network tints: one periwinkle stepped by rank, so length carries magnitude
- * and no extra categorical hue is spent on networks. */
-const NETWORK_TINTS = [100, 85, 71, 60, 52];
-const networkTint = (rank: number) =>
-  `color-mix(in oklab, var(--iris) ${NETWORK_TINTS[Math.min(rank, NETWORK_TINTS.length - 1)]}%, var(--surface-4))`;
 const TAIL_COLOR = "color-mix(in oklab, var(--ink-faint) 82%, var(--surface-3))";
 
 /** Two composition ribbons under the readouts: where the tracked total came
@@ -291,6 +286,12 @@ export function AnalyticsComposition({
   const composition = compositionParts(model, metric);
   if (!composition) return null;
   const copy = metricCopy(metric, model.windowKey);
+  const networkColor = networkColors(
+    composition.networks
+      .filter((part) => !part.tail && !part.remainder)
+      .map((part) => part.id),
+    TAIL_COLOR,
+  );
   const segments = (
     parts: RibbonPart[],
     entity: string,
@@ -316,8 +317,8 @@ export function AnalyticsComposition({
           <span className="analytics-composition-label">By network</span>
           <Ribbon
             label={`${copy.name} by network, composition`}
-            segments={segments(composition.networks, "network", (_, rank) =>
-              networkTint(rank),
+            segments={segments(composition.networks, "network", (part) =>
+              networkColor.get(part.id) ?? TAIL_COLOR,
             )}
             selectedId={focus?.kind === "network" ? focus.id : null}
             onSelect={select("network")}

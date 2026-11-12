@@ -264,6 +264,22 @@ test("a run at full size stays inside the request budget, the gaps and the burst
     ).length <= 6,
   );
 
+  // The daily-volume step comes last and takes only what the 399 requests leave:
+  // (385 requests come before it in this world, so it gets 14), never more than
+  // its own 20, and the total never passes 399.
+  const dailyCalls = fetchImpl.calls.filter((call) =>
+    call.url.includes("/ohlcv/day?"),
+  );
+  const otherCalls = fetchImpl.calls.length - dailyCalls.length;
+  assert.equal(dailyCalls.length, Math.min(20, 399 - otherCalls));
+  assert.ok(dailyCalls.length >= 1, "a run at full size still has a request left");
+  assert.equal(status.counts.daily.requested, dailyCalls.length);
+  assert.equal(
+    fetchImpl.calls.indexOf(dailyCalls[0]),
+    otherCalls,
+    "every daily read comes after every other request",
+  );
+
   // The gaps between request starts, per provider, in the contract's numbers.
   const minimum = {
     "api.dexscreener.com": 400,

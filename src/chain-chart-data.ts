@@ -13,7 +13,7 @@ function nonnegative(value: number | null | undefined): number | null {
 /** These values have already passed buildChains' current-measurement gate.
  * Missing measurements stay missing, even beside a measured zero. */
 export function chainNetworkSeries(
-  result: Pick<ChainExplorerResult, "networks" | "totals">,
+  result: Pick<ChainExplorerResult, "networks" | "totals" | "dailyTotals">,
   metric: ChainChartMetric,
 ) {
   const rows = result.networks.map((network) => ({
@@ -33,7 +33,11 @@ export function chainNetworkSeries(
         : null
       : nonnegative(
           metric === "volume"
-            ? result.totals.volumeUsd
+            ? // Edition: over a 7D or 30D lens the rows are daily sums, and so
+              // is the total they are a share of.
+              result.dailyTotals
+              ? result.dailyTotals.usd
+              : result.totals.volumeUsd
             : result.totals.liquidityUsd,
         );
   return rows

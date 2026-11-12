@@ -779,10 +779,11 @@ test("the start guide says state/ is the job's, and what to upload by hand", () 
   const after = section(start(), "What happens after that");
   assert.match(
     after,
-    /\*\*Updating the repository by hand\.\*\* The `state` folder is written by the job, not by you\. When you upload a newer version of this folder, upload only `state\/priority\.json` from it\. Never replace `state\/pools\.json`, `state\/history\.json`, `state\/hookless\.json` or `state\/registry\.json`/,
+    /\*\*Updating the repository by hand\.\*\* The `state` folder is written by the job, not by you\. When you upload a newer version of this folder, upload only `state\/priority\.json` from it\. Never replace `state\/pools\.json`, `state\/history\.json`, `state\/hookless\.json`, `state\/registry\.json` or `state\/daily\.json`/,
   );
-  // The four files the sentence forbids are the ones the collector rewrites after
-  // every run, and the one it allows is never written by the collector.
+  // The five files the sentence forbids are the ones the collector rewrites
+  // (after every run, or when the daily-volume records change), and the one it
+  // allows is never written by the collector.
   const collector = read("collector/state.mjs");
   const writer = collector.slice(
     collector.indexOf("export async function writeState"),
@@ -792,6 +793,7 @@ test("the start guide says state/ is the job's, and what to upload by hand", () 
     "history.json",
     "hookless.json",
     "registry.json",
+    "daily.json",
   ])
     assert.ok(writer.includes(file), `the collector writes ${file}`);
   assert.ok(

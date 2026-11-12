@@ -433,7 +433,7 @@ export const additionalLaunchpadRecords: readonly LaunchpadRecord[] = [
       "Umia is a curated platform where founders raise funds through a Uniswap continuous clearing auction that seeds a hooked Uniswap v4 pool run by the project's treasury.",
     status: "restricted",
     statusNote:
-      "Curated: founders apply to launch. The Base deployment is live with 7 ventures counted on-chain on 2026-10-23; a separate Robinhood Chain deployment exists with 0 ventures.",
+      "Curated: founders apply to launch. The Base deployment is live with 7 ventures counted on-chain on 2026-10-23. A separate Robinhood Chain deployment is also live: Umia's documentation names Slop Cash as its first venture (read on 2026-11-12).",
     relationship: "multiple",
     relationshipNote:
       "Umia's auction stage is Uniswap's continuous clearing auction, shared Uniswap infrastructure. Umia adds its own hook and liquidity bootstrapper for the v4 spot pool stage.",
@@ -483,15 +483,15 @@ export const additionalLaunchpadRecords: readonly LaunchpadRecord[] = [
         chainId: 4663,
         uniswapVersion: "v4",
         poolKind: "hooked",
-        status: "unverified",
+        status: "restricted",
         attribution: "platform-hook",
         summary:
-          "Umia's documentation lists the same hook address for Robinhood Chain. Its registry counted no ventures.",
+          "Umia's documentation names UmiaHookV2 as the hook on every new spot pool on Robinhood Chain and marks the original hook as unused there. Slop Cash is its first venture.",
         hooks: [
           {
-            address: "0x128bedebaa9304db74726efba848a98e7fb53a80",
-            name: "UmiaHook",
-            role: "Hook attached to Umia spot pools on Robinhood Chain",
+            address: "0xbea11b032bfb6d7e20b9fd975c0211ad81a03a80",
+            name: "UmiaHookV2",
+            role: "Hook attached to every new Umia spot pool on Robinhood Chain",
             permissions: 0x3a80,
             source: "docs",
           },
@@ -500,11 +500,19 @@ export const additionalLaunchpadRecords: readonly LaunchpadRecord[] = [
           {
             address: "0x3712aff63d6f0d094b0894f2e1ff4a2637265f04",
             name: "UmiaHub",
-            role: "Registry; no ventures at review",
+            role: "Registry; creates ventures",
           },
           poolManager("robinhood"),
         ],
         evidence: [
+          {
+            url: "https://umia.finance/docs/contract-addresses/robinhood-chain",
+            note: "Lists UmiaHookV2 as attached to every new spot pool, marks the original UmiaHook as legacy with no pool using it, and names Slop Cash as venture #1. Checked on-chain separately on 2026-11-12: the PoolManager's Initialize log for the SLOP / USDG pool names this hook. Pool id 0x18f3778f93a34c08d41a03e6b3a466a37ec0fd1b019e43f622927ba0c339838b, block 111,022,880, transaction 0x25e64d72e0cb87bf260fc49fcf71e750ba6795b179e0cea605e3f7e6f36b0173.",
+          },
+          {
+            url: "https://github.com/umiafinance/protocol/blob/main/src/periphery/UmiaHookV2.sol",
+            note: "Umia's source declares before-initialize, after-initialize, before-add-liquidity, before-remove-liquidity and before-swap, the flags in the address bits 0x3a80.",
+          },
           {
             url: "https://umia.finance/llms-full.txt",
             note: "States that Robinhood Chain runs its own Umia deployment.",
@@ -514,7 +522,10 @@ export const additionalLaunchpadRecords: readonly LaunchpadRecord[] = [
     ],
     unresolved: [
       "Radar files UmiaHook under the Oracles use case, not Launches.",
-      "The Robinhood Chain deployment has no ventures and its hook is not in Radar's directory.",
+      "UmiaHookV2 is named here from Umia's documentation and source. Who deployed it was not read from the chain.",
+      "The original Umia hook, 0x128bedebaa9304db74726efba848a98e7fb53a80, is the live hook on Base. Umia's documentation marks it legacy on Robinhood Chain, where no pool uses it, so it is not listed there.",
+      "The number of ventures on the Robinhood Chain deployment was not counted on-chain.",
+      "Umia's documentation describes one application process; it does not state separately that Robinhood Chain launches are curated, so that path's status follows the platform.",
       "Whether Umia's liquidity bootstrapper contract is itself used as a hook is not established.",
     ],
   },

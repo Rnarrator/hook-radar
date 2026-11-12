@@ -2,6 +2,8 @@ import type { Pool, RadarProject, WindowKey } from "../shared/types";
 import { csvCell, windows } from "./model.ts";
 import { measurementProvenance } from "./provenance.ts";
 import { comparisonMeasurement } from "./comparison.ts";
+import { dailyCsvHeader } from "./daily.ts";
+import type { DailyLens } from "./daily.ts";
 
 /** What a file says about itself when it comes from a dated snapshot (the
  * Auto Snapshot edition): the time its figures are from and what its rows
@@ -25,12 +27,18 @@ function cents<T extends number | null>(
     : amount;
 }
 
+/** @param daily Edition: the 7D or 30D lens the list is showing. The volume
+ * column is then the span's figure (at least; blank when no pool of the project
+ * has one), under its own header, and the columns about the 24H measurement's
+ * freshness are blank, since they describe a different figure. Absent, the file
+ * is exactly what it always was. */
 export function projectCsv(
   projects: RadarProject[],
   pools: Pool[],
   window: WindowKey,
   chain = "all",
   context?: ProjectCsvContext,
+  daily?: DailyLens | null,
 ) {
   const rows: unknown[][] = [
     [
@@ -41,9 +49,11 @@ export function projectCsv(
       "Chains",
       "Indexed deployments",
       "Deployment addresses",
-      context
-        ? `Observed ${windows[window]} volume USD at snapshot`
-        : `Current observed ${windows[window]} volume USD`,
+      daily
+        ? dailyCsvHeader(daily)
+        : context
+          ? `Observed ${windows[window]} volume USD at snapshot`
+          : `Current observed ${windows[window]} volume USD`,
       context
         ? "Reported reserve valuation USD at snapshot"
         : "Current reported reserve valuation USD",
@@ -69,6 +79,7 @@ export function projectCsv(
     );
     const volume = measurementProvenance(contributors, window),
       liquidity = measurementProvenance(contributors, "liquidity");
+    const span = daily ? daily.sum(contributors) : null;
     rows.push([
       project.id,
       project.name,
@@ -79,21 +90,23 @@ export function projectCsv(
       project.deployments
         .map((deployment) => `${deployment.chain}:${deployment.address}`)
         .join("; "),
-      cents(
-        comparisonMeasurement(project, contributors, window, chain).amount,
-        context,
-      ),
+      span
+        ? cents(span.usd, context)
+        : cents(
+            comparisonMeasurement(project, contributors, window, chain).amount,
+            context,
+          ),
       cents(
         comparisonMeasurement(project, contributors, "liquidity", chain).amount,
         context,
       ),
       project.metrics.coverage,
-      volume.oldestAt,
-      volume.cachedPoolCount,
+      span ? null : volume.oldestAt,
+      span ? null : volume.cachedPoolCount,
       liquidity.oldestAt,
       liquidity.cachedPoolCount,
-      volume.stalePoolCount,
-      volume.latestObservedAt,
+      span ? null : volume.stalePoolCount,
+      span ? null : volume.latestObservedAt,
       liquidity.stalePoolCount,
       liquidity.latestObservedAt,
       project.sourceUrl,

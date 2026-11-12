@@ -4,6 +4,12 @@ import { isMarketCoverage } from "../shared/market-coverage.ts";
 import { isDirectoryInfo } from "../shared/directory.ts";
 import { isPublishedPlatformProject } from "../shared/published-platform-hooks.ts";
 import { STATIC_EDITION, timeLabel } from "./edition.ts";
+import {
+  foldSearchText,
+  matchSearchTerms,
+  searchTerms,
+} from "./pool-search.ts";
+import type { PoolSearchIndex } from "./pool-search.ts";
 // Components that render the edition's differences import the flag from here,
 // where their isolated render tests already resolve the module.
 export { STATIC_EDITION };
@@ -61,21 +67,153 @@ function namesNetwork(
   );
 }
 
+/** For each word of a search, whether it is part of the name of one of `chains`:
+ * a word alone ("base", "uni") or with its neighbours ("x layer", "world
+ * chain"). A network's name has at most three words. */
+function networkWordFlags(
+  terms: readonly string[],
+  chains: readonly string[],
+  chainNames: ReadonlyMap<string, string>,
+) {
+  const flags = terms.map(() => false);
+  for (let start = 0; start < terms.length; start++)
+    for (let end = start; end < Math.min(terms.length, start + 3); end++)
+      if (
+        namesNetwork(terms.slice(start, end + 1).join(" "), chains, chainNames)
+      )
+        for (let index = start; index <= end; index++) flags[index] = true;
+  return flags;
+}
+
+/** The text of a project the search reads, folded once per object: the project's
+ * name, use case and description, and each hook's address, name and description. */
+const foldedText = new WeakMap<object, readonly string[]>();
+function foldedFields(owner: object, fields: () => string[]) {
+  let value = foldedText.get(owner);
+  if (!value) {
+    value = fields().map(foldSearchText);
+    foldedText.set(owner, value);
+  }
+  return value;
+}
+const allFoldedText = new WeakMap<RadarProject, readonly string[]>();
+function projectSearchFields(
+  project: RadarProject,
+  deployments: RadarProject["deployments"],
+) {
+  // With no network selected the whole list of hooks is read: keep that list.
+  const whole = deployments === project.deployments;
+  const known = whole ? allFoldedText.get(project) : undefined;
+  if (known) return known;
+  const own = foldedFields(project, () => [
+    project.name,
+    project.description,
+    project.category,
+  ]);
+  const fields = deployments.length
+    ? own.concat(
+        ...deployments.map((d) =>
+          foldedFields(d, () => [d.address, d.name, d.description]),
+        ),
+      )
+    : own;
+  if (whole) allFoldedText.set(project, fields);
+  return fields;
+}
+
+/** The deployments a search reads: those on the selected network, or all. */
+function scopedDeployments(project: RadarProject, chain: string) {
+  return chain === "all"
+    ? project.deployments
+    : project.deployments.filter((d) => d.chain === chain);
+}
+
+/** The whole search, as typed, found in the project's own text, or naming one of
+ * its networks. This is what the search has always matched. */
+function matchesProjectText(
+  project: RadarProject,
+  deployments: RadarProject["deployments"],
+  query: string,
+  chain: string,
+  chainNames: ReadonlyMap<string, string> | undefined,
+) {
+  return (
+    [
+      project.name,
+      project.description,
+      project.category,
+      ...deployments.flatMap((d) => [d.address, d.name, d.description]),
+    ].some((value) => value.toLowerCase().includes(query)) ||
+    (chainNames !== undefined &&
+      namesNetwork(
+        query,
+        chain === "all" ? project.chains : [chain],
+        chainNames,
+      ))
+  );
+}
+
+/** Which words of a search name a network the page knows, whether or not a
+ * project runs there. Worked out once per search. */
+function searchNetworkWords(
+  terms: readonly string[],
+  chainNames: ReadonlyMap<string, string> | undefined,
+) {
+  return chainNames === undefined || !terms.length
+    ? terms.map(() => false)
+    : networkWordFlags(terms, [...chainNames.keys()], chainNames);
+}
+
+/** The search read word by word, through the project's text or one of its
+ * measured pools. */
+function matchesWords(
+  project: RadarProject,
+  deployments: RadarProject["deployments"],
+  terms: readonly string[],
+  networkWords: readonly boolean[],
+  chain: string,
+  chainNames: ReadonlyMap<string, string> | undefined,
+  poolSearch: PoolSearchIndex,
+) {
+  const pools = poolSearch.get(project.id) ?? [];
+  // The words that name a network this project runs on (in scope).
+  let own: boolean[] | undefined;
+  return matchSearchTerms(
+    terms,
+    projectSearchFields(project, deployments),
+    networkWords,
+    (index) => {
+      if (chainNames === undefined) return false;
+      own ??= networkWordFlags(
+        terms,
+        chain === "all" ? project.chains : [chain],
+        chainNames,
+      );
+      return own[index];
+    },
+    chain === "all" ? pools : pools.filter((entry) => entry.chain === chain),
+  );
+}
+
 /** `chainNames` (short name to display name) lets the search also find the
- * projects that run on a network; without it only the text of a project matches. */
+ * projects that run on a network; without it only the text of a project matches.
+ *
+ * `poolSearch` (see pool-search.ts) lets it also find a project by one of its
+ * measured pools: a token symbol, a pair, a token address, a pool id or a pool
+ * address. Without it nothing about the search changes. */
 export function filterProjects(
   projects: RadarProject[],
   filters: Filters,
   chainNames?: ReadonlyMap<string, string>,
+  poolSearch?: PoolSearchIndex,
 ) {
   const query = filters.search.trim().toLowerCase();
+  const terms = poolSearch && query ? searchTerms(filters.search) : [];
+  const networkWords = searchNetworkWords(terms, chainNames);
   return projects.filter((project) => {
     if (filters.category !== "all" && project.category !== filters.category)
       return false;
-    const deployments =
-      filters.chain === "all"
-        ? project.deployments
-        : project.deployments.filter((d) => d.chain === filters.chain);
+    const deployments = scopedDeployments(project, filters.chain);
     if (
       filters.chain !== "all" &&
       !deployments.length &&
@@ -107,20 +245,52 @@ export function filterProjects(
       return false;
     return (
       !query ||
-      [
-        project.name,
-        project.description,
-        project.category,
-        ...deployments.flatMap((d) => [d.address, d.name, d.description]),
-      ].some((value) => value.toLowerCase().includes(query)) ||
-      (chainNames !== undefined &&
-        namesNetwork(
-          query,
-          filters.chain === "all" ? project.chains : [filters.chain],
+      matchesProjectText(
+        project,
+        deployments,
+        query,
+        filters.chain,
+        chainNames,
+      ) ||
+      (poolSearch !== undefined &&
+        matchesWords(
+          project,
+          deployments,
+          terms,
+          networkWords,
+          filters.chain,
           chainNames,
-        ))
+          poolSearch,
+        ) !== null)
     );
   });
+}
+
+/** The pool a listed project matched through, for the line a row shows; null when
+ * the project's own text matched (or nothing did). It repeats the decision of
+ * `filterProjects` on a project that function listed, so the two cannot differ. */
+export function poolMatchFor(
+  project: RadarProject,
+  filters: Filters,
+  chainNames: ReadonlyMap<string, string> | undefined,
+  poolSearch: PoolSearchIndex | undefined,
+) {
+  const query = filters.search.trim().toLowerCase();
+  if (!poolSearch || !query) return null;
+  const deployments = scopedDeployments(project, filters.chain);
+  if (matchesProjectText(project, deployments, query, filters.chain, chainNames))
+    return null;
+  const terms = searchTerms(filters.search);
+  const match = matchesWords(
+    project,
+    deployments,
+    terms,
+    searchNetworkWords(terms, chainNames),
+    filters.chain,
+    chainNames,
+    poolSearch,
+  );
+  return match?.via === "pool" ? match : null;
 }
 export function projectComparator(
   key: SortKey,
@@ -128,6 +298,10 @@ export function projectComparator(
   window: WindowKey,
   poolCount: (project: RadarProject) => number | null = (project) =>
     project.metrics.poolCount,
+  /** Edition: the figure a "volume" sort ranks by, when the list shows 7D or
+   * 30D volume instead of the project's own window. Absent: the window's. */
+  volumeOf: (project: RadarProject) => number | null = (project) =>
+    project.metrics.volumeUsd[window],
 ) {
   const value = (p: RadarProject): number | string | null =>
     key === "name"
@@ -135,7 +309,7 @@ export function projectComparator(
       : key === "deployments"
         ? p.deployments.length
         : key === "volume"
-          ? p.metrics.volumeUsd[window]
+          ? volumeOf(p)
           : key === "liquidity"
             ? p.metrics.liquidityUsd
             : poolCount(p);

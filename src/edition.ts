@@ -439,13 +439,19 @@ export function editionNavigation<
     view: string;
     activityProject?: unknown;
     extensionSelection?: unknown;
+    span?: unknown;
   },
 >(state: T, enabled: boolean = STATIC_EDITION): T {
   if (!enabled) return state;
-  const withoutExtension =
-    state.extensionSelection != null
-      ? { ...state, extensionSelection: null }
+  // 7D and 30D are shown by Discover, the Watchlist and Networks only.
+  const stated =
+    state.span != null && !["overview", "watchlist", "chains"].includes(state.view)
+      ? { ...state, span: null }
       : state;
+  const withoutExtension =
+    stated.extensionSelection != null
+      ? { ...stated, extensionSelection: null }
+      : stated;
   if (withoutExtension.view !== "activity") return withoutExtension;
   return { ...withoutExtension, view: "overview", activityProject: null };
 }

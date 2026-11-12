@@ -269,7 +269,9 @@ export function frontierSources(frontier, measured) {
  * request count and the times of its first and last request. A request the
  * collector sent again after a rate-limit answer is one of the requests counted,
  * and the wait is stated. `unsupportedNetworks` are the slugs of networks DEX
- * Screener does not index; `chains` gives them the names the page shows. */
+ * Screener does not index; `chains` gives them the names the page shows.
+ * `stats` are the requests of the measurement phase: the daily-volume step that
+ * follows reads GeckoTerminal as well, and is a source of its own (`daily`). */
 export function providerSources({
   stats,
   measured,
@@ -279,6 +281,7 @@ export function providerSources({
   unsupportedNetworks = [],
   chains = [],
   frontier = null,
+  daily = null,
 }) {
   const latest = (provider) => {
     const times = [...measured.values()]
@@ -349,6 +352,8 @@ export function providerSources({
       note: `Pool identity only (which hook, which two currencies) for newly discovered pools: ${span(v4)}. Network lists read: ${discovery.indexerLists}, hooked pools listed: ${discovery.indexerListed}, exact lookups: ${discovery.resolvesTried}. It supplies no amounts. The LP fee printed at the end of a pool name is read only to recognise hooks that set fees dynamically.${waitNote(v4)}${stopNote(v4)}`,
     });
   sources.push(...frontierSources(frontier, measured));
+  // The row that tells the page the 7D and 30D file exists (see daily.mjs).
+  if (daily) sources.push(daily);
   if (census)
     sources.push({
       id: "census",

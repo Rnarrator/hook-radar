@@ -1,7 +1,12 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { isAddress, isPoolId, ZERO_ADDRESS } from "../server/model.mjs";
-import { HISTORY_MAX_POINTS, MAX_PRIORITY_POOLS } from "./config.mjs";
+import {
+  DAILY_KEEP_RANK,
+  DAILY_STORED_DAYS,
+  HISTORY_MAX_POINTS,
+  MAX_PRIORITY_POOLS,
+} from "./config.mjs";
 
 // The persistent state committed in state/. Every reader validates what it
 // reads and every writer is atomic, so a crashed run leaves the old files.
@@ -156,6 +161,112 @@ export function isHistory(value) {
   );
 }
 
+// The daily-volume records (state/daily.json, written by the collector, never by
+// hand): for each of the largest pools, the complete UTC days read from
+// GeckoTerminal and when. `result` is the last definite answer (null: never
+// asked), `attemptedAt` when it came, `fetchedAt` the time the last readable
+// answer was true, `bad` how many unreadable answers came in a row, `start`
+// the first day GeckoTerminal has for the pool when its whole history was seen.
+export const DAILY_RESULTS = Object.freeze([
+  "ok",
+  "none",
+  "missing",
+  "unreadable",
+]);
+const DAILY_RECORD_KEYS = [
+  "chain",
+  "id",
+  "lastRankedAt",
+  "attemptedAt",
+  "result",
+  "fetchedAt",
+  "bad",
+  "start",
+  "days",
+];
+
+export function isDailyRecord(row) {
+  return (
+    !!row &&
+    typeof row === "object" &&
+    !Array.isArray(row) &&
+    Object.keys(row).every((key) => DAILY_RECORD_KEYS.includes(key)) &&
+    DAILY_RECORD_KEYS.every((key) => key in row) &&
+    isPoolId(row.id) &&
+    lower(row.id) &&
+    typeof row.chain === "string" &&
+    CHAIN_SLUG.test(row.chain) &&
+    isIso(row.lastRankedAt) &&
+    (row.attemptedAt === null || isIso(row.attemptedAt)) &&
+    (row.result === null
+      ? row.attemptedAt === null
+      : DAILY_RESULTS.includes(row.result) && row.attemptedAt !== null) &&
+    (row.fetchedAt === null || isIso(row.fetchedAt)) &&
+    Number.isSafeInteger(row.bad) &&
+    row.bad >= 0 &&
+    row.bad <= 99 &&
+    (row.start === null || (Number.isSafeInteger(row.start) && row.start >= 0)) &&
+    Array.isArray(row.days) &&
+    row.days.length <= DAILY_STORED_DAYS &&
+    row.days.every(
+      (pair, index) =>
+        Array.isArray(pair) &&
+        pair.length === 2 &&
+        Number.isSafeInteger(pair[0]) &&
+        pair[0] >= 0 &&
+        typeof pair[1] === "number" &&
+        Number.isFinite(pair[1]) &&
+        pair[1] >= 0 &&
+        pair[1] < 1e13 &&
+        (index === 0 || pair[0] > row.days[index - 1][0]),
+    )
+  );
+}
+
+export function isDailyState(value) {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value).every((key) =>
+      ["schemaVersion", "updatedAt", "pools"].includes(key),
+    ) &&
+    value.schemaVersion === 1 &&
+    (value.updatedAt === null || isIso(value.updatedAt)) &&
+    Array.isArray(value.pools) &&
+    value.pools.length <= DAILY_KEEP_RANK &&
+    value.pools.every(isDailyRecord) &&
+    new Set(value.pools.map((row) => poolKey(row.chain, row.id))).size ===
+      value.pools.length
+  );
+}
+
+/** The daily-volume state, read on its own so that nothing about this file can
+ * fail a run: a missing file is "no daily data yet"; one that cannot be read,
+ * is not JSON (conflict markers after a merge, a cut-off write) or has the wrong
+ * shape is ignored with a note, and the step starts empty. The next published
+ * run writes a good file. */
+async function readDailyState(dir) {
+  const empty = (note) => ({ records: [], present: note !== null, note });
+  let text;
+  try {
+    text = await readFile(join(dir, "daily.json"), "utf8");
+  } catch (error) {
+    return error?.code === "ENOENT"
+      ? empty(null)
+      : empty("state/daily.json could not be read, so the daily volume starts empty.");
+  }
+  let file;
+  try {
+    file = JSON.parse(text.replace(/^\uFEFF/, ""));
+  } catch {
+    return empty("state/daily.json is not valid JSON, so the daily volume starts empty.");
+  }
+  if (!isDailyState(file))
+    return empty("state/daily.json has an unexpected shape, so the daily volume starts empty.");
+  return { records: file.pools, present: true, note: null };
+}
+
 export async function writeFileAtomic(path, text) {
   await mkdir(join(path, ".."), { recursive: true });
   const temporary = `${path}.${process.pid}.${Date.now()}.tmp`;
@@ -255,6 +366,8 @@ export async function readState(dir) {
       ? { exportedAt: priorityFile.exportedAt, pools: priorityFile.pools }
       : null,
     registry: registryFile,
+    // The daily-volume records; see readDailyState.
+    daily: await readDailyState(dir),
   };
 }
 
@@ -277,11 +390,13 @@ export const historyJson = (points) =>
   rowsJson({ schemaVersion: 1 }, "points", points);
 export const priorityJson = (header, pools) =>
   rowsJson({ schemaVersion: 1, ...header }, "pools", [...pools].sort(byKey));
+export const dailyJson = (updatedAt, records) =>
+  rowsJson({ schemaVersion: 1, updatedAt }, "pools", [...records].sort(byKey));
 
 /** Write the run's state. Registry is rewritten only when its data changed. */
 export async function writeState(
   dir,
-  { updatedAt, pools, hookless, history, registry },
+  { updatedAt, pools, hookless, history, registry, daily },
 ) {
   await writeFileAtomic(join(dir, "pools.json"), poolsJson(updatedAt, pools));
   await writeFileAtomic(
@@ -289,6 +404,9 @@ export async function writeState(
     hooklessJson(updatedAt, hookless),
   );
   await writeFileAtomic(join(dir, "history.json"), historyJson(history));
+  // Only when there are daily records to keep or an older file to replace.
+  if (daily)
+    await writeFileAtomic(join(dir, "daily.json"), dailyJson(updatedAt, daily));
   if (registry)
     await writeFileAtomic(
       join(dir, "registry.json"),

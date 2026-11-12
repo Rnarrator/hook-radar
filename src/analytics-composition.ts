@@ -116,3 +116,55 @@ export function compositionParts(
   if (!networks.length && !categories.length) return null;
   return { total, networks, categories };
 }
+
+/** Network colours: each network keeps its own hue whatever the metric or its
+ * rank, so neighbouring segments can be told apart at a glance (stepped tints of
+ * one hue differ by 3 to 6 on a 100-point scale and read as one block on a
+ * phone). The hues are the shared chart tokens, chosen so the biggest use-case
+ * slices (Fees, MEV) are not worn by the biggest networks, and so every
+ * neighbouring pair of the five usual networks differs in hue and brightness,
+ * for colour-blind readers too. They are data colours, never a network's brand
+ * artwork. A network without a fixed hue, or one whose hue is already on this
+ * bar, takes the next unused one; with none left it takes `fallback`. */
+export const NETWORK_COLORS: Readonly<Record<string, string>> = Object.freeze({
+  ethereum: "var(--cat-oracles)",
+  robinhood: "var(--cat-liquidity)",
+  base: "var(--cat-access)",
+  ink: "var(--cat-orders)",
+  xlayer: "var(--cat-launches)",
+  unichain: "var(--cat-fees)",
+  arbitrum: "var(--cat-mev)",
+});
+const NETWORK_SPARE_COLORS = [
+  "var(--cat-fees)",
+  "var(--cat-mev)",
+  "var(--cat-launches)",
+  "var(--cat-orders)",
+  "var(--cat-access)",
+  "var(--cat-liquidity)",
+  "var(--cat-oracles)",
+] as const;
+
+/** One colour for each network id drawn on a bar, no colour used twice while a
+ * spare one is left. The ids are the bar's named parts (not its tail). */
+export function networkColors(
+  ids: readonly string[],
+  fallback: string,
+): Map<string, string> {
+  const colors = new Map<string, string>();
+  const taken = new Set<string>();
+  for (const id of ids) {
+    const own = Object.hasOwn(NETWORK_COLORS, id) ? NETWORK_COLORS[id] : undefined;
+    if (own && !taken.has(own)) {
+      colors.set(id, own);
+      taken.add(own);
+    }
+  }
+  for (const id of ids) {
+    if (colors.has(id)) continue;
+    const spare = NETWORK_SPARE_COLORS.find((color) => !taken.has(color));
+    colors.set(id, spare ?? fallback);
+    if (spare) taken.add(spare);
+  }
+  return colors;
+}

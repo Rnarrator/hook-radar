@@ -266,6 +266,12 @@ async function buildTree(t, files) {
   await mkdir(join(root, "scripts"), { recursive: true });
   for (const name of ["build-static-edition.mjs", "check-edition-data.mjs"])
     copyFileSync(join(repo, "scripts", name), join(root, "scripts", name));
+  // The data check shares the 7D and 30D file's rules with the collector.
+  await mkdir(join(root, "shared"), { recursive: true });
+  copyFileSync(
+    join(repo, "shared", "daily-volume.ts"),
+    join(root, "shared", "daily-volume.ts"),
+  );
   await writeFile(join(root, "package.json"), "{}");
   const record = `require("fs").appendFileSync(${JSON.stringify(join(root, "calls.log"))}, JSON.stringify([process.argv[1].split(/[\\\\/]/).slice(-2).join("/"), process.argv.slice(2), process.env.VITE_STATIC_EDITION]) + "\\n");`;
   for (const [name, content] of Object.entries({

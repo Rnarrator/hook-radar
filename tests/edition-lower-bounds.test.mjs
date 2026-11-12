@@ -23,32 +23,46 @@ import { makeSnapshot } from "./fixtures.mjs";
 const source = (path) =>
   readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-/* ── A hook on two networks is two hooks (Umia) ─────────────────────────── */
+/* ── A hook on two networks is two hooks ────────────────────────────────── */
 
 test("a platform that publishes one address on two networks has two exact hooks in the edition, one in the live build", () => {
+  // No reviewed platform publishes one address on two networks today (Umia did
+  // until its Robinhood Chain hook was named), so the case is built from a real
+  // record: Umia's Base hook listed on both of its networks.
   const umia = getLaunchpad("umia");
-  const hooks = umia.paths
-    .filter((path) => path.attribution === "platform-hook")
-    .flatMap((path) =>
-      path.hooks.map((hook) => `${path.chain}:${hook.address}`),
-    );
-  const addresses = new Set(
-    umia.paths
-      .filter((path) => path.attribution === "platform-hook")
-      .flatMap((path) => path.hooks.map((hook) => hook.address)),
+  const base = umia.paths.find((path) => path.chain === "base");
+  const twoNetworks = {
+    ...umia,
+    paths: umia.paths.map((path) => ({ ...path, hooks: base.hooks })),
+  };
+  const platformPaths = twoNetworks.paths.filter(
+    (path) => path.attribution === "platform-hook",
   );
-  // The record this was found on: one contract address, two networks.
+  const hooks = platformPaths.flatMap((path) =>
+    path.hooks.map((hook) => `${path.chain}:${hook.address}`),
+  );
+  const addresses = new Set(
+    platformPaths.flatMap((path) => path.hooks.map((hook) => hook.address)),
+  );
+  // One contract address, two networks.
   assert.equal(new Set(hooks).size, 2);
   assert.equal(addresses.size, 1);
   assert.equal(
-    launchpadEntryFromRecord(umia, { hooksByChain: true }).hookSummary,
+    launchpadEntryFromRecord(twoNetworks, { hooksByChain: true }).hookSummary,
     "2 exact hooks published",
   );
   // Off, it is the count the live page has always shown.
   assert.equal(
-    launchpadEntryFromRecord(umia, { hooksByChain: false }).hookSummary,
+    launchpadEntryFromRecord(twoNetworks, { hooksByChain: false }).hookSummary,
     "1 exact hook published",
   );
+  // The real Umia record has a different hook on each network, so it says two
+  // either way.
+  for (const hooksByChain of [true, false])
+    assert.equal(
+      launchpadEntryFromRecord(umia, { hooksByChain }).hookSummary,
+      "2 exact hooks published",
+    );
   // Another platform is the same either way: its hooks are on one network each.
   const other = getLaunchpad("pons");
   assert.equal(
@@ -57,7 +71,7 @@ test("a platform that publishes one address on two networks has two exact hooks 
   );
   // The test build is not the edition: the default is the live count.
   assert.equal(
-    launchpadEntryFromRecord(umia).hookSummary,
+    launchpadEntryFromRecord(twoNetworks).hookSummary,
     "1 exact hook published",
   );
 });

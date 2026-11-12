@@ -1,8 +1,11 @@
 // What the Launchpads list and the Frontier drawer of the Auto Snapshot edition
 // say about the reach of their figures, in a real browser: a USD sum beside a
 // lower-bound pool count carries the mark too, Frontier's figures say they leave
-// bonding-curve trades out, and a platform that publishes one contract on two
-// networks counts two hooks. Like scripts/edition-platform-browser.test.mjs it
+// bonding-curve trades out, and a platform with a hook on each of two
+// networks counts two hooks (the per-network count of one contract published on
+// two networks is pinned in tests/edition-lower-bounds.test.mjs, because no
+// reviewed platform has that case). Like
+// scripts/edition-platform-browser.test.mjs it
 // builds nothing: point it at an edition build (VITE_STATIC_EDITION=1) with
 // RADAR_TEST_DIST; it serves that build next to the TEST data in
 // tests/fixtures/static-data/data (or RADAR_TEST_DATA) through
@@ -207,12 +210,49 @@ test("Frontier's drawer carries the same scope in its market coverage", async (t
   s.verify();
 });
 
-test("a platform that publishes one contract on two networks says two exact hooks, as its Known hooks does", async (t) => {
+test("a platform with a hook on each of two networks says two exact hooks, as its Known hooks does", async (t) => {
   const s = await site(t);
   const rows = await searched(s, "Umia");
   const umia = rows.find((row) => row.name === "Umia");
   assert.ok(umia, "Umia is in the Launchpads list");
   assert.match(umia.summary, /2 exact hooks published/);
   assert.equal(umia.cells["known hooks"].text, "2");
+  s.verify();
+});
+
+test("Umia's Robinhood Chain sources show the pool id and transaction in full and fit a phone", async (t) => {
+  const s = await site(t, { size: PHONE });
+  await s.goto("?project=umia");
+  const sources = s.page.locator('ul.lp-evidence[aria-label*="Robinhood"]');
+  await expect(sources.first()).toBeVisible({ timeout: 30000 });
+  const note = sources.first().locator("li").first().locator("> span").first();
+  await note.scrollIntoViewIfNeeded();
+  const text = (await note.textContent())
+    .replace(/\s+/g, " ")
+    .trim();
+  assert.match(text, /Checked on-chain separately on 2026-11-12/);
+  // Both long strings are there whole, so a reader can paste them into an
+  // explorer, and they wrap inside the drawer instead of widening it.
+  assert.ok(
+    text.includes(
+      "0x18f3778f93a34c08d41a03e6b3a466a37ec0fd1b019e43f622927ba0c339838b",
+    ),
+  );
+  assert.ok(
+    text.includes(
+      "0x25e64d72e0cb87bf260fc49fcf71e750ba6795b179e0cea605e3f7e6f36b0173",
+    ),
+  );
+  const box = await note.boundingBox();
+  assert.ok(box.x >= 0 && box.x + box.width <= PHONE.width, "inside the screen");
+  const sideways = await s.page.evaluate(() => {
+    const root = document.documentElement;
+    const drawer = document.querySelector(".project-detail");
+    return [
+      root.scrollWidth - root.clientWidth,
+      drawer ? drawer.scrollWidth - drawer.clientWidth : 0,
+    ];
+  });
+  assert.deepEqual(sideways, [0, 0], "no sideways scroll");
   s.verify();
 });

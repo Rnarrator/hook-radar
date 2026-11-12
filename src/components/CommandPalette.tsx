@@ -343,7 +343,10 @@ export function CommandPalette({
       key: "search:query",
       group: "Search",
       label: `Search Discover for “${trimmed}”`,
-      hint: "Names, purposes and contract addresses",
+      // The edition's Discover search also reads the snapshot's measured pools.
+      hint: STATIC_EDITION
+        ? "Names, use cases, tokens, pairs, pools and addresses"
+        : "Names, purposes and contract addresses",
       words: "",
       icon: <Search size={17} />,
       command: { type: "search", query: trimmed },

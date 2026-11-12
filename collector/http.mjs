@@ -91,6 +91,11 @@ async function readBounded(response, maxBytes, signal) {
   return { text: Buffer.concat(chunks).toString("utf8"), bytes };
 }
 
+const DEFAULT_ACCEPT = "application/json";
+// JSON, and at most a dated API version after it (GeckoTerminal's day candles
+// are answered in the shape of version 20230302).
+const ACCEPT_ALLOWED = /^application\/json(?:;version=[0-9]{8})?$/;
+
 /** Cloudflare's rate-limit answer, which a provider behind it sends as the body
  * of an HTTP 429 (sometimes without a Retry-After header). */
 const CLOUDFLARE_RATE_LIMIT = /error code:?\s*1015\b/i;
@@ -215,6 +220,7 @@ export function createHttpClient({
       tolerate = [],
       method,
       body: sent,
+      accept,
     } = options;
     if (state.stopped)
       throw new ProviderError(
@@ -289,7 +295,7 @@ export function createHttpClient({
           redirect: "error",
           signal: controller.signal,
           headers: {
-            accept: "application/json",
+            accept,
             "user-agent": userAgent,
             ...(method === "POST"
               ? { "content-type": "application/json" }
@@ -448,7 +454,10 @@ export function createHttpClient({
    * have to start later than that, a cooldown included.
    * `tolerate` lists HTTP statuses that are an answer about this request alone:
    * they reject with code "http" but do not count toward the consecutive-failure
-   * limit. */
+   * limit.
+   * `accept` is the Accept header, and the only header a caller may change: JSON,
+   * with at most an API version (application/json;version=20230302). Anything
+   * else is refused with code "accept" before a request is made. */
   async function getJson(
     id,
     url,
@@ -458,8 +467,11 @@ export function createHttpClient({
       notAfter,
       tolerate = [],
       body,
+      accept = DEFAULT_ACCEPT,
     } = {},
   ) {
+    if (typeof accept !== "string" || !ACCEPT_ALLOWED.test(accept))
+      throw new ProviderError("accept", "The Accept header is not allowed.");
     const state = lane(id);
     const method = body === undefined ? "GET" : "POST";
     const run = () =>
@@ -470,6 +482,7 @@ export function createHttpClient({
         tolerate,
         method,
         body,
+        accept,
       });
     const result = state.tail.then(run, run);
     state.tail = result.then(

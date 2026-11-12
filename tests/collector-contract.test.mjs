@@ -90,6 +90,16 @@ test("the contract numbers are the ones the design states", () => {
     DYNAMIC_FEE_FLAG: 8388608,
     FRONTIER_MAX_REQUESTS: 3,
     FRONTIER_LATEST_START_MS: 240000,
+    DAILY_JOIN_RANK: 40,
+    DAILY_KEEP_RANK: 60,
+    DAILY_RANK_GRACE_MS: 259200000,
+    DAILY_MAX_REQUESTS: 20,
+    DAILY_BUDGET_MS: 240000,
+    DAILY_LATEST_START_MS: 1800000,
+    DAILY_CANDLES: 33,
+    DAILY_STORED_DAYS: 35,
+    DAILY_READY_SHARE: 0.9,
+    DAILY_MAX_UNREADABLE: 2,
   };
   for (const [name, value] of Object.entries(pinned))
     assert.equal(config[name], value, name);
@@ -128,6 +138,62 @@ test("the contract numbers are the ones the design states", () => {
     config.FRONTIER_LATEST_START_MS + 10000 + 1000 + 10000 + 15000 < 300000,
   );
   assert.ok(config.BURST_BUDGET_MS < config.BURST_DEADLINE_MS);
+  // The daily-volume step is the last of a run: it asks GeckoTerminal for one
+  // answer per pool at the lane's gap, so its 20 requests start inside its own
+  // 240 s, and it may begin only while the run is under 30 minutes old: with the
+  // longest discovery, the burst deadline and Frontier before it, the whole run
+  // is far inside the job's 45 minutes.
+  assert.deepEqual([...config.DAILY_CHECKPOINT_HOURS], [0, 4]);
+  assert.equal(config.MAX_BYTES.geckoDaily, 64 * 1024);
+  assert.ok((config.DAILY_MAX_REQUESTS - 1) * config.GT_GAP_MS < config.DAILY_BUDGET_MS);
+  assert.ok(config.DAILY_JOIN_RANK <= config.DAILY_KEEP_RANK);
+  assert.ok(
+    config.DISCOVERY_BUDGET_MS +
+      config.BURST_DEADLINE_MS +
+      36000 +
+      config.DAILY_BUDGET_MS +
+      config.REQUEST_TIMEOUT_MS <
+      45 * 60 * 1000,
+  );
+  // 33 candles are the 30 complete days of the longest window, the day in
+  // progress and two days of slack; 35 stored days cover them.
+  assert.ok(config.DAILY_CANDLES >= 30 + 1 + 2);
+  assert.ok(config.DAILY_STORED_DAYS >= config.DAILY_CANDLES);
+});
+
+test("the accept option is the only header a caller can change, and only to JSON of a dated version", async () => {
+  const seen = [];
+  const answer = (call) => {
+    seen.push(call.headers);
+    return { body: {} };
+  };
+  const { client, fetchImpl } = harness(answer);
+  await client.getJson("geckoterminal", GT + "0x1");
+  assert.equal(seen[0].accept, "application/json", "the default is unchanged");
+  await client.getJson("geckoterminal", GT + "0x2", {
+    accept: "application/json;version=20230302",
+  });
+  assert.equal(seen[1].accept, "application/json;version=20230302");
+  assert.equal(seen[1]["user-agent"], "Test/1 (+https://github.com/example/repo)");
+  const before = fetchImpl.calls.length;
+  for (const bad of [
+    "text/html",
+    "*/*",
+    "application/json;version=2023",
+    "application/json;q=0.9",
+    "application/json, text/html",
+    "application/json;version=20230302;x=1",
+    "application/jsonx",
+    "",
+    42,
+    null,
+  ])
+    await rejects(
+      client.getJson("geckoterminal", GT + "0x3", { accept: bad }),
+      "accept",
+    );
+  assert.equal(fetchImpl.calls.length, before, "nothing was sent");
+  assert.equal(client.requestCount(), before);
 });
 
 test("five failures in a row stop a provider, four do not", async () => {

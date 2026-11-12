@@ -115,7 +115,48 @@ export const FRONTIER_MAX_REQUESTS = 3;
 // after the burst began, which keeps even that case under 300 s.
 export const FRONTIER_LATEST_START_MS = 240000;
 
+// 7D and 30D volume of the largest pools (collector/daily.mjs). The step reads
+// one GeckoTerminal answer per pool, after the measurement burst, the Frontier
+// step and the snapshot time, on the GeckoTerminal lane (the same 12 s gap, the
+// same cooldown, the same 399-request cap). It never delays the burst and never
+// fails a run.
+//
+// A pool joins when it ranks DAILY_JOIN_RANK or better by its 24h volume and
+// stays while it ranks DAILY_KEEP_RANK or better (so a pool near the line does
+// not drop in and out of the totals); at most DAILY_KEEP_RANK pools are kept.
+// A pool that is not measured in a run keeps its record for DAILY_RANK_GRACE_MS.
+export const DAILY_JOIN_RANK = 40;
+export const DAILY_KEEP_RANK = 60;
+export const DAILY_RANK_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
+// At most this many GeckoTerminal requests per run, none starting later than
+// DAILY_BUDGET_MS after the step began (a cooldown included), and no step at all
+// once the run itself is DAILY_LATEST_START_MS old: the job has 45 minutes.
+export const DAILY_MAX_REQUESTS = 20;
+export const DAILY_BUDGET_MS = 240000;
+export const DAILY_LATEST_START_MS = 30 * 60 * 1000;
+// One answer holds 33 daily candles: the 30 complete days of the longest window,
+// the day in progress and two days of slack (the answer of the hour after a
+// rollover may end one day behind).
+export const DAILY_CANDLES = 33;
+// The days kept for a pool: a calendar window, newest complete day minus 34.
+export const DAILY_STORED_DAYS = 35;
+// A completed day never changes, so a pool is read at two checkpoints a day, the
+// UTC hours below: the first run after 00:00 UTC brings the new day, the first
+// after 04:00 UTC catches what the provider adds afterwards. 04:00 and not 03:00:
+// a discovery run is the first of each three-hour block and has the fewest
+// requests to spare.
+export const DAILY_CHECKPOINT_HOURS = Object.freeze([0, 4]);
+// The dataset ends at the newest complete UTC day once pools holding this share
+// of the covered volume have been read after that day ended; until then it ends
+// one day earlier, so no total mixes two end days.
+export const DAILY_READY_SHARE = 0.9;
+// An answer that is HTTP 200 but unreadable twice in a row (two checkpoints)
+// takes the pool out of the covered set until it reads again.
+export const DAILY_MAX_UNREADABLE = 2;
+
 export const MAX_BYTES = Object.freeze({
+  // A real answer for 33 days is about 4 KB.
+  geckoDaily: 64 * 1024,
   registry: 24 * 1024 * 1024,
   frontier: 2 * 1024 * 1024,
   // coinsPage?limit=100 is about 100 KB; the index answer holds at most 1,000
@@ -202,6 +243,20 @@ export function resolveMaxDiscovery(env = process.env) {
       ? env.COLLECTOR_MAX_DISCOVERY.trim()
       : "";
   return /^[0-9]{1,6}$/.test(text) ? Number(text) : undefined;
+}
+
+/** How many GeckoTerminal requests the daily-volume step may send in a run:
+ * COLLECTOR_DAILY_MAX_REQUESTS can lower the contract's DAILY_MAX_REQUESTS and
+ * never raise it; 0 switches the step off. An empty or invalid value (anything
+ * but a whole number from 0 to 999999) changes nothing. */
+export function resolveDailyMaxRequests(env = process.env) {
+  const text =
+    typeof env.COLLECTOR_DAILY_MAX_REQUESTS === "string"
+      ? env.COLLECTOR_DAILY_MAX_REQUESTS.trim()
+      : "";
+  return /^[0-9]{1,6}$/.test(text)
+    ? Math.min(DAILY_MAX_REQUESTS, Number(text))
+    : DAILY_MAX_REQUESTS;
 }
 
 /** The longest rate-limit wait: COLLECTOR_RETRY_AFTER_CAP_MS can lower it and

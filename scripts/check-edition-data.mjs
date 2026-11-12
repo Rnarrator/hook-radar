@@ -8,10 +8,23 @@
 // marker). So a folder passes only when status.json exists, is not marked
 // offline, and names the same generatedAt as snapshot.json. Files from two
 // different runs, or a snapshot with no status next to it, are refused too.
+//
+// daily.json (the 7D and 30D volume of the largest pools) is optional, and
+// snapshot.json says whether it exists: it names the file as a source
+// (geckoterminal-daily) exactly when the file is there. A file that is not valid,
+// that belongs to another run, or that counts a day that was not complete is
+// refused (the rules are shared/daily-volume.ts, which the collector applies
+// before it writes the file and the page applies when it reads it).
 import { realpathSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  DAILY_FILE_NAME,
+  DAILY_SOURCE_ID,
+  dailyRunProblem,
+  validateDailyShape,
+} from "../shared/daily-volume.ts";
 
 async function readJson(path) {
   let text;
@@ -84,7 +97,33 @@ export async function inspectPublishedData(dataDir) {
         `status.json generatedAt (${JSON.stringify(status.value.generatedAt ?? null)}) is not snapshot.json generatedAt (${JSON.stringify(generatedAt)}): the files are from different runs`,
       );
   }
+  problems.push(
+    ...(await dailyProblems(dataDir, snapshot.value, generatedAt)),
+  );
   return { present: true, generatedAt, problems };
+}
+
+/** What is wrong with daily.json next to the snapshot, if anything. */
+async function dailyProblems(dataDir, snapshot, generatedAt) {
+  const sources = Array.isArray(snapshot?.sources) ? snapshot.sources : [];
+  const named = sources.filter((source) => source?.id === DAILY_SOURCE_ID);
+  const daily = await readJson(join(dataDir, DAILY_FILE_NAME));
+  if (daily.missing)
+    return named.length
+      ? [
+          `snapshot.json names the daily volume as a source but ${DAILY_FILE_NAME} is missing`,
+        ]
+      : [];
+  if (daily.error)
+    return [`${DAILY_FILE_NAME} cannot be read: ${daily.error}`];
+  const shape = validateDailyShape(daily.value);
+  if (!shape.ok) return [`${DAILY_FILE_NAME} is not valid: ${shape.reason}`];
+  if (generatedAt === null) return [];
+  const problem = dailyRunProblem(shape.file, {
+    generatedAt,
+    sources: sources.filter((source) => source && typeof source.id === "string"),
+  });
+  return problem ? [`${DAILY_FILE_NAME}: ${problem}`] : [];
 }
 
 const blockersOf = ({ present, problems }) =>

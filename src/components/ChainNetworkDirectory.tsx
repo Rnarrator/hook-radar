@@ -14,6 +14,9 @@ import { STATIC_EDITION } from "../edition";
 import { ArrowRight, ChevronDown, Search, X } from "./Icons";
 import { Empty } from "./Primitives";
 import { CensusNote } from "./EditionStatus";
+import { DailyAmount, NO_SUM } from "./DailyAmount";
+import { dailyNetworksLabel } from "../daily";
+import { useDailyView } from "../daily-view";
 import "./chain-network-directory.css";
 
 const COLLAPSED_ROWS = 8;
@@ -54,6 +57,8 @@ export function ChainNetworkDirectory({
   /** "census as of 27 Oct 2026": dates the pool counts (static edition). */
   census?: string | null;
 }) {
+  // Edition: 7D or 30D, when chosen, replaces the volume column's window.
+  const daily = useDailyView();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<NetworkSort>("projects");
   const [expanded, setExpanded] = useState(false);
@@ -174,7 +179,9 @@ export function ChainNetworkDirectory({
                 role="columnheader"
                 aria-sort={sort === "volume" ? "descending" : undefined}
               >
-                Tracked {windows[windowKey]} volume
+                {daily.span
+                  ? dailyNetworksLabel(daily.span)
+                  : `Tracked ${windows[windowKey]} volume`}
               </span>
               <span
                 role="columnheader"
@@ -227,22 +234,34 @@ export function ChainNetworkDirectory({
                   </span>
                   <span
                     role="cell"
-                    data-label={`Tracked ${windows[windowKey]} volume`}
+                    data-label={
+                      daily.span
+                        ? dailyNetworksLabel(daily.span)
+                        : `Tracked ${windows[windowKey]} volume`
+                    }
                   >
-                    <span
-                      className="chains-network-amount"
-                      title={exactAmount(row.volumeUsd)}
-                    >
-                      {money(row.volumeUsd)}
-                    </span>
-                    <span
-                      className="chains-network-measurement"
-                      title={chainMeasurementTitle(
-                        row.freshness.volume[windowKey],
-                      )}
-                    >
-                      {measurementNote(row.freshness.volume[windowKey])}
-                    </span>
+                    {daily.span ? (
+                      <span className="chains-network-amount">
+                        <DailyAmount sum={row.daily ?? NO_SUM} />
+                      </span>
+                    ) : (
+                      <>
+                        <span
+                          className="chains-network-amount"
+                          title={exactAmount(row.volumeUsd)}
+                        >
+                          {money(row.volumeUsd)}
+                        </span>
+                        <span
+                          className="chains-network-measurement"
+                          title={chainMeasurementTitle(
+                            row.freshness.volume[windowKey],
+                          )}
+                        >
+                          {measurementNote(row.freshness.volume[windowKey])}
+                        </span>
+                      </>
+                    )}
                   </span>
                   <span role="cell" data-label="Reported reserves">
                     <span

@@ -1,0 +1,14 @@
+{
+ "requestedAt": "2026-11-11T22:52:47.096Z",
+ "url": "https://api.geckoterminal.com/api/v2/networks/base/pools/0x11ae80233ca6d15171e9ec8d10d985b3c13c2c54508c88a960f6b272159eabb9/ohlcv/day?limit=33&currency=usd&include_empty_intervals=true",
+ "status": 429,
+ "headers": {
+  "cache-control": "private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0",
+  "content-type": "application/json",
+  "date": "Wed, 11 Nov 2026 22:52:46 GMT",
+  "expires": "Thu, 01 Jan 1970 00:00:01 GMT",
+  "retry-after": "0",
+  "vary": "accept-encoding"
+ },
+ "bodyText": "{\"status\":{\"error_code\":429,\"error_message\":\"You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits and use the onchain endpoints: https://docs.coingecko.com/reference/endpoint-overview\"}}"
+}

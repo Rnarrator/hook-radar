@@ -40,6 +40,13 @@ import {
 } from "./Icons";
 import { Empty, External } from "./Primitives";
 import { ProtocolLogo } from "./ProtocolLogo";
+import { DailyAmount, NO_SUM } from "./DailyAmount";
+import {
+  DAILY_NOT_COVERED,
+  dailyNetworksLabel,
+  dailySumTitle,
+} from "../daily";
+import { useDailyView } from "../daily-view";
 import "./chain-protocol-catalog.css";
 
 interface Props {
@@ -461,6 +468,9 @@ export function ChainProtocolCatalog({
   updating = false,
   disabled = false,
 }: Props) {
+  // Edition: 7D or 30D, when chosen, replaces the volume column's window. The
+  // rows' own figures come from the model (buildChains over the same lens).
+  const daily = useDailyView();
   const searchId = useId();
   const searchInput = useRef<HTMLInputElement>(null);
   const catalogHeading = useRef<HTMLHeadingElement>(null);
@@ -511,7 +521,9 @@ export function ChainProtocolCatalog({
     `Known hooks${network ? ` on ${network.name}` : ""}`,
     // The edition counts the pools measured in the snapshot, not an index.
     STATIC_EDITION ? "Pools in snapshot" : "Pools using hooks",
-    `Tracked ${windows[windowKey]} volume`,
+    daily.span
+      ? dailyNetworksLabel(daily.span)
+      : `Tracked ${windows[windowKey]} volume`,
     "Reported reserves",
   ];
   return (
@@ -927,10 +939,16 @@ export function ChainProtocolCatalog({
                         </div>
                         <div>
                           <dt>{metricLabels[2]}</dt>
-                          <dd title={exactMoney(row.volumeUsd)}>
-                            {volumeMark}
-                            {money(row.volumeUsd)}
-                          </dd>
+                          {daily.span ? (
+                            <dd>
+                              <DailyAmount sum={row.daily ?? NO_SUM} />
+                            </dd>
+                          ) : (
+                            <dd title={exactMoney(row.volumeUsd)}>
+                              {volumeMark}
+                              {money(row.volumeUsd)}
+                            </dd>
+                          )}
                         </div>
                         <div>
                           <dt>{metricLabels[3]}</dt>
@@ -961,21 +979,32 @@ export function ChainProtocolCatalog({
                           Market data <ChevronDown size={13} />
                         </summary>
                         <div className="chains-protocol-freshness">
-                          <Measurement
-                            freshness={row.freshness.volume[windowKey]}
-                            now={now}
-                            label="Tracked volume"
-                          />
+                          {daily.span ? (
+                            <p>
+                              {daily.lens && row.daily
+                                ? dailySumTitle(row.daily, daily.lens)
+                                : DAILY_NOT_COVERED}
+                            </p>
+                          ) : (
+                            <Measurement
+                              freshness={row.freshness.volume[windowKey]}
+                              now={now}
+                              label="Tracked volume"
+                            />
+                          )}
                           <Measurement
                             freshness={row.freshness.liquidity}
                             now={now}
                             label="Reserves"
                           />
                           <p>
-                            Only pool measurements younger than five minutes
+                            {daily.span
+                              ? "Reserves use pool measurements younger than five minutes"
+                              : "Only pool measurements younger than five minutes"}
                             {STATIC_EDITION ? " when the snapshot was taken" : ""}{" "}
-                            contribute to these USD figures. Unavailable values
-                            are not zero.
+                            {daily.span
+                              ? "only. Unavailable values are not zero."
+                              : "contribute to these USD figures. Unavailable values are not zero."}
                           </p>
                         </div>
                       </details>

@@ -14,6 +14,9 @@ import {
   trackedVolumeNote,
 } from "../edition-platform-copy";
 import { ProtocolLogo } from "./ProtocolLogo";
+import { DAILY_ERROR, dailyLoadingText, dailyTileNote } from "../daily";
+import type { DailySum } from "../daily";
+import { useDailyView } from "../daily-view";
 import { External } from "./Primitives";
 import { LaunchpadPaths } from "./LaunchpadPaths";
 import {
@@ -96,6 +99,9 @@ export interface PlatformMarket {
   volumeUsd: number | null;
   volumePools: number;
   windowLabel: string;
+  /** Edition: when 7D or 30D is shown, how many of the platform's measured
+   * pools have daily figures (the volume above is their sum). */
+  daily?: DailySum;
 }
 
 /** Platform membership and observed hook ownership are different facts. */
@@ -130,6 +136,8 @@ export function PlatformDetail({
   /** Reviewed listings have no service-side identity to watch yet. */
   canWatch?: boolean;
 }) {
+  // Edition: 7D or 30D, when the list behind this drawer was showing one.
+  const dailyView = useDailyView();
   const statusHeadingId = useId();
   const chainName = (slug: string) =>
     chains.find((chain) => chain.slug === slug)?.name || slug;
@@ -332,7 +340,13 @@ export function PlatformDetail({
             </strong>
             <span className="readout-note">
               {market
-                ? trackedVolumeNote(market)
+                ? dailyView.span
+                  ? dailyView.lens && market.daily
+                    ? dailyTileNote(dailyView.lens, market.daily)
+                    : dailyView.phase === "error"
+                      ? DAILY_ERROR
+                      : dailyLoadingText(dailyView.span)
+                  : trackedVolumeNote(market)
                 : measuring
                   ? "Loading measurements"
                   : "Not attributed"}

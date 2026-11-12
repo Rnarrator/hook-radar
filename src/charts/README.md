@@ -150,8 +150,9 @@ and listed but is not selectable (`inert`; the remainder is hatched).
 Shape the parts with `src/analytics-composition.ts` (`compositionParts`): it
 drops unmeasured and zero parts, groups the tail, and returns any part of the
 total no row accounts for as an explicit remainder instead of stretching the
-others. Network parts use one periwinkle stepped by rank (every step is at
-least 3:1 against the plate); use-case parts use the fixed use-case colours.
+others. Network parts keep one fixed hue per network (`networkColors` in the
+same module: shared chart tokens, never twice on one bar, a neutral for the
+tail); use-case parts use the fixed use-case colours.
 
 ### `RatioMeter`
 A 4px meter for one measured ratio already printed in words beside it; hidden

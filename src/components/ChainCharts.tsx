@@ -20,6 +20,14 @@ import { ArrowRight, ChevronDown } from "./Icons";
 import "./chain-charts.css";
 import { STATIC_EDITION } from "../edition";
 import { CensusNote } from "./EditionStatus";
+import {
+  DAILY_ERROR,
+  dailyChartCount,
+  dailyChartNone,
+  dailyLoadingText,
+  spanLabel,
+} from "../daily";
+import { useDailyView } from "../daily-view";
 
 /** The exact value in a title or an aria-label. The edition reads a USD amount
  * in cents, like the bars of Analytics: the sums behind a network's volume carry
@@ -131,6 +139,10 @@ export function ChainCharts({
   onSelectNetwork,
   census = null,
 }: Props) {
+  // Edition: with 7D or 30D chosen the volume bars are daily sums over the
+  // largest pools (the model is built over the same lens); until the figures
+  // are there the chart says so instead of drawing 24H bars under a 7D label.
+  const daily = useDailyView();
   const [metric, setMetric] = useState<ChainChartMetric>("volume");
   const [expanded, setExpanded] = useState(false);
   const id = useId();
@@ -140,12 +152,21 @@ export function ChainCharts({
   );
   const measured = rows.filter((row) => row.value !== null);
   const largest = measured[0]?.value ?? 0;
+  const spanVolume = metric === "volume" && daily.span !== null;
+  const spanPending = spanVolume && !daily.lens;
   // Every row unmeasured: one plain statement beats a column of empty bars.
   const allUnmeasured =
-    metric !== "pools" && rows.length > 0 && measured.length === 0;
+    spanPending ||
+    (metric !== "pools" && rows.length > 0 && measured.length === 0);
   const visible = expanded ? rows : rows.slice(0, COLLAPSED_ROWS);
   const amount = (value: number | null) =>
-    metric === "pools" ? (value === null ? "—" : count(value)) : money(value);
+    metric === "pools"
+      ? value === null
+        ? "—"
+        : count(value)
+      : spanVolume && value !== null
+        ? `≥${money(value)}`
+        : money(value);
   const composition = chainPoolComposition(result.inventory);
   const network = result.selectedNetwork;
   const hasScope = result.chain === "all" || result.knownChain;
@@ -179,7 +200,9 @@ export function ChainCharts({
 
   const metricName =
     metric === "volume"
-      ? `Tracked ${windows[windowKey]} hook-pool volume`
+      ? daily.span
+        ? `Tracked ${spanLabel(daily.span)} hook-pool volume · largest pools only`
+        : `Tracked ${windows[windowKey]} hook-pool volume`
       : metric === "reserves"
         ? "Reported reserves"
         : "Indexed hook pools";
@@ -268,8 +291,14 @@ export function ChainCharts({
           </div>
         </header>
         <p className="chain-chart-caption">
-          <b>{metricName}</b> · All networks · {count(measured.length)} of{" "}
-          {count(rows.length)} {metric === "pools" ? "indexed" : "measured"}
+          <b>{metricName}</b> · All networks ·{" "}
+          {spanVolume
+            ? dailyChartCount(
+                daily.span!,
+                count(measured.length),
+                count(rows.length),
+              )
+            : `${count(measured.length)} of ${count(rows.length)} ${metric === "pools" ? "indexed" : "measured"}`}
           {metric === "volume" && (
             <>
               {" · "}
@@ -289,12 +318,31 @@ export function ChainCharts({
           </div>
         )}
         {allUnmeasured ? (
+          spanPending ? (
+          <p className="chain-chart-empty">
+            <strong>
+              {daily.phase === "error"
+                ? DAILY_ERROR
+                : dailyLoadingText(daily.span!)}
+            </strong>
+            The bars are drawn once the figures are there.
+          </p>
+          ) : (
+          spanVolume ? (
+          <p className="chain-chart-empty">
+            <strong>{`No ${spanLabel(daily.span!)} volume`}</strong>
+            None of the {count(rows.length)} networks has a{" "}
+            {spanLabel(daily.span!)} figure for any of its largest pools, so no
+            bars are drawn. Unavailable is not zero.
+          </p>
+          ) : (
           <p className="chain-chart-empty">
             <strong>No current measurements</strong>
             None of the {count(rows.length)} networks has a current{" "}
             {metric === "volume" ? "hook-pool volume" : "reserve"} measurement,
             so no bars are drawn. Unavailable is not zero.
           </p>
+          ))
         ) : (
         <ol className="chain-chart-networks">
           {visible.map(({ network: row, value, share }, index) => (
@@ -307,7 +355,7 @@ export function ChainCharts({
                 data-state={
                   value === null ? "unavailable" : value === 0 ? "zero" : "measured"
                 }
-                aria-label={`View ${row.name} ecosystem: ${exactValue(value, metric !== "pools")} ${metric === "pools" ? "indexed hook pools" : metric === "volume" ? `tracked ${windows[windowKey]} hook-pool volume` : "reserves"}`}
+                aria-label={`View ${row.name} ecosystem: ${exactValue(value, metric !== "pools")} ${metric === "pools" ? "indexed hook pools" : metric === "volume" ? `tracked ${daily.span ? spanLabel(daily.span) : windows[windowKey]} hook-pool volume` : "reserves"}`}
                 title={exactValue(value, metric !== "pools")}
               >
                 <span className="chain-chart-rank" aria-hidden="true">
@@ -325,7 +373,9 @@ export function ChainCharts({
                   <b>{amount(value)}</b>
                   <small>
                     {value === null
-                      ? "not measured"
+                      ? spanVolume
+                        ? dailyChartNone(daily.span!)
+                        : "not measured"
                       : analyticsChartPercent(share)}
                   </small>
                 </span>
@@ -360,7 +410,9 @@ export function ChainCharts({
             ? STATIC_EDITION
               ? `Share of indexed hook pools${census ? `, ${census}` : ""}. Counts include inactive pools.`
               : "Share of indexed hook pools. Counts include inactive pools and can grow while history syncs."
-            : `${count(measured.length)} of ${count(rows.length)} networks have current ${metric === "volume" ? "hook-pool volume" : "reserve"} measurements. Shares use ${metric === "volume" ? "tracked volume" : "reported reserves"} across those networks; unavailable values are not zero.`}
+            : spanVolume
+              ? `${count(measured.length)} of ${count(rows.length)} networks have 7D or 30D volume for at least one pool. Each bar is the sum over the largest pools that have it; shares use those sums, and networks without any are not zero.`
+              : `${count(measured.length)} of ${count(rows.length)} networks have current ${metric === "volume" ? "hook-pool volume" : "reserve"} measurements. Shares use ${metric === "volume" ? "tracked volume" : "reported reserves"} across those networks; unavailable values are not zero.`}
         </p>
       </section>
 

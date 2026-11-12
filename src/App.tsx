@@ -69,12 +69,19 @@ import {
   count,
   isSnapshot,
   money,
+  poolMatchFor,
   readWatchlist,
   relativeTime,
   safeUrl,
   projectComparator,
   windows,
 } from "./model";
+import {
+  buildPoolSearchIndex,
+  poolSearchCount,
+  poolSearchCoverage,
+  suggestName,
+} from "./pool-search";
 import type { Filters, PropertyFilter, SortKey, View } from "./model";
 import { navigationSearch, parseNavigation, publicViewUrl } from "./navigation";
 import type {
@@ -85,6 +92,32 @@ import type {
   SortOrder,
 } from "./navigation";
 import { selectProjects } from "./scope";
+import {
+  createDailyLens,
+  dailyButtonTitle,
+  dailyCaption,
+  dailyCardLabel,
+  dailyColumnHelp,
+  dailyColumnLabel,
+  dailyLoadingText,
+  dailyExportNote,
+  dailyReadyText,
+  dailySumText,
+  dailyTileLabel,
+  dailyTileNote,
+  dailyView as dailyViewSupported,
+  DAILY_ERROR,
+  DAILY_SCOPE_NOTE,
+  DAILY_UNAVAILABLE,
+  offersDaily,
+  spanLabel,
+} from "./daily";
+import type { DailySpan, DailySum } from "./daily";
+import { DAILY_SPAN_KEYS } from "../shared/daily-volume";
+import { DailyViewProvider } from "./daily-view";
+import type { DailyView } from "./daily-view";
+import { DailyAmount, NO_SUM } from "./components/DailyAmount";
+import { useDailyVolume } from "./useDailyVolume";
 import { projectCsv } from "./export";
 import { flashCopied } from "./copy-feedback";
 import { useMediaQuery } from "./use-media-query";
@@ -93,6 +126,7 @@ import { useFrontierExtensionCount } from "./useFrontierExtensionCount";
 import type { ExtensionCatalogSummary } from "./extensions";
 import { buildChains, launchpadRegistry as platformStatusEntries } from "./chains";
 import { LoadingPlates } from "./components/LoadingPlates";
+import { PoolMatchLine, poolMatchId } from "./components/PoolMatchLine";
 import { External, Empty, Modal } from "./components/Primitives";
 import {
   CommandPalette,
@@ -444,6 +478,9 @@ export default function App() {
   // wording and ellipsises it (compact.css), so one label reads the same on every
   // laptop width.
   const phoneHeader = useMediaQuery("(max-width: 30rem)");
+  // The search box's long hint needs about 310px of room; below 32rem the page's
+  // search field is narrower than that, so the short hint is shown instead.
+  const shortSearchHint = useMediaQuery("(max-width: 32rem)");
   const snapshot = useMemo(
     () => (sourceSnapshot ? refreshMarketSnapshot(sourceSnapshot, now) : null),
     [sourceSnapshot, now],
@@ -493,6 +530,51 @@ export default function App() {
   const [filters, setFilters] = useState<Filters>(initial.filters);
   const [windowKey, setWindow] = useState<WindowKey>(initial.window);
   const [sort, setSort] = useState<SortOrder>(initial.sort);
+  // Edition: 7D or 30D volume of the largest pools, picked beside 1H, 6H and
+  // 24H. The window beneath stays 24H, so a panel that knows nothing of spans
+  // shows 24H under its own 24H label. Null in the live app, always. The file
+  // is read only once a span is picked (and is one request for both spans).
+  const [span, setSpan] = useState<DailySpan | null>(initial.span ?? null);
+  const [dailyRetry, setDailyRetry] = useState(0);
+  const dailyOffered = STATIC_EDITION && offersDaily(sourceSnapshot);
+  const dailyWanted = dailyOffered && span !== null && dailyViewSupported(view);
+  const dailyState = useDailyVolume({
+    run: dailyOffered ? (sourceSnapshot?.generatedAt ?? null) : null,
+    wanted: dailyWanted,
+    retry: dailyRetry,
+  });
+  // The file is missing, not valid or too old for this snapshot: the buttons go
+  // and the plain windows are shown.
+  const dailyGone = dailyOffered && dailyState.status === "unavailable";
+  const activeSpan = dailyWanted && !dailyGone ? span : null;
+  const dailyLens = useMemo(
+    () =>
+      activeSpan && dailyState.status === "ready"
+        ? createDailyLens(dailyState.file, activeSpan)
+        : null,
+    [activeSpan, dailyState],
+  );
+  const dailyContext = useMemo<DailyView>(
+    () => ({
+      span: activeSpan,
+      lens: dailyLens,
+      phase: !activeSpan
+        ? "off"
+        : dailyLens
+          ? "ready"
+          : dailyState.status === "error"
+            ? "error"
+            : "loading",
+    }),
+    [activeSpan, dailyLens, dailyState.status],
+  );
+  useEffect(() => {
+    // A span a link names is dropped when the snapshot offers none, when the
+    // file turns out to be unavailable, and on a page that shows no spans.
+    if (span === null) return;
+    if (!dailyViewSupported(view) || dailyGone || (sourceSnapshot && !dailyOffered))
+      setSpan(null);
+  }, [span, view, dailyGone, dailyOffered, sourceSnapshot]);
   const [selectedTab, setSelectedTab] = useState<DetailTab>(initial.detailTab);
   const [selectedExtension, setSelectedExtension] =
     useState<ExtensionSelection | null>(initial.extensionSelection || null);
@@ -633,18 +715,24 @@ export default function App() {
       role: "launchpads",
       windowKey,
       now,
+      daily: dailyLens,
     }).protocols.find((item) => item.project.id === registryRecord.id);
     const attribution = row?.attribution;
     if (!row || !attribution || attribution.mappedHooks === 0) return null;
+    // Edition: 7D or 30D is a sum over the platform's pools that have daily
+    // figures. Until the figures are there the drawer shows none, never the 24H
+    // figure under a 7D label.
+    const pending = activeSpan !== null && !dailyLens;
     return {
       mappedHooks: attribution.mappedHooks,
       hooksWithPools: attribution.hooksWithPools,
       pools: row.observedPools,
-      volumeUsd: row.volumeUsd,
-      volumePools: row.volumePools,
-      windowLabel: windows[windowKey],
+      volumeUsd: pending ? null : row.volumeUsd,
+      volumePools: pending ? 0 : row.volumePools,
+      windowLabel: activeSpan ? spanLabel(activeSpan) : windows[windowKey],
+      ...(row.daily ? { daily: row.daily } : {}),
     };
-  }, [registryRecord, snapshot, windowKey, now]);
+  }, [registryRecord, snapshot, windowKey, now, dailyLens, activeSpan]);
   const fastDetails = useProjectView(
     registryRecord ? null : selectedId,
     !STATIC_EDITION && !snapshot && !serviceStarting,
@@ -1081,6 +1169,7 @@ export default function App() {
         view: nextView,
         filters,
         window: windowKey,
+        span,
         project: nextProject,
         detailTab: nextTab,
         extensionSelection: extensionScope,
@@ -1916,6 +2005,7 @@ export default function App() {
     filters,
     view,
     windowKey,
+    span,
     selectedId,
     selectedTab,
     selectedExtension,
@@ -1942,6 +2032,7 @@ export default function App() {
       setFilters(state.filters);
       setViewState(state.view);
       setWindow(state.window);
+      setSpan(state.span ?? null);
       setSelectedIdState(state.project);
       setSelectedTab(state.detailTab);
       setSelectedExtension(state.extensionSelection || null);
@@ -2223,6 +2314,16 @@ export default function App() {
     () => new Map((snapshot?.chains || []).map((c) => [c.slug, c.name])),
     [snapshot?.chains],
   );
+  // Edition: the search also reads the snapshot's measured pools (token, pair,
+  // pool id and address). Built once per snapshot; the live page keeps its own
+  // search, which asks the service.
+  const poolSearch = useMemo(
+    () =>
+      STATIC_EDITION && snapshot
+        ? buildPoolSearchIndex(snapshot.pools, chainNames)
+        : undefined,
+    [snapshot?.pools, chainNames],
+  );
   const localFiltered = useMemo(
     () =>
       !discoveryView
@@ -2238,6 +2339,7 @@ export default function App() {
             now,
             windowKey,
             chainNames,
+            poolSearch,
           ).filter(
             (project) => view !== "watchlist" || watchlist.includes(project.id),
           ),
@@ -2251,9 +2353,79 @@ export default function App() {
       windowKey,
       discoveryView,
       chainNames,
+      poolSearch,
     ],
   );
   const filtered = useDirectory ? remote?.projects || [] : localFiltered;
+  // A search that finds nothing says what it looked through, and offers the one
+  // project name it is clearly a typo of. Worked out only then.
+  const searchedText = filters.search.trim();
+  const emptySearch = useMemo(() => {
+    if (
+      !poolSearch ||
+      !snapshot ||
+      useDirectory ||
+      !discoveryView ||
+      view === "watchlist" ||
+      !searchedText ||
+      filtered.length
+    )
+      return null;
+    // What the list would hold without the search, under the same scope,
+    // network, use case and feature choices.
+    const candidates = selectProjects(
+      projects,
+      snapshot.pools,
+      { ...filters, search: "" },
+      undefined,
+      now,
+      windowKey,
+      chainNames,
+    );
+    return {
+      covered: poolSearchCount(
+        poolSearch,
+        candidates.map((project) => project.id),
+        filters.chain,
+      ),
+      all: poolSearchCount(poolSearch),
+      network:
+        filters.chain === "all"
+          ? null
+          : (chainNames.get(filters.chain) ?? filters.chain),
+      suggestion: suggestName(
+        searchedText,
+        candidates.map((project) => project.name),
+      ),
+      // The same search in All hooks: hooks no registry names are only there.
+      elsewhere:
+        filters.market === "projects" || filters.market === "observed"
+          ? selectProjects(
+              projects,
+              snapshot.pools,
+              { ...filters, market: "all" },
+              undefined,
+              now,
+              windowKey,
+              chainNames,
+              poolSearch,
+            ).length
+          : 0,
+    };
+  }, [
+    poolSearch,
+    snapshot,
+    useDirectory,
+    discoveryView,
+    view,
+    searchedText,
+    filtered.length,
+    projects,
+    filters,
+    now,
+    windowKey,
+    chainNames,
+  ]);
   const duplicateNames = useMemo(() => {
     const projectIds = new Set(projects.map((project) => project.id));
     return duplicateFamilyNames([
@@ -2261,16 +2433,47 @@ export default function App() {
       ...filtered.filter((project) => !projectIds.has(project.id)),
     ]);
   }, [projects, filtered]);
+  // Edition: the 7D or 30D figure of every project in the list, not only of the
+  // visible page, so that sorting sees them all: the sum over the project's pools
+  // on the chosen network that have daily figures.
+  const dailySums = useMemo(() => {
+    if (!dailyLens) return null;
+    const byProject = new Map<string, Pool[]>();
+    for (const pool of snapshot?.pools ?? []) {
+      if (
+        !pool.projectId ||
+        (filters.chain !== "all" && pool.chain !== filters.chain)
+      )
+        continue;
+      const rows = byProject.get(pool.projectId);
+      if (rows) rows.push(pool);
+      else byProject.set(pool.projectId, [pool]);
+    }
+    return new Map<string, DailySum>(
+      filtered.map((project) => [
+        project.id,
+        dailyLens.sum(byProject.get(project.id) ?? []),
+      ]),
+    );
+  }, [dailyLens, snapshot, filters.chain, filtered]);
   const sorted = useMemo(
     () =>
       useDirectory
         ? filtered
         : [...filtered].sort(
-            projectComparator(sort.key, sort.direction, windowKey, (project) =>
-              projectPoolCount(project, filters.chain),
+            projectComparator(
+              sort.key,
+              sort.direction,
+              windowKey,
+              (project) => projectPoolCount(project, filters.chain),
+              // The list ranks by the figure it shows: a project with none is
+              // last in both directions, and a list still loading is by name.
+              activeSpan
+                ? (project) => dailySums?.get(project.id)?.usd ?? null
+                : undefined,
             ),
           ),
-    [filtered, sort, windowKey, useDirectory, filters.chain],
+    [filtered, sort, windowKey, useDirectory, filters.chain, activeSpan, dailySums],
   );
   const resultCount = useDirectory ? (remote?.total ?? null) : sorted.length;
   const pages =
@@ -2286,6 +2489,17 @@ export default function App() {
             Math.min(page, pages) * PAGE_SIZE,
           ),
     [useDirectory, sorted, page, pages],
+  );
+  // Rows listed because one of their pools matched say which (the page's rows only).
+  const poolMatches = useMemo(
+    () =>
+      new Map(
+        tablePage.flatMap((project) => {
+          const match = poolMatchFor(project, filters, chainNames, poolSearch);
+          return match ? [[project.id, match] as const] : [];
+        }),
+      ),
+    [tablePage, filters, chainNames, poolSearch],
   );
   useEffect(() => {
     if (discoveryView) setPage((previous) => Math.min(previous, pages));
@@ -2428,6 +2642,11 @@ export default function App() {
       return { volumeUsd: frame.volumeUsd, freshness: frame.freshness };
     return aggregateCurrentMarkets(scopedPools, now);
   }, [snapshot, scopedPools, now]);
+  // Edition: the tile's 7D or 30D figure, over the pools of this view.
+  const scopeDaily = useMemo(
+    () => (dailyLens ? dailyLens.sum(scopedPools) : null),
+    [dailyLens, scopedPools],
+  );
   const scopeVolume = scopeMarkets.volumeUsd[windowKey];
   const scopeVolumeCount =
     scopeMarkets.freshness.volume[windowKey].currentPools;
@@ -2761,9 +2980,9 @@ export default function App() {
                     updateFilter("search", event.target.value)
                   }
                   placeholder={
-                    phoneHeader
-                      ? "Search projects, networks"
-                      : "Search projects, networks or hook addresses"
+                    shortSearchHint
+                      ? "Search projects, tokens"
+                      : "Search projects, tokens, networks, addresses"
                   }
                   aria-label="Search projects"
                   maxLength={300}
@@ -3077,6 +3296,18 @@ export default function App() {
       ) : !filtered.length ? (
         <Empty
           headingLevel={view === "watchlist" ? 2 : 3}
+          more={
+            emptySearch &&
+            !savedOutsideSnapshot &&
+            !noMeasuredPoolsOnNetwork &&
+            filters.market !== "active"
+              ? poolSearchCoverage(
+                  emptySearch.covered,
+                  emptySearch.all,
+                  emptySearch.network,
+                )
+              : null
+          }
           icon={
             view === "watchlist" && !watchlist.length ? (
               <Star size={27} />
@@ -3097,26 +3328,54 @@ export default function App() {
                   : "No matching projects"
           }
           action={
-            <button
-              ref={emptyActionRef}
-              className="primary-button"
-              onClick={() => {
-                // Filters cannot bring back a saved project the snapshot does
-                // not carry: the way on is to browse what it does carry.
-                const leave =
-                  view === "watchlist" &&
-                  (!watchlist.length || savedOutsideSnapshot);
-                resetFilters(leave ? "overview" : view);
-                if (leave) setView("overview");
-              }}
-            >
-              {view === "watchlist" && !watchlist.length
-                ? "Explore projects"
-                : savedOutsideSnapshot
-                  ? "Browse projects"
-                  : "Clear filters"}
-              <ArrowRight size={15} />
-            </button>
+            <>
+              {emptySearch?.suggestion &&
+                !savedOutsideSnapshot &&
+                !noMeasuredPoolsOnNetwork &&
+                filters.market !== "active" && (
+                  <button
+                    className="suggestion-button"
+                    onClick={() => {
+                      updateFilter("search", emptySearch.suggestion!);
+                      searchRef.current?.focus();
+                    }}
+                  >
+                    Did you mean {emptySearch.suggestion}?
+                  </button>
+                )}
+              {emptySearch && emptySearch.elsewhere > 0 &&
+                !savedOutsideSnapshot &&
+                !noMeasuredPoolsOnNetwork && (
+                  <button
+                    className="suggestion-button"
+                    onClick={() => updateFilter("market", "all")}
+                  >
+                    Show {emptySearch.elsewhere}{" "}
+                    {emptySearch.elsewhere === 1 ? "match" : "matches"} in All
+                    hooks
+                  </button>
+                )}
+              <button
+                ref={emptyActionRef}
+                className="primary-button"
+                onClick={() => {
+                  // Filters cannot bring back a saved project the snapshot does
+                  // not carry: the way on is to browse what it does carry.
+                  const leave =
+                    view === "watchlist" &&
+                    (!watchlist.length || savedOutsideSnapshot);
+                  resetFilters(leave ? "overview" : view);
+                  if (leave) setView("overview");
+                }}
+              >
+                {view === "watchlist" && !watchlist.length
+                  ? "Explore projects"
+                  : savedOutsideSnapshot
+                    ? "Browse projects"
+                    : "Clear filters"}
+                <ArrowRight size={15} />
+              </button>
+            </>
           }
         >
           {view === "watchlist" && !watchlist.length
@@ -3184,10 +3443,14 @@ export default function App() {
                   >
                     {sortLabel(
                       "volume",
-                      `${windows[windowKey]} VOLUME`,
-                      STATIC_EDITION
-                        ? "How much was traded in these pools over the selected time, from measurements under five minutes old when the snapshot was taken."
-                        : "How much was traded in these pools over the selected time, from measurements under five minutes old.",
+                      activeSpan
+                        ? dailyColumnLabel(activeSpan)
+                        : `${windows[windowKey]} VOLUME`,
+                      activeSpan
+                        ? dailyColumnHelp(activeSpan)
+                        : STATIC_EDITION
+                          ? "How much was traded in these pools over the selected time, from measurements under five minutes old when the snapshot was taken."
+                          : "How much was traded in these pools over the selected time, from measurements under five minutes old.",
                     )}
                   </th>
                   <th
@@ -3230,6 +3493,11 @@ export default function App() {
                         className="project-identity"
                         data-testid={`project-${project.id}`}
                         aria-label={`Open ${project.name}`}
+                        aria-describedby={
+                          poolMatches.has(project.id)
+                            ? poolMatchId(project.id)
+                            : undefined
+                        }
                         onClick={() => setSelectedId(project.id)}
                       >
                         <ProtocolLogo project={project} />
@@ -3243,6 +3511,12 @@ export default function App() {
                           </small>
                         </span>
                       </button>
+                      {poolMatches.has(project.id) && (
+                        <PoolMatchLine
+                          id={poolMatchId(project.id)}
+                          match={poolMatches.get(project.id)!}
+                        />
+                      )}
                     </td>
                     <td>
                       <button
@@ -3304,22 +3578,31 @@ export default function App() {
                       className="numeric observed-number"
                       title={STATIC_EDITION ? undefined : project.metrics.note}
                     >
-                      {money(project.metrics.volumeUsd[windowKey])}
-                      {deferredPoolMembership ? (
-                        <ProjectMetricProof
-                          project={project}
-                          metric={windowKey}
-                          now={now}
+                      {activeSpan ? (
+                        // Edition: 7D or 30D of the project's covered pools.
+                        <DailyAmount
+                          sum={dailySums?.get(project.id) ?? NO_SUM}
                         />
                       ) : (
-                        <MetricMeasurement
-                          pools={pagePools.get(project.id) ?? NO_POOLS}
-                          metric={windowKey}
-                          compact
-                          awaitingTotal={
-                            project.metrics.volumeUsd[windowKey] === null
-                          }
-                        />
+                        <>
+                          {money(project.metrics.volumeUsd[windowKey])}
+                          {deferredPoolMembership ? (
+                            <ProjectMetricProof
+                              project={project}
+                              metric={windowKey}
+                              now={now}
+                            />
+                          ) : (
+                            <MetricMeasurement
+                              pools={pagePools.get(project.id) ?? NO_POOLS}
+                              metric={windowKey}
+                              compact
+                              awaitingTotal={
+                                project.metrics.volumeUsd[windowKey] === null
+                              }
+                            />
+                          )}
+                        </>
                       )}
                     </td>
                     <td
@@ -3379,6 +3662,11 @@ export default function App() {
                     className="project-identity"
                     data-testid={`project-${project.id}`}
                     aria-label={`Open ${project.name}`}
+                    aria-describedby={
+                      poolMatches.has(project.id)
+                        ? poolMatchId(project.id)
+                        : undefined
+                    }
                     onClick={() => setSelectedId(project.id)}
                   >
                     <ProtocolLogo project={project} />
@@ -3402,6 +3690,12 @@ export default function App() {
                     <Star size={18} />
                   </button>
                 </div>
+                {poolMatches.has(project.id) && (
+                  <PoolMatchLine
+                    id={poolMatchId(project.id)}
+                    match={poolMatches.get(project.id)!}
+                  />
+                )}
                 <div className="mobile-project-meta">
                   <span className="category-tag" data-category={project.category}>
                     {project.category}
@@ -3462,9 +3756,10 @@ export default function App() {
                   </div>
                 )}
                 <div
-                  className={`mobile-project-bottom ${project.metrics.volumeUsd[windowKey] === null && project.metrics.liquidityUsd === null ? "unmeasured" : ""}`}
+                  className={`mobile-project-bottom ${!activeSpan && project.metrics.volumeUsd[windowKey] === null && project.metrics.liquidityUsd === null ? "unmeasured" : ""}`}
                 >
-                  {project.metrics.volumeUsd[windowKey] === null &&
+                  {!activeSpan &&
+                  project.metrics.volumeUsd[windowKey] === null &&
                   project.metrics.liquidityUsd === null ? (
                     <span className="unmeasured-note">
                       {STATIC_EDITION
@@ -3485,6 +3780,17 @@ export default function App() {
                     </span>
                   ) : (
                     <>
+                      {activeSpan ? (
+                        // Edition: 7D or 30D of the project's covered pools.
+                        <span>
+                          {dailyCardLabel(activeSpan)}
+                          <strong>
+                            <DailyAmount
+                              sum={dailySums?.get(project.id) ?? NO_SUM}
+                            />
+                          </strong>
+                        </span>
+                      ) : (
                       <span>
                         {windows[windowKey]} tracked volume
                         <strong>
@@ -3507,6 +3813,7 @@ export default function App() {
                           />
                         )}
                       </span>
+                      )}
                       <span>
                         Reported reserves
                         <strong>{money(project.metrics.liquidityUsd)}</strong>
@@ -3619,7 +3926,7 @@ export default function App() {
                               : "Connecting";
 
   return (
-    <>
+    <DailyViewProvider value={dailyContext}>
       <div
         className={`application-shell ${carriedComparison.length && view !== "compare" ? "has-comparison" : ""} ${view === "learn" ? "learn-shell" : ""}`}
       >
@@ -3858,13 +4165,39 @@ export default function App() {
                       {(Object.keys(windows) as WindowKey[]).map((key) => (
                         <button
                           key={key}
-                          className={windowKey === key ? "selected" : ""}
-                          aria-pressed={windowKey === key}
-                          onClick={() => setWindow(key)}
+                          className={
+                            windowKey === key && !activeSpan ? "selected" : ""
+                          }
+                          aria-pressed={windowKey === key && !activeSpan}
+                          onClick={() => {
+                            setSpan(null);
+                            setWindow(key);
+                          }}
                         >
                           {windows[key]}
                         </button>
                       ))}
+                      {/* Edition: 7D and 30D of the largest pools, only when the
+                          snapshot names the daily file as a source and the page
+                          shows spans. Nothing dead is drawn otherwise. */}
+                      {dailyOffered &&
+                        !dailyGone &&
+                        dailyViewSupported(view) &&
+                        DAILY_SPAN_KEYS.map((key) => (
+                          <button
+                            key={key}
+                            data-span={key}
+                            className={activeSpan === key ? "selected" : ""}
+                            aria-pressed={activeSpan === key}
+                            title={dailyButtonTitle(key)}
+                            onClick={() => {
+                              setWindow("h24");
+                              setSpan(key);
+                            }}
+                          >
+                            {spanLabel(key)}
+                          </button>
+                        ))}
                     </div>
                   )}
                   {view !== "activity" && !STATIC_EDITION && (
@@ -3927,6 +4260,49 @@ export default function App() {
                       <Download size={15} />
                     )}
                   </button>
+                  {dailyOffered && dailyViewSupported(view) && (
+                    // What a screen reader is told about the figures: loading,
+                    // where they run to, or why there are none.
+                    <span
+                      className="sr-only"
+                      role="status"
+                      data-testid="daily-status"
+                    >
+                      {dailyGone
+                        ? DAILY_UNAVAILABLE
+                        : activeSpan && dailyLens
+                          ? dailyReadyText(dailyLens)
+                          : activeSpan && dailyState.status === "error"
+                            ? DAILY_ERROR
+                            : activeSpan
+                              ? dailyLoadingText(activeSpan)
+                              : ""}
+                    </span>
+                  )}
+                  {dailyOffered &&
+                    dailyViewSupported(view) &&
+                    (dailyGone ||
+                      (activeSpan &&
+                        (dailyLens || dailyState.status === "error"))) && (
+                      <p className="daily-caption" data-testid="daily-caption">
+                        {dailyGone ? (
+                          <span>{DAILY_UNAVAILABLE}</span>
+                        ) : dailyLens ? (
+                          <span>{dailyCaption(dailyLens)}</span>
+                        ) : (
+                          <>
+                            <span>{DAILY_ERROR}</span>
+                            <button
+                              type="button"
+                              className="control"
+                              onClick={() => setDailyRetry((n) => n + 1)}
+                            >
+                              Try again
+                            </button>
+                          </>
+                        )}
+                      </p>
+                    )}
                 </>
               )}
             </div>
@@ -4553,6 +4929,29 @@ export default function App() {
                           }
                           icon={<Layers size={16} />}
                         />
+                        {activeSpan ? (
+                          // Edition: the same tile for 7D or 30D, summed over
+                          // the pools in this view that have daily figures.
+                          <Metric
+                            label={dailyTileLabel(activeSpan)}
+                            value={
+                              dailyLens && scopeDaily
+                                ? dailySumText(scopeDaily)
+                                : dailyState.status === "error"
+                                  ? "—"
+                                  : "…"
+                            }
+                            note={
+                              dailyLens && scopeDaily
+                                ? dailyTileNote(dailyLens, scopeDaily)
+                                : dailyState.status === "error"
+                                  ? DAILY_ERROR
+                                  : dailyLoadingText(activeSpan)
+                            }
+                            icon={<ArrowLeftRight size={16} />}
+                            scope="Partial coverage · Not total Uniswap volume"
+                          />
+                        ) : (
                         <Metric
                           label={`Tracked hook volume · ${windows[windowKey]}`}
                           value={money(scopeVolume)}
@@ -4575,6 +4974,7 @@ export default function App() {
                             )
                           }
                         />
+                        )}
                         <Metric
                           label="Networks"
                           value={
@@ -5301,6 +5701,17 @@ export default function App() {
                                     projectIds: sorted.map(
                                       (project) => project.id,
                                     ),
+                                    // Edition: the list was ordered by the
+                                    // 7D or 30D figure it showed.
+                                    ...(STATIC_EDITION && activeSpan && dailyLens
+                                      ? {
+                                          dailySpan: {
+                                            span: activeSpan,
+                                            through: dailyLens.through,
+                                            scope: DAILY_SCOPE_NOTE,
+                                          },
+                                        }
+                                      : {}),
                                     ...(STATIC_EDITION && view === "watchlist"
                                       ? {
                                           savedNotInSnapshot: {
@@ -5375,10 +5786,16 @@ export default function App() {
                                         savedExportNote(
                                           unavailableWatchIds.length,
                                         ),
+                                      // The figure column is 7D or 30D of the
+                                      // largest pools, and the file says so.
+                                      activeSpan && dailyLens
+                                        ? DAILY_SCOPE_NOTE
+                                        : false,
                                     ],
                                   }),
                                 }
                               : undefined,
+                            STATIC_EDITION && activeSpan ? dailyLens : undefined,
                           ),
                           snapshotFileName(
                             "hook-radar-projects.csv",
@@ -5426,6 +5843,9 @@ export default function App() {
                     {STATIC_EDITION
                       ? EXPORT_FILES_NOTE
                       : "Blank metrics mean unavailable data. JSON includes source freshness and the observed pool sample."}
+                    {STATIC_EDITION && activeSpan && dailyLens
+                      ? ` ${dailyExportNote(activeSpan)}`
+                      : ""}
                   </span>
                 </div>
               )}
@@ -5463,7 +5883,7 @@ export default function App() {
         {toastTone === "success" ? <Check size={16} /> : <Info size={16} />}
         {toast}
       </div>
-    </>
+    </DailyViewProvider>
   );
 }
 

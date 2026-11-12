@@ -77,6 +77,9 @@ import {
   tokenMetadataKey,
 } from "../token-metadata";
 import "./project-detail.css";
+import { DailyAmount, NO_SUM } from "./DailyAmount";
+import { dailyDrawerNote, dailyThrough, spanLabel } from "../daily";
+import { useDailyView } from "../daily-view";
 import {
   STATIC_EDITION,
   censusHeading,
@@ -169,6 +172,10 @@ function HookProjectDetail({
   extensionSelection?: ExtensionSelection | null;
   onExtensionSelection?: (selection: ExtensionSelection | null) => void;
 }) {
+  // Edition: 7D or 30D of the largest pools, when the list behind the drawer
+  // was showing one. The drawer's headline, its pool order and each pool follow;
+  // everything else in it is 24H and says so.
+  const daily = useDailyView();
   const detailRoot = useRef<HTMLDivElement>(null);
   const [rechecking, setRechecking] = useState(false);
   // The snapshot edition's Retry has run at least once since the notice appeared;
@@ -494,8 +501,21 @@ function HookProjectDetail({
   );
   // The edition lists the largest pools first; the live list keeps its order.
   const rankedProjectPools = useMemo(
-    () => orderedPools(allProjectPools, windowKey, evaluationNow()),
-    [allProjectPools, windowKey],
+    () =>
+      orderedPools(
+        allProjectPools,
+        windowKey,
+        evaluationNow(),
+        undefined,
+        daily.lens
+          ? (pool) => daily.lens!.pool(pool)?.usd ?? null
+          : undefined,
+      ),
+    [allProjectPools, windowKey, daily.lens],
+  );
+  const projectDaily = useMemo(
+    () => (daily.lens ? daily.lens.sum(allProjectPools) : null),
+    [daily.lens, allProjectPools],
   );
   const measuredPools = rankedProjectPools.filter(
     (pool) =>
@@ -1206,7 +1226,8 @@ function HookProjectDetail({
               Project totals
             </h3>
             <span className="detail-scope">
-              All networks · {windows[windowKey]}
+              All networks ·{" "}
+              {daily.span ? spanLabel(daily.span) : windows[windowKey]}
               <span className="detail-scope-window"> window</span>
             </span>
           </div>
@@ -1248,6 +1269,33 @@ function HookProjectDetail({
               {networksFigure.note}
             </span>
           </div>
+          {daily.span ? (
+            <div className="readout" data-kind="market">
+              <span className="readout-label">
+                {spanLabel(daily.span)} volume
+              </span>
+              <strong
+                className="readout-value"
+                data-size={readoutSize(
+                  projectDaily?.usd == null ? "—" : `≥${money(projectDaily.usd)}`,
+                  true,
+                )}
+                data-unavailable={
+                  !projectDaily || projectDaily.usd === null || undefined
+                }
+              >
+                <DailyAmount sum={projectDaily ?? NO_SUM} />
+              </strong>
+              <span className="readout-note">
+                {projectDaily
+                  ? dailyDrawerNote(daily.span, projectDaily)
+                  : "Loading"}
+                {projectDaily && daily.lens
+                  ? ` Through ${dailyThrough(daily.lens)}.`
+                  : ""}
+              </span>
+            </div>
+          ) : (
           <div className="readout" data-kind="market">
             <span className="readout-label">{windows[windowKey]} volume</span>
             <strong
@@ -1280,6 +1328,7 @@ function HookProjectDetail({
               )}
             </span>
           </div>
+          )}
           <div className="readout" data-kind="market">
             <span
               className="readout-label"
@@ -2031,7 +2080,10 @@ function HookProjectDetail({
                 <div className="pool-table-head" aria-hidden="true">
                   <span>Pool</span>
                   <span>Network</span>
-                  <span>{windows[windowKey]} volume</span>
+                  <span>
+                    {daily.span ? spanLabel(daily.span) : windows[windowKey]}{" "}
+                    volume
+                  </span>
                   <span>Reserves</span>
                   <span>Created</span>
                 </div>
@@ -2550,6 +2602,9 @@ function PoolCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const detailsId = useId();
+  // Edition: the pool's own 7D or 30D figure, when the page shows one.
+  const daily = useDailyView();
+  const dailyFigure = daily.lens ? daily.lens.pool(pool) : null;
   const volume = currentMetricValue(pool, windowKey, evaluationNow());
   const liquidity = currentMetricValue(pool, "liquidity", evaluationNow());
   const hasPrice = volume !== null || liquidity !== null;
@@ -2609,10 +2664,29 @@ function PoolCard({
           </span>
         </div>
         <span className="tag pool-network">{networkName}</span>
-        <span className="pool-metric" data-empty={volume === null || undefined}>
-          <span className="pool-metric-label">{windows[windowKey]} volume</span>
-          <span className="pool-metric-value">{money(volume)}</span>
-        </span>
+        {daily.span ? (
+          <span
+            className="pool-metric"
+            data-empty={dailyFigure === null || undefined}
+          >
+            <span className="pool-metric-label">
+              {spanLabel(daily.span)} volume
+            </span>
+            <span className="pool-metric-value">
+              <DailyAmount pool={dailyFigure} compact />
+            </span>
+          </span>
+        ) : (
+          <span
+            className="pool-metric"
+            data-empty={volume === null || undefined}
+          >
+            <span className="pool-metric-label">
+              {windows[windowKey]} volume
+            </span>
+            <span className="pool-metric-value">{money(volume)}</span>
+          </span>
+        )}
         <span
           className="pool-metric"
           data-empty={liquidity === null || undefined}

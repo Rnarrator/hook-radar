@@ -141,7 +141,94 @@ which is not part of this repository; the numbers are in
    which keeps its worst case (10 s, 1 s and 10 s for the first two reads, 15 s for
    the index) inside the five minutes; then it is skipped and said so. The
    snapshot's time is taken after it.
-4. **Assemble.** The directory is built with the project's own `createDirectory`,
+4. **Daily volume (7D and 30D).** The last step of the collection, after the burst,
+   its fallback and Frontier, with the snapshot's time already fixed
+   (`collector/daily.mjs`). Providers report 1h, 6h and 24h volume only, so a
+   longer window needs the daily answer of each pool: one GeckoTerminal request
+   per pool, `/networks/{network}/pools/{poolId}/ohlcv/day?limit=33&currency=usd&include_empty_intervals=true`,
+   asked with `Accept: application/json;version=20230302` (the one header a caller
+   can change: `accept` in the client is allow-listed to JSON and a dated
+   version). Only the largest pools are read: a pool **joins** when it ranks 40th
+   or better by its current 24h volume in this run and **stays** while it ranks
+   60th or better (so a pool near the line does not drop in and out of the totals),
+   at most 60 records; a pool that is not measured in a run keeps its record for
+   three days. The top 40 held about 95 percent of the tracked 24h volume on
+   11 November 2026; about 26 of 333 projects with trading had a pool among them,
+   so most projects have no 7D or 30D figure and show a dash, said plainly on the
+   page.
+   A figure is the sum of the pool's USD volume over the last 7 (30) **complete**
+   UTC days. The answer's newest candle is the day still in progress; it is dropped
+   at the answer's own time (the response's `Date` minus its `Age`, never the
+   moment we looked), so a stored day never changes. That is why a pool needs
+   reading only twice a day, at the first run after 00:00 UTC (the new day) and the
+   first after 04:00 UTC (what the provider adds afterwards; 04:00 and not 03:00
+   because a discovery run, the first of each three-hour block, has the fewest
+   requests to spare). About 125 requests a day in all, so about 20 of 24 hourly
+   runs send none. A pool GeckoTerminal does not know (HTTP 404) or has no data for
+   is asked once a day.
+   The step runs only in a run that will be published, is skipped when the run is
+   already 30 minutes old, when GeckoTerminal was stopped earlier in it, when the
+   request budget is spent, or when the run would not pass the quality gate (the
+   gate runs after assembly, so what it can already tell is asked first). It spends
+   only what the 399 requests still allow: at most 20 requests, none starting later
+   than 240 s into the step (the lane's own gap of 12 s, doubled after the one
+   cooldown, decides how many fit; a cooldown's second try counts as a request), one
+   at a time, largest pools first. It cannot delay the burst (it starts after it),
+   and the snapshot's time, `state/pools.json`'s `updatedAt` and the workflow's
+   45-minute rule are what they were (`tests/collector-daily-run.test.mjs` pins
+   that). What it does move is publication: the write phase waits for the step, so
+   on a run that sends requests (a few a day, the first after 00:00 and after
+   04:00 UTC) `snapshot.json`, `daily.json` and the deploy follow up to about four
+   minutes later (the step's own 240 s and one last request). The snapshot's time
+   stays the time the measurements were taken; a run without requests publishes
+   when it did before. It never fails a run: an answer that is wrong in any way
+   is a note, the days already on file are kept, and the records are published as
+   they were.
+   - **Reading an answer.** It must be at most 33 rows, each `[seconds, open, high,
+     low, close, volume]` at a UTC midnight, newest first (sorted again here),
+     contiguous (with `include_empty_intervals=true` a quiet day is a row with
+     volume 0; without it quiet days are left out and 33 rows can span two months, so
+     an answer with a missing day is refused), with no day after the reading, no
+     repeated day, and every volume a plain amount from 0 to under 1e13. Where the
+     answer names the pool's two currencies they must be the pool's own (the native
+     currency is not compared). Anything else is unreadable: the stored days stay.
+     An answer that is HTTP 200 and unreadable is an answer: the pool is not asked
+     again until the next checkpoint, and does not count toward the step's own
+     five-failures-in-a-row stop (only network errors, timeouts and 5xx do). A pool
+     unreadable twice in a row is out of the file until it reads again.
+   - **Which day the figures end on.** The dataset ends on the snapshot's newest
+     complete UTC day once pools holding 90 percent of the covered volume (their
+     current 24h volume as the weight) have been read after that day ended, and one
+     day earlier until then, so no total mixes two end days and nothing older than
+     one day behind the newest complete day is ever published. A pool with no data,
+     unknown to GeckoTerminal, or unreadable twice is not covered: it leaves both
+     sides of that share and the file.
+   - **Young pools.** A pool younger than the span carries `n7`/`n30`, the UTC
+     days it was live (its creation day, or its first day at GeckoTerminal if
+     earlier, to the end day), and the page says "since launch". A pool whose
+     history was cut at the 33-row limit is never young. A day inside the window
+     that is missing from a pool's days means no figure for that pool, never a zero.
+   - **Request arithmetic.** The real discovery run of 11 November 2026 made 380
+     requests (DEX Screener 288, GeckoTerminal 26, v4.xyz 60, registry 2, Frontier 3,
+     Goldsky 1), so the step could send 19; the documented full-size fake run is 388
+     (11 left); the ceiling of a discovery run, 3 + 306 + 6 + 3 + 80, is 398 (1 left).
+     A run without discovery makes about 300, so a checkpoint run sends 20 of the 99
+     left and the others none. The worst discovery run (900 s of discovery, the 270 s
+     burst deadline, 36 s of Frontier, 240 s and one last request of the step) is
+     about 24 minutes of the job's 45. `COLLECTOR_DAILY_MAX_REQUESTS` can lower the
+     20 and `0` switches the step off (below).
+   - **What it writes.** `state/daily.json` (below) when the records changed, and
+     `data/daily.json` with one source row, `geckoterminal-daily`, in
+     `snapshot.json`: the row is how the already-loaded page knows to offer 7D and
+     30D without a request of its own. `status.json` has `counts.daily`
+     (`selected`, `due`, `requested`, `read`, `noData`, `missing`,
+     `unreadable`, `failed`, `revisedDays`, `through`, `published`,
+     `covered`, `readyShare`, and why it `stopped` or was `skipped`).
+     `counts.requests` keeps the lane's total (GeckoTerminal's number includes the
+     step's); `counts.daily.requested` is the step's share, and in `sources` the
+     `geckoterminal` row shows the measurement phase and `geckoterminal-daily` the
+     step's requests. The market notes describe the measurement phase only.
+5. **Assemble.** The directory is built with the project's own `createDirectory`,
    asked for `strictFamilyNames` and `includeOfficialHooks` (see "Choices to know
    about"). Pools are attributed
    with the project's own `attributePools`
@@ -153,11 +240,11 @@ which is not part of this repository; the numbers are in
    moment the burst ended (Frontier's step included) and freshness is evaluated at
    that moment. The coverage text names Frontier's public AMM index when pools
    carry its figures, in the live app's words.
-5. **Overview files.** `analyticsOverviewAsync` (the live server's own function)
+6. **Overview files.** `analyticsOverviewAsync` (the live server's own function)
    builds `overview-all-h1`, `-h6`, `-h24` and `overview-<network>-h24` for every
    network, with the per-pool contributions the client re-slices locally, at the
    snapshot's own time.
-6. **Quality gate.** The run is refused (exit code 1, nothing written) when the
+7. **Quality gate.** The run is refused (exit code 1, nothing written) when the
    snapshot or any overview fails its validator, no pool has a current 24h volume,
    fewer than 500 pools carry a current 24h volume (a measured zero is a volume;
    a pool with a liquidity figure and no volume does not count), fewer than 80% of
@@ -183,8 +270,10 @@ which is not part of this repository; the numbers are in
    sample holds the site back for a day at most). The refusal prints its reasons
    and, because a refused run writes no `status.json`, the request counts, the
    networks DEX Screener answered HTTP 400 for and the rate-limit waits.
-7. **Write.** Overview files, `history.json`, `status.json`, then `snapshot.json`
-   last (it is the marker that the set is complete), then the state files.
+8. **Write.** Overview files, `history.json`, `daily.json` (any old one is deleted
+   first, and a new one is written only if it validated and is not empty),
+   `status.json`, then `snapshot.json` last (it is the marker that the set is
+   complete), then the state files.
 
 ## Commands
 
@@ -222,7 +311,9 @@ discovery off; the Snapshot workflow sets it to `0` for the runs that only
 measure the pools already known). Like every environment setting it can only
 make a run smaller: an empty or invalid value (anything but a whole number from
 0 to 999,999) changes nothing, a large number is the same as no limit, and
-`--max-discovery` on the command line wins.
+`--max-discovery` on the command line wins. `COLLECTOR_DAILY_MAX_REQUESTS` limits
+the 7D and 30D step the same way: a whole number from 0 to 999,999 that can only
+lower its 20 requests, `0` switches the step off, anything else changes nothing.
 
 ## Limits and gaps (all in `collector/config.mjs`)
 
@@ -236,6 +327,12 @@ make a run smaller: an empty or invalid value (anything but a whole number from
 | `MAX_MEASURED_POOLS` / `MAX_DISCOVERED_MEASURED` | 8,000 seeded pools, plus up to 500 found by discovery (8,500 in all) |
 | `MAX_RESOLVES_PER_RUN` | 40 exact-pool lookups |
 | `MAX_REQUESTS_PER_RUN` | 399 in all (hard stop) |
+| `DAILY_JOIN_RANK` / `DAILY_KEEP_RANK` / `DAILY_RANK_GRACE_MS` | 40 / 60 / 3 days: a pool joins the 7D and 30D reads at rank 40, stays to rank 60, and an unmeasured pool keeps its record three days |
+| `DAILY_MAX_REQUESTS` / `DAILY_BUDGET_MS` / `DAILY_LATEST_START_MS` | 20 requests; none starts later than 240 s into the step; the step is skipped once the run is 30 minutes old |
+| `DAILY_CANDLES` / `DAILY_STORED_DAYS` | 33 rows asked for (30 complete days, the day in progress, two days of slack); 35 days kept per pool |
+| `DAILY_CHECKPOINT_HOURS` | 00:00 and 04:00 UTC: a pool is read once per checkpoint |
+| `DAILY_READY_SHARE` / `DAILY_MAX_UNREADABLE` | 0.9 of the covered volume read after the day ended; two unreadable answers in a row take a pool out |
+| `MAX_BYTES.geckoDaily` | 64 KB (a 33-day answer is about 4 KB) |
 | `BURST_BUDGET_MS` / `BURST_DEADLINE_MS` | no new DEX Screener batch may start after 225 s, no request of any kind after 270 s (a wait for a gap or a `Retry-After` counts: a request that could only start later is not sent) |
 | `MIN_CURRENT_POOLS` / `MIN_REQUESTED_SHARE` / `MIN_CURRENT_SHARE` | 500 / 0.8 / 0.9 (500 pools with a current 24h volume; 80% of the planned pools requested and 80% of those answered; 90% of the measured pools current) |
 | `MIN_VOLUME_POOLS_OF_PREVIOUS` / `PREVIOUS_POINT_MAX_AGE_MS` | 0.6 / 24 hours: the pools with a current 24h volume against the previous history point's, compared only while that point is less than a day old |
@@ -381,7 +478,7 @@ fewer than 90% of the measured pools are current, so a thin run is not published
 | Provider | Used for | Not used for |
 |---|---|---|
 | DEX Screener (`api.dexscreener.com`) | The measurements: liquidity and 1h/6h/24h volume per exact pool id | Discovery |
-| GeckoTerminal (`api.geckoterminal.com`) | One top-pools page per network (candidate ids), and up to six exact-pool fallback batches | Anything else |
+| GeckoTerminal (`api.geckoterminal.com`) | One top-pools page per network (candidate ids), up to six exact-pool fallback batches, and the daily answers of the largest pools (7D and 30D volume: at most 20 requests a run, about 125 a day, at the same 12 s gap) | Anything else |
 | v4.xyz indexer (`www.v4.xyz`) | Pool identity only: which hook, which two currencies. The paths are undocumented | Any amount |
 | Uniswap hooklist and chain registry (GitHub raw) | Hook deployments, project grouping, chain names | |
 | Frontier (`api.frontier.fun`) | `/chains`: exact hook addresses Frontier publishes, so its pools are attributed (not in the contract's list; see "Choices to know about"). `/coinsPage?limit=100` and `/coinsStats`: the market figures of the pools of its own hooks (three requests with the index query) | Curve volume, curve ETH, anything outside its isLPd markets |
@@ -407,6 +504,7 @@ only be raised.
 | `priority.json` | `{ schemaVersion, exportedAt, selection: { snapshotGeneratedAt, rule, counts }, pools: [...] }`, one pool per line: the pools that are always in the plan. A record holds seven fields and no others: `id`, `chain`, `hookAddress`, `tokens`, `name`, `createdAt` and `projectId` (the platform or project it was chosen for, a label: ownership is decided from the exact hook at every snapshot). The state refuses a file with any other field (a provider's address, a key, a figure), a web address in a name or a malformed identity. Written once by `collector/export-priority.mjs`; the collector only reads it. |
 | `census.json` | `{ exportedAt, seed: {...}, inventory }`. `inventory` is the live app's pool census as published, with its original `generatedAt`, per-network `updatedAt` and `headCheckedAt`, plus the time of the export. The one thing removed is each network's `sourceUrl`, the address of the data service the app read that network from (some embed an access key; see "Choices to know about"). The page shows it as "Census as of <date>", never as current. |
 | `history.json` | `{ schemaVersion, points: [{ timestamp, value, pools }] }`, newest last, at most 2,016 points. |
+| `daily.json` | `{ schemaVersion, updatedAt, pools: [...] }`, one record per line, at most 60: `chain`, `id`, `lastRankedAt` (moves at most once a day), `attemptedAt` and `result` (the last definite answer: `ok`, `none`, `missing`, `unreadable`; null before the first), `fetchedAt` (when the last readable answer was true), `bad` (unreadable answers in a row), `start` (the pool's first day at GeckoTerminal, when its whole history was seen) and `days` (`[dayNumber, usd]`, complete UTC days, at most 35). About 50 KB. Written by the collector only, and only when the records changed; never committed from a worktree. A missing file means no daily data yet; one that cannot be read, is not JSON (conflict markers after a merge) or has the wrong shape is ignored with a note in `counts.daily.note` and replaced by the next published run. |
 | `registry.json` | Last fetched hooklist (without the decoded flags, which are recomputed from each address), chain registry and Frontier configuration, each with its fetch time. Rewritten only when the data changed. |
 
 `lastSeen` moves at most once a day per pool, so the committed file stays quiet.
@@ -519,6 +617,14 @@ The list does not make a platform's volume complete: a platform with millions of
 pools stays a lower bound (the page marks its sums "≥"), and the pools of a hot
 launch that has faded since are measured and found quiet. It is not refreshed by
 the collector; re-run the export from a newer snapshot to change it.
+
+A pool created after that snapshot is not on the list. Umia's pool on UmiaHookV2
+on Robinhood Chain (SLOP / USDG, created 10 November 2026) is one: it is a
+discovered pool, so it is measured only while it stays among the 500 most
+recently seen discovered pools; if enough newer discoveries push it out, its last
+reading ages until its freshness expires and its figures are no longer shown.
+Putting it on the list is a new export, made deliberately (the list holds 1,355
+of the 1,500 it may).
 
 ## Fixtures and offline mode
 
@@ -658,6 +764,28 @@ indexer answers every list with `Retry-After: 110`; sums to the cent in the
 summary and the history, and the overview keeping its exact sums; the collector
 started through a directory junction; and what these notes say about files, size,
 the real runs and the gate.
+
+`node --test tests/collector-daily.test.mjs tests/collector-daily-run.test.mjs tests/edition-daily-gate.test.mjs tests/edition-daily-client.test.mjs tests/edition-daily-docs.test.mjs`
+(no network) pins the 7D and 30D volume: the request and the parser against the
+real answers recorded from GeckoTerminal on 11 November 2026
+(`collector/fixtures/daily/`: a busy Ethereum pool, a sparse one with and without
+empty days, a Frontier-measured Robinhood pool, an X Layer pool, a day-old Base
+pool, two HTTP 429 answers and two 404s) and against hand-built bad ones (an empty,
+short, reversed, null, negative, absurd, misaligned, duplicated or gappy list);
+joining, keeping and dropping pools; the checkpoints to the millisecond; the reads
+on a fake clock (largest first, 12 s apart, the limit of 20, the 240 s start limit,
+the cooldown and its doubled gap, a second 429, five network failures, five
+unreadable answers that must not starve the rest, 404s, a cached answer dated by its
+`Age`); the sums (exact, a quiet window as $0, a gap as no figure, young pools); the
+end day and the 90 percent rule; `state/daily.json` missing, garbage, truncated,
+with conflict markers and of the wrong shape; whole runs (the step after every other
+request, the snapshot time and `state/pools.json` time identical with the step on and
+off, idempotence, a failing step, a refused run that spends nothing, the heaviest
+run at the cap); the data gate on folders (another run's file, a day in progress, a
+7D above a 30D, a source row without a file or the reverse); the page's reading, lens,
+address, sort, CSV and Networks model; and what these documents say.
+`scripts/edition-daily-browser.test.mjs` shows the screens at 1440, 390 and 360 px
+on test data.
 
 ## Choices to know about
 

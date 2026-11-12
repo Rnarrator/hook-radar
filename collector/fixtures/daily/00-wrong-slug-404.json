@@ -1,0 +1,13 @@
+{
+ "requestedAt": "2026-11-11T22:47:55.017Z",
+ "url": "https://api.geckoterminal.com/api/v2/networks/ethereum/pools/0x2b21c65d9a7dc6926ee330a1c6e5a8037fd81774f3dc066536f800128e39f634/ohlcv/day?limit=33&currency=usd",
+ "status": 404,
+ "headers": {
+  "cache-control": "max-age=30, public, must-revalidate, s-maxage=60",
+  "cf-cache-status": "MISS",
+  "content-type": "application/json; charset=utf-8",
+  "date": "Wed, 11 Nov 2026 22:47:55 GMT",
+  "vary": "Accept, Origin, accept-encoding"
+ },
+ "bodyText": "{\"errors\":[{\"status\":\"404\",\"title\":\"Not Found\"}],\"meta\":{\"ref_id\":\"b48eed05-5c71-4270-b140-36cfaf271cee\"}}"
+}

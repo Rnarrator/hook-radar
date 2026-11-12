@@ -11,6 +11,7 @@
 // read from the build (a relative build is also served under /sub/dir/).
 import test, { after, before } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { chromium, expect } from "@playwright/test";
@@ -21,7 +22,11 @@ import {
   refreshMarketSnapshot,
 } from "../shared/market-freshness.ts";
 import { money } from "../src/model.ts";
-import { fullTimeLabel, timeLabel } from "../src/edition.ts";
+import {
+  NO_MATCH_IN_SNAPSHOT,
+  fullTimeLabel,
+  timeLabel,
+} from "../src/edition.ts";
 import { GENERATED_AT } from "../tests/fixtures/static-data/generate.mjs";
 import {
   ownerShowsSources,
@@ -1288,7 +1293,7 @@ test("Discover's search finds projects by network, and the All hooks switch a pa
   const scopeButton = (name) => scope.getByRole("button", { name, exact: true });
   await expect(search).toHaveAttribute(
     "placeholder",
-    "Search projects, networks or hook addresses",
+    "Search projects, tokens, networks, addresses",
   );
 
   // A network's name lists the projects that run on it, not only the one whose
@@ -1314,6 +1319,380 @@ test("Discover's search finds projects by network, and the All hooks switch a pa
   await scopeButton("All hooks").click();
   await search.fill("frontier");
   await expect(scopeButton("All hooks")).toHaveAttribute("aria-pressed", "true");
+  s.verify();
+});
+
+// ── Discover's search reads the snapshot's measured pools ───────────────────
+// The fixture's pools carry symbols and short ids; the tests below serve the
+// same snapshot with a few more pools of the shapes real ones have: full-length
+// token addresses and pool ids, a symbol spelled with hair spaces, and a pool
+// of a hook no registry names (it is only in All hooks).
+const HAIR = String.fromCodePoint(0x200a);
+const digest = (label, width) =>
+  createHash("sha256").update(label).digest("hex").repeat(2).slice(0, width);
+const searchSnapshot = () => {
+  const template = snapshotFixture.pools[0];
+  const extra = (chain, name, projectId, label) => ({
+    ...template,
+    id: `${chain}:0x${digest(`pool-${label}`, 64)}`,
+    chain,
+    name,
+    address: `0x${digest(`pool-${label}`, 64)}`,
+    hookAddress: null,
+    projectId,
+    url: `https://www.geckoterminal.com/${chain}/pools/${label}`,
+    tokens: [`0x${digest(`token-${label}-0`, 40)}`, `0x${digest(`token-${label}-1`, 40)}`],
+    liquidityUsd: null,
+    volumeUsd: { h1: null, h6: null, h24: null },
+    metricUpdatedAt: null,
+    metricStatus: "unavailable",
+  });
+  const unnamed = structuredClone(snapshotFixture.projects[3]);
+  unnamed.id = "hook-0123456789abcdef0123";
+  unnamed.name = "Hook 0x77777777…777777";
+  unnamed.description =
+    "Discovered from a PoolManager initialization event. Project identity and contract source have not been verified.";
+  unnamed.deployments = unnamed.deployments.slice(0, 1).map((hook) => ({
+    ...hook,
+    id: "base:0x7777777777777777777777777777777777777777",
+    address: "0x7777777777777777777777777777777777777777",
+    chain: "base",
+    chainId: 8453,
+    name: "Hook 0x77777777…777777",
+    description: "Discovered from a PoolManager initialization event.",
+    discovery: "onchain",
+  }));
+  unnamed.chains = ["base"];
+  const pools = [
+    ...snapshotFixture.pools,
+    extra("ethereum", "LINK / UNI", "delta", "link-uni"),
+    extra("base", `U${HAIR}S${HAIR}O${HAIR}E / WETH`, "gamma", "usoe"),
+    extra("base", "BIRDIE / USDC", unnamed.id, "birdie"),
+  ];
+  return {
+    snapshot: {
+      ...snapshotFixture,
+      projects: [...snapshotFixture.projects, unnamed],
+      pools,
+    },
+    pools,
+    unnamed,
+  };
+};
+
+test("Discover's search finds a project by the token, pair or pool of its measured pools and says which pool matched", async (t) => {
+  const { snapshot, pools } = searchSnapshot();
+  const linkUni = pools.find((pool) => pool.name === "LINK / UNI");
+  for (const size of [DESKTOP, PHONE]) {
+    const phone = size === PHONE;
+    const s = await site(t, { size, data: { "snapshot.json": snapshot } });
+    const { page } = s;
+    await s.goto();
+    await ready(page, { phone });
+    const search = page.getByTestId("search-input");
+    const rows = page.locator(phone ? ".mobile-project" : "tbody tr");
+    const line = (id) =>
+      page.getByTestId(`project-${id}`).locator("xpath=ancestor::*[self::tr or self::article][1]").locator(".pool-match");
+    const finds = async (query, ids) => {
+      await search.fill(query);
+      await expect(rows, query).toHaveCount(ids.length);
+      for (const id of ids) await expect(page.getByTestId(`project-${id}`), query).toBeVisible();
+    };
+
+    // A token symbol, in any case: the row names the pool and its network, and
+    // a screen reader reads it as the description of the row's button.
+    await finds("wbtc", ["alpha"]);
+    await expect(line("alpha")).toHaveText("Matched pool WBTC / ALPHA on Ethereum");
+    await expect(page.getByTestId("project-alpha")).toHaveAccessibleDescription(
+      "Matched pool WBTC / ALPHA on Ethereum",
+    );
+    await finds("  WBTC  ", ["alpha"]);
+
+    // A pair however it is written; the second line of the pair is the same pool.
+    for (const pair of ["USDC / GAMMA", "usdc gamma", "usdc/gamma", "gamma-usdc"]) {
+      await finds(pair, ["gamma"]);
+      await expect(line("gamma")).toHaveText("Matched pool USDC / GAMMA on Ethereum");
+    }
+    // Several projects have a USDC pool; each says its own.
+    await finds("usdc", ["alpha", "beta", "gamma"]);
+    await expect(line("alpha")).toHaveText("Matched pool USDC / ALPHA on Base");
+    await expect(line("beta")).toHaveText("Matched pool USDC / BETA on Base");
+    await expect(line("gamma")).toHaveText("Matched pool USDC / GAMMA on Ethereum");
+    // A pair is one pool: Alpha has USDC and WBTC pools, but no USDC / WBTC pool.
+    await finds("usdc / wbtc", []);
+
+    // A network beside a token asks for a pool on that network. Gamma's hook is
+    // called GammaBase, but its only USDC pool is on Ethereum.
+    await finds("usdc base", ["alpha", "beta"]);
+    await expect(line("alpha")).toHaveText("Matched pool USDC / ALPHA on Base");
+    await expect(line("beta")).toHaveText("Matched pool USDC / BETA on Base");
+    expect(
+      (await page.locator(".pool-match").allTextContents()).every((text) => text.endsWith(" on Base")),
+    ).toBe(true);
+    await finds("base usdc", ["alpha", "beta"]);
+    await finds("usdc ethereum", ["gamma"]);
+    await expect(line("gamma")).toHaveText("Matched pool USDC / GAMMA on Ethereum");
+    await finds("wbtc base", []);
+    await finds("wbtc ethereum", ["alpha"]);
+    await expect(line("alpha")).toHaveText("Matched pool WBTC / ALPHA on Ethereum");
+
+    // A token address and a pool address, whole, and the pool id and a fragment.
+    await finds(linkUni.tokens[0], ["delta"]);
+    await expect(line("delta")).toHaveText("Matched pool LINK / UNI on Ethereum");
+    await finds(linkUni.tokens[1].toUpperCase(), ["delta"]);
+    await finds(linkUni.address, ["delta"]);
+    await finds(linkUni.id, ["delta"]);
+    await finds(linkUni.address.slice(10, 20), ["delta"]);
+    // Five characters are too few to look for inside an address.
+    await finds(linkUni.address.slice(10, 15), []);
+
+    // A symbol spelled with hair spaces, searched the way it reads or as written.
+    await finds("usoe", ["gamma"]);
+    await expect(line("gamma")).toHaveText("Matched pool U S O E / WETH on Base");
+    await finds("U S O E", ["gamma"]);
+    await finds(`U${HAIR}S${HAIR}O${HAIR}E`, ["gamma"]);
+
+    // Every word must match, the project's own text counting as a word.
+    await finds("gamma usdc", ["gamma"]);
+    await finds("beta usdc", ["beta"]);
+    await finds("delta usdc", []);
+    // A word the project's own text matches shows no pool line.
+    await finds("alpha", ["alpha"]);
+    await expect(page.locator(".pool-match")).toHaveCount(0);
+    await finds("creator", ["alpha", "frontier"]);
+    await expect(page.locator(".pool-match")).toHaveCount(0);
+
+    // Typing reaches no service and raises no error; clearing returns the list.
+    await search.fill("");
+    await expect(rows.first()).toBeVisible();
+    await expect(page.locator(".pool-match")).toHaveCount(0);
+    s.verify();
+  }
+});
+
+test("a row's pool line is plain text that fits, whatever the pool is called", async (t) => {
+  const { snapshot, pools } = searchSnapshot();
+  const long = `LONGSYMBOL${"X".repeat(70)} / WETH`;
+  const hostile = {
+    ...pools.find((pool) => pool.name === "LINK / UNI"),
+    id: `ethereum:0x${digest("hostile", 64)}`,
+    address: `0x${digest("hostile", 64)}`,
+    name: "<img src=x onerror=window.__hit=1> / EVIL",
+    projectId: "delta",
+  };
+  const wide = {
+    ...hostile,
+    id: `ethereum:0x${digest("wide", 64)}`,
+    address: `0x${digest("wide", 64)}`,
+    name: long,
+    projectId: "beta",
+  };
+  const served = { ...snapshot, pools: [...snapshot.pools, hostile, wide] };
+  for (const size of [DESKTOP, PHONE]) {
+    const phone = size === PHONE;
+    const s = await site(t, { size, data: { "snapshot.json": served } });
+    const { page } = s;
+    await s.goto();
+    await ready(page, { phone });
+    const search = page.getByTestId("search-input");
+    await search.fill("onerror");
+    await expect(page.getByTestId("project-delta")).toBeVisible();
+    const line = page.locator(".pool-match");
+    await expect(line).toHaveCount(1);
+    // The name is text: no element was made from it, and nothing ran.
+    await expect(line).toContainText("<img src=x onerror=window.__hit=1> / EVIL");
+    await expect(line.locator("img")).toHaveCount(0);
+    assert.equal(await page.evaluate(() => window.__hit), undefined);
+    // A very long symbol is cut inside its box: no horizontal scrolling, and the
+    // whole line is in the title.
+    await search.fill("longsymbol");
+    await expect(page.getByTestId("project-beta")).toBeVisible();
+    await expect(line).toHaveCount(1);
+    await expect(line).toHaveAttribute("title", /^Matched pool LONGSYMBOLX{70}/);
+    const fits = await page.evaluate(() => ({
+      page: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      line: (() => {
+        const el = document.querySelector(".pool-match");
+        const box = el.getBoundingClientRect();
+        const cell = el.parentElement.getBoundingClientRect();
+        return box.right <= cell.right + 1 && el.scrollWidth <= el.clientWidth + 1;
+      })(),
+    }));
+    assert.deepEqual(fits, { page: true, line: true }, `${size.width}px`);
+    s.verify();
+  }
+});
+
+test("a search that finds nothing says what it looked through and offers one clear typo fix", async (t) => {
+  const { snapshot, pools, unnamed } = searchSnapshot();
+  const inProjects = (project) =>
+    project.entityType === "platform" ||
+    project.deployments.some((hook) => hook.discovery !== "onchain");
+  const named = new Set(snapshot.projects.filter(inProjects).map((p) => p.id));
+  const covered = pools.filter((pool) => pool.projectId && named.has(pool.projectId)).length;
+  for (const size of [DESKTOP, PHONE]) {
+    const phone = size === PHONE;
+    const s = await site(t, { size, data: { "snapshot.json": snapshot } });
+    const { page } = s;
+    await s.goto();
+    await ready(page, { phone });
+    const search = page.getByTestId("search-input");
+    const empty = page.locator(".empty-state");
+    const coverage = `Token, pair and pool search covers the ${covered} pools measured in this snapshot for the projects in this view.`;
+
+    // The first line is the edition's own and is kept word for word.
+    await search.fill("zzqqxx");
+    await expect(empty).toContainText(NO_MATCH_IN_SNAPSHOT);
+    await expect(empty).toContainText(coverage);
+    await expect(empty.getByRole("button", { name: /^Did you mean/ })).toHaveCount(0);
+    await expect(empty.getByRole("button", { name: /in All hooks$/ })).toHaveCount(0);
+    // Under four characters there is no suggestion.
+    await search.fill("frn");
+    await expect(empty.getByRole("button", { name: /^Did you mean/ })).toHaveCount(0);
+
+    // A typo of one project name: one button, and choosing it fills the search.
+    await search.fill("Frontir");
+    const suggestion = empty.getByRole("button", { name: "Did you mean Frontier?" });
+    await expect(suggestion).toBeVisible();
+    await expect(empty.getByRole("button", { name: /^Did you mean/ })).toHaveCount(1);
+    await suggestion.click();
+    await expect(search).toHaveValue("Frontier");
+    await expect(search).toBeFocused();
+    await expect(page.getByTestId("project-frontier")).toBeVisible();
+    await expect(empty).toHaveCount(0);
+    // A name two edits away is too far for a short search.
+    await search.fill("Frontr");
+    await expect(page.getByTestId("project-frontier")).toHaveCount(0);
+    await expect(empty).toContainText(NO_MATCH_IN_SNAPSHOT);
+    await expect(empty.getByRole("button", { name: /^Did you mean/ })).toHaveCount(0);
+    await search.fill("Frnt");
+    await expect(empty.getByRole("button", { name: /^Did you mean/ })).toHaveCount(0);
+
+    // A pool of a hook no registry names is only in All hooks: the empty state
+    // says so and the button goes there.
+    await search.fill("birdie");
+    await expect(empty).toContainText(NO_MATCH_IN_SNAPSHOT);
+    const elsewhere = empty.getByRole("button", { name: "Show 1 match in All hooks" });
+    await expect(elsewhere).toBeVisible();
+    await elsewhere.click();
+    await expect(
+      page.getByRole("group", { name: "Directory coverage" }).getByRole("button", { name: "All hooks", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId(`project-${unnamed.id}`)).toBeVisible();
+    await expect(page.locator(".pool-match")).toHaveText("Matched pool BIRDIE / USDC on Base");
+
+    // In All hooks the search covers every measured pool the snapshot carries.
+    await search.fill("zzqqxx");
+    await expect(empty).toContainText(
+      `Token, pair and pool search covers the ${pools.filter((pool) => pool.projectId).length} pools measured in this snapshot.`,
+    );
+
+    // With a network chosen the sentence names it and counts only its pools.
+    await s.goto("?chain=ethereum");
+    await ready(page, { phone });
+    await search.fill("zzqqxx");
+    const onEthereum = new Set(
+      snapshot.projects
+        .filter((project) => named.has(project.id) && project.chains.includes("ethereum"))
+        .map((project) => project.id),
+    );
+    const ethereumPools = pools.filter(
+      (pool) => pool.chain === "ethereum" && pool.projectId && onEthereum.has(pool.projectId),
+    ).length;
+    await expect(empty).toContainText(
+      `Token, pair and pool search covers the ${ethereumPools} pools measured on Ethereum in this snapshot for the projects in this view.`,
+    );
+    s.verify();
+  }
+});
+
+test("a link that carries a token or pair search lists the matching projects after a load and a reload", async (t) => {
+  const { snapshot } = searchSnapshot();
+  const s = await site(t, { data: { "snapshot.json": snapshot } });
+  const { page } = s;
+  await s.goto("?q=usdc%20gamma");
+  await expect(page.getByTestId("search-input")).toHaveValue("usdc gamma", {
+    timeout: 30000,
+  });
+  await expect(page.getByTestId("project-gamma")).toBeVisible();
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator(".pool-match")).toHaveText(
+    "Matched pool USDC / GAMMA on Ethereum",
+  );
+  await page.reload();
+  await expect(page.getByTestId("project-gamma")).toBeVisible({
+    timeout: 30000,
+  });
+  await expect(page.locator(".pool-match")).toHaveText(
+    "Matched pool USDC / GAMMA on Ethereum",
+  );
+  // Choosing a project from the list and coming Back keeps the search and its line.
+  await page.getByTestId("project-gamma").click();
+  await expect(
+    page.locator(".project-detail").getByRole("heading", { name: "Gamma Fee Guard" }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(page.getByTestId("search-input")).toHaveValue("usdc gamma");
+  await expect(page.locator(".pool-match")).toHaveText(
+    "Matched pool USDC / GAMMA on Ethereum",
+  );
+  s.verify();
+});
+
+test("Ctrl K hands a token or pair to Discover's search, which finds the pool", async (t) => {
+  const { snapshot } = searchSnapshot();
+  const s = await site(t, { data: { "snapshot.json": snapshot } });
+  const { page } = s;
+  await s.goto();
+  await ready(page);
+  await page.keyboard.press("Control+k");
+  const palette = page.getByRole("dialog");
+  await expect(palette).toBeVisible();
+  await page.keyboard.type("wbtc");
+  const handoff = palette.getByRole("option", { name: /^Search Discover for/ });
+  await expect(handoff).toContainText("tokens, pairs, pools");
+  await handoff.click();
+  await expect(page.getByTestId("search-input")).toHaveValue("wbtc");
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator(".pool-match")).toHaveText(
+    "Matched pool WBTC / ALPHA on Ethereum",
+  );
+  s.verify();
+});
+
+test("keyboard and a screen reader can use a pool match and the empty state's buttons", async (t) => {
+  const { snapshot } = searchSnapshot();
+  const s = await site(t, { data: { "snapshot.json": snapshot } });
+  const { page } = s;
+  await s.goto();
+  await ready(page);
+  const search = page.getByTestId("search-input");
+  await search.fill("wbtc");
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  // The row's open button carries the match as its description, and no serious
+  // accessibility rule fails on the row or on the empty state.
+  const check = async (where) => {
+    const result = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+      .analyze();
+    assert.deepEqual(
+      result.violations
+        .filter((violation) => ["serious", "critical"].includes(violation.impact))
+        .map((violation) => `${violation.id}: ${violation.nodes[0].target.join(" ")}`),
+      [],
+      where,
+    );
+  };
+  await check("a row with a pool match");
+  await search.fill("Frontir");
+  await expect(page.getByRole("button", { name: "Did you mean Frontier?" })).toBeVisible();
+  await check("the empty state with a suggestion");
+  // Keyboard only: tab to the suggestion and press Enter.
+  await page.getByRole("button", { name: "Did you mean Frontier?" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(search).toHaveValue("Frontier");
+  await expect(search).toBeFocused();
+  await expect(page.getByTestId("project-frontier")).toBeVisible();
   s.verify();
 });
 

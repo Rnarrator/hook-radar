@@ -30,9 +30,12 @@ export function Empty({
   action,
   icon,
   headingLevel = 3,
+  more,
 }: {
   title: string;
   children: ReactNode;
+  /** A second, quieter line under the first. */
+  more?: ReactNode;
   action?: ReactNode;
   icon?: ReactNode;
   /** Use 2 when the empty state sits directly under the page's h1. */
@@ -44,6 +47,7 @@ export function Empty({
       {icon ?? <EmptyInstrument />}
       <Heading>{title}</Heading>
       <p>{children}</p>
+      {more ? <p className="empty-more">{more}</p> : null}
       {action}
     </div>
   );

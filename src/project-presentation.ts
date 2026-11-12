@@ -231,12 +231,25 @@ export function orderedPools<T extends Pool>(
   windowKey: WindowKey,
   now: number,
   edition: boolean = STATIC_EDITION,
+  /** Edition: the 7D or 30D figure of a pool, when the page shows one. A pool
+   * with one comes before every pool without, largest first; the rest keep the
+   * window's order. Absent: the window's order throughout. */
+  dailyOf?: (pool: T) => number | null,
 ): T[] {
   if (!edition) return pools;
   const volume = new Map(
     pools.map((pool) => [pool, currentMetricValue(pool, windowKey, now)]),
   );
   return [...pools].sort((a, b) => {
+    if (dailyOf) {
+      const p = dailyOf(a);
+      const q = dailyOf(b);
+      if (p !== q) {
+        if (p === null) return 1;
+        if (q === null) return -1;
+        return q - p;
+      }
+    }
     const x = volume.get(a)!;
     const y = volume.get(b)!;
     if (x !== y) {

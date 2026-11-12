@@ -1056,6 +1056,8 @@ async function collect({
       sleep: clock.sleep,
       env: { GITHUB_REPOSITORY: "owner/hook-radar", ...env },
       maxDiscovery: 0,
+      // These tests count requests; the daily-volume step has its own tests.
+      dailyMaxRequests: 0,
       log,
     });
     const published = result.published

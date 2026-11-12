@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   COLLECTOR_VERSION,
+  DAILY_LATEST_START_MS,
+  DAILY_MAX_REQUESTS,
   DISCOVERY_BUDGET_MS,
   DS_BATCH_SIZE,
   FRONTIER_LATEST_START_MS,
@@ -15,6 +17,7 @@ import {
   MAX_MEASURED_POOLS,
   MAX_RESOLVES_PER_RUN,
   MIN_CURRENT_POOLS,
+  resolveDailyMaxRequests,
   resolveGaps,
   resolveMaxDiscovery,
   resolveRateLimitCap,
@@ -27,6 +30,15 @@ import {
   providerSources,
   validSnapshot,
 } from "./assemble.mjs";
+import {
+  buildDailyDataset,
+  collectDaily,
+  currentMeasured,
+  dailySource,
+  emptyDailyReport,
+  rankPools,
+  selectDaily,
+} from "./daily.mjs";
 import { discoverPools, discoveryChains, discoveryStats } from "./discover.mjs";
 import { historyPointFor } from "./history.mjs";
 import { createHttpClient } from "./http.mjs";
@@ -48,6 +60,7 @@ import { discoveryPage } from "./providers/geckoterminal.mjs";
 import { assessQuality } from "./quality.mjs";
 import { loadRegistry } from "./registry.mjs";
 import {
+  dailyJson,
   historyJson,
   poolKey,
   readState,
@@ -153,6 +166,7 @@ function statusDocument({
   dropped,
   frontier,
   priority,
+  daily,
 }) {
   // The Frontier lane carries the configuration read at the start and the
   // market reads of the Frontier step; each source is credited its own.
@@ -167,7 +181,10 @@ function statusDocument({
     "frontier-stats": frontierReads["frontier-stats"] ?? 0,
     "frontier-amm-index": frontierReads["frontier-amm-index"] ?? 0,
     dexscreener: stats.dexscreener.requests,
-    geckoterminal: stats.geckoterminal.requests,
+    // The daily-volume step reads GeckoTerminal too; its requests are a source
+    // of their own, and "requests" below stays the lane's total.
+    geckoterminal: stats.geckoterminal.requests - daily.requested,
+    "geckoterminal-daily": daily.requested,
     v4xyz: stats.v4xyz.requests,
   };
   const total = Object.values(stats).reduce(
@@ -226,6 +243,9 @@ function statusDocument({
         ),
       },
       discovery: discovery.stats,
+      // The 7D and 30D step: what it selected, read and published, and why it
+      // stopped or was left out. `requested` is part of requests.geckoterminal.
+      daily,
     },
     sources: snapshot.sources.map((source) => ({
       ...source,
@@ -253,6 +273,7 @@ export async function runCollector({
   minCurrent = MIN_CURRENT_POOLS,
   discoveryBudgetMs = DISCOVERY_BUDGET_MS,
   discoveryPageOverride = null,
+  dailyMaxRequests = undefined,
   env = process.env,
   fetchImpl = globalThis.fetch,
   now = Date.now,
@@ -378,12 +399,116 @@ export async function runCollector({
     requests: frontier.requests,
   };
 
+  // 7D and 30D volume of the largest pools: GeckoTerminal's daily candles. The
+  // step is the last of the collection, after the burst, its fallback and
+  // Frontier, with the snapshot time already fixed above: it can delay no
+  // measurement and move no time the page judges. It spends only what the 399
+  // requests still allow, and a skipped or failed step is a note and the records
+  // it had (see collector/daily.mjs).
+  log("Daily volume");
+  const statsBeforeDaily = client.stats();
+  const dailyLimit = Math.max(
+    0,
+    Math.min(
+      DAILY_MAX_REQUESTS,
+      Number.isSafeInteger(dailyMaxRequests)
+        ? dailyMaxRequests
+        : resolveDailyMaxRequests(env),
+    ),
+  );
+  // The quality gate runs after the snapshot is assembled, so what it can already
+  // tell is asked first: a run that will be refused does not spend its requests.
+  const current = currentMeasured(burst.measured, generatedAtMs);
+  const wouldPass = assessQuality({
+    currentPools: current.pools,
+    currentVolumePools: current.withVolume,
+    observedPools: burst.measured.size,
+    plannedPools: plan.planned,
+    requestedPools: burst.requestedPools,
+    checkedPools: burst.answeredPools,
+    snapshotValid: true,
+    overviewsValid: true,
+    volumeMeasured: current.withVolume > 0,
+    minCurrent,
+    previousPoint: state.history.at(-1) ?? null,
+    generatedAtMs,
+  }).ok;
+  const dailyReason =
+    dailyLimit <= 0
+      ? "switched off (COLLECTOR_DAILY_MAX_REQUESTS is 0)"
+      : !publish
+        ? "this run publishes nothing"
+        : !wouldPass
+          ? "this run would not pass the quality gate"
+          : now() - collectionStartedAt > DAILY_LATEST_START_MS
+            ? "the run was already over 30 minutes old"
+            : client.isStopped("geckoterminal")
+              ? "GeckoTerminal was stopped for this run"
+              : client.requestsLeft() < 1
+                ? "the run's request budget was spent"
+                : null;
+  let dailyRecords = state.daily.records;
+  let dailyReport = {
+    ...emptyDailyReport(),
+    selected: dailyRecords.length,
+    skipped: dailyReason,
+  };
+  if (!dailyReason) {
+    const step = await collectDaily({
+      client,
+      records: selectDaily({
+        previous: state.daily.records,
+        ranked: rankPools(burst.measured, generatedAtMs),
+        generatedAtMs,
+      }),
+      measured: burst.measured,
+      now,
+      maxRequests: dailyLimit,
+      // An offline replay has no real time: its clock stands still while the
+      // lane's gaps are counted up, so the step's time limit cannot apply.
+      ...(offline ? { budgetMs: Infinity } : {}),
+    });
+    dailyRecords = step.records;
+    dailyReport = step.report;
+  }
+  const dailyDataset = buildDailyDataset({
+    records: dailyRecords,
+    measured: burst.measured,
+    generatedAtMs,
+  });
+  dailyReport = {
+    ...dailyReport,
+    through: dailyDataset.through,
+    published: dailyDataset.pools,
+    covered: dailyDataset.covered,
+    readyShare:
+      dailyDataset.readyShare === null
+        ? null
+        : Math.round(dailyDataset.readyShare * 1000) / 1000,
+    note:
+      [
+        state.daily.note,
+        dailyDataset.problem
+          ? `The file was not published: ${dailyDataset.problem}.`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ") || null,
+  };
+  // The daily records are written when the step changed them, and to replace a
+  // file that could not be read; a quiet run leaves the committed file alone.
+  const dailyChanged =
+    dailyJson(null, dailyRecords) !== dailyJson(null, state.daily.records) ||
+    state.daily.note !== null;
+
   const stats = client.stats();
   // The notes name a network as the page does, so they are made once the
-  // snapshot's chains are known.
+  // snapshot's chains are known. They describe the measurement phase: the
+  // requests of the daily-volume step are a source of their own.
   const sources = (chains) =>
     providerSources({
-      stats,
+      stats: statsBeforeDaily,
+      daily: dailySource(dailyDataset),
       measured: burst.measured,
       discovery: discovery.stats,
       census: state.census,
@@ -429,7 +554,7 @@ export async function runCollector({
     minCurrent,
     previousPoint: state.history.at(-1) ?? null,
     generatedAtMs,
-    stoppedProviders: Object.entries(stats)
+    stoppedProviders: Object.entries(statsBeforeDaily)
       .filter(([, row]) => row.stopped)
       .map(([id, row]) => `${id} (${row.stopped.reason})`),
     unsupportedNetworks: [...burst.unsupportedNetworks].sort(),
@@ -446,6 +571,7 @@ export async function runCollector({
     plan,
     dropped: pools.length - plan.planned - plan.unsupported,
     frontier: frontierCounts,
+    daily: dailyReport,
     priority: {
       listed: priority.keys.size,
       addedToState: priority.fresh.length,
@@ -461,6 +587,7 @@ export async function runCollector({
     status,
     overviews,
     historyPoints,
+    daily: dailyDataset,
     published: false,
     served: transport?.served,
   };
@@ -474,6 +601,14 @@ export async function runCollector({
       join(outDir, "history.json"),
       historyJson(historyPoints),
     );
+    // The 7D and 30D file: any old one goes first, and a new one is written only
+    // when it validated and is not empty.
+    await rm(join(outDir, "daily.json"), { force: true });
+    if (dailyDataset.file)
+      await writeFileAtomic(
+        join(outDir, "daily.json"),
+        `${JSON.stringify(dailyDataset.file)}\n`,
+      );
     await writeFileAtomic(
       join(outDir, "status.json"),
       `${JSON.stringify(status, null, 2)}\n`,
@@ -493,6 +628,7 @@ export async function runCollector({
       hookless: new Set([...state.hookless, ...discovery.hookless]),
       history: historyPoints,
       registry: registry.changed || !state.registry ? registry.fetched : null,
+      daily: dailyChanged ? dailyRecords : undefined,
     });
     result.published = true;
   }
