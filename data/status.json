@@ -1,0 +1,439 @@
+{
+  "generatedAt": "2026-11-21T18:14:59.100Z",
+  "collectionStartedAt": "2026-11-21T18:07:21.690Z",
+  "burstStartedAt": "2026-11-21T18:12:18.537Z",
+  "burstEndedAt": "2026-11-21T18:14:59.100Z",
+  "counts": {
+    "statePools": 9891,
+    "plannedPools": 3483,
+    "plannedDiscoveredPools": 719,
+    "priorityPools": {
+      "listed": 1355,
+      "addedToState": 0,
+      "planned": 942,
+      "measured": 544
+    },
+    "requestedPools": 3483,
+    "answeredPools": 3480,
+    "checkedPools": 3521,
+    "measuredPools": 1541,
+    "trackedPools": 1541,
+    "currentPools": 1541,
+    "droppedForCap": 0,
+    "deferredPools": 6416,
+    "plan": {
+      "mode": "lanes",
+      "reason": null,
+      "detail": null,
+      "fellBack": false,
+      "batches": 127,
+      "maxBatches": 220,
+      "ceilingBound": false,
+      "trimmed": {
+        "warm": 0,
+        "cool": 0,
+        "cold": 0
+      },
+      "newOverflow": 0,
+      "hotAndNew": 2471,
+      "geckoCarried": 457,
+      "floor": 1419,
+      "previousPools": 1576,
+      "periodsHours": {
+        "warm": 3,
+        "cool": 6,
+        "cold": 12
+      },
+      "windowFrom": "2026-11-21T17:13:26.388Z",
+      "windowTo": "2026-11-21T18:12:18.518Z",
+      "anchor": "2026-11-21T18:12:18.518Z",
+      "networkGuard": {
+        "minHotPools": 50,
+        "minShare": 0.8,
+        "networks": []
+      }
+    },
+    "lanes": {
+      "hot": {
+        "known": 2174,
+        "scheduled": 2174,
+        "requested": 2174,
+        "answered": 2174,
+        "measured": 1407
+      },
+      "new": {
+        "known": 305,
+        "scheduled": 305,
+        "requested": 305,
+        "answered": 305,
+        "measured": 4
+      },
+      "warm": {
+        "known": 1040,
+        "scheduled": 369,
+        "requested": 369,
+        "answered": 366,
+        "measured": 82
+      },
+      "cool": {
+        "known": 911,
+        "scheduled": 171,
+        "requested": 171,
+        "answered": 171,
+        "measured": 1
+      },
+      "cold": {
+        "known": 5469,
+        "scheduled": 464,
+        "requested": 464,
+        "answered": 464,
+        "measured": 0
+      }
+    },
+    "projects": 2453,
+    "deployments": 5504,
+    "networks": 9,
+    "discoveredPools": 8,
+    "discoveredHookless": 13,
+    "fallbackRequests": 6,
+    "fallbackMeasured": 121,
+    "frontier": {
+      "coinMarketsListed": 10,
+      "poolsSupplied": 10,
+      "poolsAdded": 8,
+      "poolsReplacingOlderRow": 2,
+      "poolsKeptFromOtherProvider": 0,
+      "poolsLeftOutOnMismatch": 0,
+      "listingRows": 96,
+      "listingTotal": 96,
+      "failure": null
+    },
+    "dexscreener": {
+      "batches": 127,
+      "failedBatches": {
+        "total": 2,
+        "byReason": {
+          "http-400": 2
+        }
+      },
+      "rowsReturned": 1422,
+      "rowsWithoutValue": 10,
+      "rowsRejected": {
+        "total": 0,
+        "byReason": {
+          "identity": 0,
+          "chain": 0,
+          "tokens": 0
+        }
+      },
+      "poolsAsked": 3483,
+      "poolsWithRow": 1422,
+      "retry": {
+        "maxBatches": 8,
+        "burstLimitMs": 150000,
+        "failedFirstPass": 0,
+        "retried": 0,
+        "recovered": 0,
+        "stillFailed": 0,
+        "notRetried": {},
+        "networks": {
+          "recovered": [],
+          "stillFailed": []
+        },
+        "stillFailedBatches": [],
+        "error": null
+      }
+    },
+    "geckoterminal": {
+      "requests": 6,
+      "failures": {
+        "total": 1,
+        "byReason": {
+          "http-404": 1
+        }
+      },
+      "idsAsked": 128,
+      "measured": 121,
+      "measuredByNetwork": {
+        "base": 30,
+        "celo": 1,
+        "robinhood": 90
+      },
+      "errors": {
+        "total": 0,
+        "last": null
+      },
+      "fallback": {
+        "mode": "tiers",
+        "limit": 6,
+        "split": {
+          "tier0": 4,
+          "sweepReserve": 2
+        },
+        "available": {
+          "carried": 456,
+          "unindexed": 0,
+          "sweep": 8367
+        },
+        "requests": {
+          "tier0": 4,
+          "sweep": 2,
+          "ordered": 0
+        },
+        "idsAsked": {
+          "carried": 120,
+          "unindexed": 0,
+          "sweep": 8,
+          "ordered": 0
+        },
+        "measured": {
+          "carried": 120,
+          "unindexed": 0,
+          "sweep": 1,
+          "ordered": 0
+        },
+        "networks": {
+          "base": {
+            "requests": 1,
+            "ids": 30,
+            "measured": 30
+          },
+          "blast": {
+            "requests": 1,
+            "ids": 5,
+            "measured": 0
+          },
+          "celo": {
+            "requests": 1,
+            "ids": 3,
+            "measured": 1
+          },
+          "robinhood": {
+            "requests": 3,
+            "ids": 90,
+            "measured": 90
+          }
+        },
+        "pricedLastTime": {
+          "known": 663,
+          "measuredNow": 122
+        },
+        "bookmarksMoved": [
+          "celo"
+        ]
+      }
+    },
+    "providers": {
+      "dexscreener": {
+        "requests": 127,
+        "succeeded": 125,
+        "failed": 2,
+        "lastStatus": 200,
+        "firstRequestAt": "2026-11-21T18:12:18.539Z",
+        "lastRequestAt": "2026-11-21T18:13:56.975Z",
+        "stopped": null
+      },
+      "geckoterminal": {
+        "requests": 26,
+        "succeeded": 24,
+        "failed": 2,
+        "lastStatus": 200,
+        "firstRequestAt": "2026-11-21T18:07:23.220Z",
+        "lastRequestAt": "2026-11-21T18:14:57.174Z",
+        "stopped": null
+      },
+      "v4xyz": {
+        "requests": 60,
+        "succeeded": 60,
+        "failed": 0,
+        "lastStatus": 200,
+        "firstRequestAt": "2026-11-21T18:07:23.219Z",
+        "lastRequestAt": "2026-11-21T18:12:18.263Z",
+        "stopped": null
+      },
+      "registry": {
+        "requests": 2,
+        "succeeded": 2,
+        "failed": 0,
+        "lastStatus": 200,
+        "firstRequestAt": "2026-11-21T18:07:21.784Z",
+        "lastRequestAt": "2026-11-21T18:07:22.785Z",
+        "stopped": null
+      },
+      "frontier": {
+        "requests": 3,
+        "succeeded": 3,
+        "failed": 0,
+        "lastStatus": 200,
+        "firstRequestAt": "2026-11-21T18:07:22.936Z",
+        "lastRequestAt": "2026-11-21T18:14:58.619Z",
+        "stopped": null
+      },
+      "goldsky": {
+        "requests": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "lastStatus": 200,
+        "firstRequestAt": "2026-11-21T18:14:58.841Z",
+        "lastRequestAt": "2026-11-21T18:14:58.841Z",
+        "stopped": null
+      }
+    },
+    "unsupportedNetworks": [
+      "tempo",
+      "xlayer"
+    ],
+    "downNetworks": [],
+    "rateLimitWaits": {},
+    "requests": {
+      "total": 219,
+      "dexscreener": 127,
+      "geckoterminal": 26,
+      "v4xyz": 60,
+      "registry": 2,
+      "frontier": 3,
+      "goldsky": 1
+    },
+    "discovery": {
+      "page": 1,
+      "geckoPages": 19,
+      "geckoCandidates": 95,
+      "geckoPageFailures": 1,
+      "geckoPageFailureReasons": {
+        "http-404": 1
+      },
+      "indexerLists": 20,
+      "indexerListed": 219,
+      "indexerListFailures": 0,
+      "resolveBudget": 40,
+      "resolvesTried": 40,
+      "resolvedHooked": 0,
+      "resolvedHookless": 13,
+      "unresolved": 27,
+      "cutShort": false
+    },
+    "cursors": {
+      "families": 1,
+      "refused": null
+    },
+    "daily": {
+      "selected": 47,
+      "due": 0,
+      "requested": 0,
+      "read": 0,
+      "noData": 0,
+      "missing": 0,
+      "unreadable": 0,
+      "failed": 0,
+      "revisedDays": 0,
+      "through": "2026-11-20",
+      "published": 40,
+      "covered": 43,
+      "readyShare": 1,
+      "stopped": null,
+      "skipped": null,
+      "note": null
+    }
+  },
+  "sources": [
+    {
+      "id": "registry",
+      "name": "Uniswap hook registry",
+      "url": "https://github.com/Uniswap/hooklist",
+      "status": "live",
+      "updatedAt": "2026-11-21T18:07:22.000Z",
+      "note": "Fetched at the start of this snapshot run from https://raw.githubusercontent.com/Uniswap/hooklist/main/hooklist.json.",
+      "requests": 2
+    },
+    {
+      "id": "chains",
+      "name": "Uniswap chain registry",
+      "url": "https://github.com/Uniswap/hooklist",
+      "status": "live",
+      "updatedAt": "2026-11-21T18:07:22.000Z",
+      "note": "Fetched at the start of this snapshot run from https://raw.githubusercontent.com/Uniswap/hooklist/main/chains.json."
+    },
+    {
+      "id": "frontier-chains",
+      "name": "Frontier deployment configuration",
+      "url": "https://api.frontier.fun/chains",
+      "status": "live",
+      "updatedAt": "2026-11-21T18:07:23.000Z",
+      "note": "Fetched at the start of this snapshot run from https://api.frontier.fun/chains.",
+      "requests": 1
+    },
+    {
+      "id": "dexscreener",
+      "name": "DEX Screener",
+      "url": "https://dexscreener.com",
+      "status": "live",
+      "updatedAt": "2026-11-21T18:13:51.000Z",
+      "note": "Exact-pool lookups in batches of up to 30: 127 requests between 2026-11-21 18:12:18 UTC and 2026-11-21 18:13:56 UTC. 1,410 pools returned a matching Uniswap v4 row with a liquidity or volume figure; pools it did not return, or returned without one, are unresolved, not zero. This snapshot asked about 3,483 of the 9,899 pools the collector knows: the pools that answered in the last 72 hours and the pools first seen in the last 72 hours every time, the others in turn (answered 72 hours to 7 days ago: every 3 hours; answered longer ago: every 6 hours; never answered: every 12 hours). The 457 pools GeckoTerminal priced that answered in the last 72 hours are asked about here every 3 hours, and GeckoTerminal is asked about the ones not priced here first in each run, as many as its requests allow. A pool that was not asked is unchecked in this snapshot, not zero. Does not index: Tempo, X Layer.",
+      "requests": 127
+    },
+    {
+      "id": "geckoterminal",
+      "name": "GeckoTerminal",
+      "url": "https://www.geckoterminal.com",
+      "status": "live",
+      "updatedAt": "2026-11-21T18:14:57.000Z",
+      "note": "Top-pool pages for discovery (pages read: 19) and a small exact-pool fallback (pools measured: 121): 26 requests between 2026-11-21 18:07:23 UTC and 2026-11-21 18:14:57 UTC. Data provided by GeckoTerminal.",
+      "requests": 26
+    },
+    {
+      "id": "v4xyz",
+      "name": "v4.xyz indexer",
+      "url": "https://www.v4.xyz",
+      "status": "live",
+      "updatedAt": "2026-11-21T18:12:18.263Z",
+      "note": "Pool identity only (which hook, which two currencies) for newly discovered pools: 60 requests between 2026-11-21 18:07:23 UTC and 2026-11-21 18:12:18 UTC. Network lists read: 20, hooked pools listed: 219, exact lookups: 40. It supplies no amounts. The LP fee printed at the end of a pool name is read only to recognise hooks that set fees dynamically.",
+      "requests": 60
+    },
+    {
+      "id": "frontier-coins",
+      "name": "Frontier · pooled coin markets",
+      "url": "https://api.frontier.fun/coinsPage?limit=100",
+      "status": "live",
+      "updatedAt": "2026-11-21T18:14:58.000Z",
+      "note": "Only isLPd=true markets are included. Curve-only coins are excluded. At most the first 100 coin rows. Fetched successfully from the published source. 10 pooled coin markets listed; Frontier's figures are used for 10 pools of this snapshot (a pool that another provider measured more recently keeps that measurement).",
+      "requests": 1
+    },
+    {
+      "id": "frontier-stats",
+      "name": "Frontier · ETH/USD conversion",
+      "url": "https://api.frontier.fun/coinsStats",
+      "status": "live",
+      "updatedAt": "2026-11-21T18:14:44.840Z",
+      "note": "AMM native-ETH amounts are converted using the current ETH/USD snapshot, not historical execution prices. Curve volume is never counted as v4 volume. Fetched successfully from the published source.",
+      "requests": 1
+    },
+    {
+      "id": "frontier-amm-index",
+      "name": "Goldsky · Frontier AMM index",
+      "url": "https://api.goldsky.com/api/public/project_cmhfvhwp1000mqkp2g91h5ej1/subgraphs/frontier-ammv4-robinhood/prod/gn",
+      "status": "live",
+      "updatedAt": "2026-11-21T18:14:58.000Z",
+      "note": "Pool hooks, core reserves and native-ETH swap amounts. USD fields in this index have no price feed and are not used. Reserve valuation excludes hook-held assets. Fetched successfully from the published source.",
+      "requests": 1
+    },
+    {
+      "id": "geckoterminal-daily",
+      "name": "GeckoTerminal daily volume",
+      "url": "https://www.geckoterminal.com",
+      "status": "live",
+      "updatedAt": "2026-11-21T11:29:03.000Z",
+      "note": "Complete UTC days up to 20 Nov 2026 for 40 of the largest pools, read 21 Nov 07:50 to 21 Nov 11:29 UTC. Other pools are not covered; a pool with no daily data is unavailable, not zero.",
+      "requests": 0
+    },
+    {
+      "id": "census",
+      "name": "Pool census",
+      "url": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "status": "cached",
+      "updatedAt": "2026-10-27T21:08:49.927Z",
+      "note": "Hook Radar's index of PoolManager events, exported 2026-10-27 21:10:10 UTC. Shown as it stood on 2026-10-27 21:08:49 UTC; this edition does not refresh it. For hooks outside the Uniswap hooklist, whether a hook sets LP fees dynamically comes from this index at that date."
+    }
+  ],
+  "collectorVersion": "1.0.0",
+  "previousGeneratedAt": "2026-11-21T17:19:26.388Z"
+}

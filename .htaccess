@@ -1,0 +1,15 @@
+# Hook Radar, Auto Snapshot edition. Written by the build for Apache hosts
+# (cPanel shared hosting). Other hosts ignore this file.
+
+# Compress text answers; the data file is about ten times smaller that way.
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE application/json text/css application/javascript text/javascript image/svg+xml text/html text/plain application/manifest+json
+</IfModule>
+
+# The data files are renewed every few hours: have the browser ask again before
+# it reuses a stored copy. An unchanged file is answered with a short 304.
+<IfModule mod_headers.c>
+  <FilesMatch "\.json$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
